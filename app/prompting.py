@@ -7,6 +7,7 @@ import httpx
 from pydantic import BaseModel
 
 from app.config import Settings
+from app.prompt_knowledge import matched_knowledge_context
 
 
 DEFAULT_NEGATIVE = (
@@ -60,12 +61,15 @@ async def translate_prompt(
         "into concise English tags. Translate character names, actions, scenes, moods, camera, "
         "composition, clothes, lighting, and background details. Never copy Chinese text into "
         "positive or negative. Return JSON only with keys positive, negative, style_notes. "
-        "Use comma-separated English tags. Keep negative prompt practical."
+        "Use comma-separated English tags. Keep negative prompt practical. If local prompt "
+        "knowledge is provided, follow it exactly."
     )
+    knowledge_context = matched_knowledge_context(prompt_cn, settings.prompt_knowledge_path)
     user_prompt = (
         f"Chinese request: {prompt_cn}\n"
         f"Extra style tags to keep in English if useful: {style_tags or '(none)'}\n"
         f"Existing negative prompt to translate/merge if useful: {negative_prompt or '(none)'}\n"
+        f"{knowledge_context or 'Local prompt knowledge matched: (none)'}\n"
         "Return the final JSON now."
     )
     payload = {

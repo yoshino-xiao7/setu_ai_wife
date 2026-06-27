@@ -71,6 +71,7 @@ OLLAMA_MODEL=qwen3:4b
 OUTPUT_DIR=outputs
 DATABASE_PATH=data/jobs.sqlite3
 CHARACTERS_PATH=config/characters.json
+PROMPT_KNOWLEDGE_PATH=config/prompt_knowledge.json
 COMFYUI_MODELS_DIR=tools/ComfyUI_windows_portable/ComfyUI/models
 DEFAULT_CHECKPOINT=waiIllustriousSDXL_v170.safetensors
 DEFAULT_STEPS=35
@@ -312,6 +313,7 @@ powershell -ExecutionPolicy Bypass -File scripts\check_env.ps1
 - [模型放置说明](docs/MODELS.md)
 - [运维和故障排查](docs/OPERATIONS.md)
 - [角色 LoRA 预设](docs/CHARACTER_LORA.md)
+- [本地提示词知识库](docs/PROMPT_KNOWLEDGE.md)
 - [云端 Worker 模式](docs/CLOUD_WORKER.md)
 - [实现日志](docs/IMPLEMENTATION_LOG.md)
 
