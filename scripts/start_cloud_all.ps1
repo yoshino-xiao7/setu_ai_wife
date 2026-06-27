@@ -1,6 +1,7 @@
 param(
     [switch]$DryRun,
-    [switch]$SkipCloudConfigCheck
+    [switch]$SkipCloudConfigCheck,
+    [switch]$Restart
 )
 
 $ErrorActionPreference = "Stop"
@@ -98,6 +99,30 @@ function Test-WorkerAlreadyRunning {
     return $null -ne $process
 }
 
+function Stop-LocalAiProcesses {
+    $patterns = @(
+        "app\.cloud_worker",
+        "uvicorn app\.main:app --host 127\.0\.0\.1 --port 7861",
+        "scripts\\start_cloud_worker\.ps1",
+        "scripts\\start_service\.ps1"
+    )
+
+    $currentPid = $PID
+    $processes = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $commandLine = $_.CommandLine
+            $processId = $_.ProcessId
+            $processId -ne $currentPid -and
+                $commandLine -and
+                ($patterns | Where-Object { $commandLine -match $_ } | Select-Object -First 1)
+        }
+
+    foreach ($process in $processes) {
+        Write-Host "[STOP] pid=$($process.ProcessId) $($process.Name)" -ForegroundColor Yellow
+        Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+    }
+}
+
 if (!(Test-Path $EnvPath)) {
     if (Test-Path $EnvExamplePath) {
         Copy-Item $EnvExamplePath $EnvPath
@@ -139,6 +164,12 @@ if ($DryRun) {
 }
 
 Write-Host "Starting local AI drawing stack for cloud users..." -ForegroundColor Cyan
+
+if ($Restart) {
+    Write-Host "Restart requested. Stopping local service and cloud worker processes..." -ForegroundColor Yellow
+    Stop-LocalAiProcesses
+    Start-Sleep -Seconds 2
+}
 
 if (Test-HttpReady "http://127.0.0.1:8188" 3) {
     Write-Host "[READY] ComfyUI is already responding at http://127.0.0.1:8188" -ForegroundColor Green
