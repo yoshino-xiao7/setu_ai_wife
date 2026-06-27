@@ -50,6 +50,17 @@ tools/ComfyUI_windows_portable/ComfyUI/models
 
 ## 启动顺序
 
+一键启动云端生图所需的全部本机组件：
+
+```powershell
+cd C:\Users\rdpuser\Documents\setu_cd\setu_ai_wife
+powershell -ExecutionPolicy Bypass -File scripts/start_cloud_all.ps1
+```
+
+这个脚本会依次启动 ComfyUI、本机 FastAPI 服务和 cloud worker，并把日志写到 `logs/`。
+
+也可以按下面步骤手动启动。
+
 1. 启动 ComfyUI，确认 `http://127.0.0.1:8188` 可访问。
 2. 启动本机 FastAPI 服务：
 

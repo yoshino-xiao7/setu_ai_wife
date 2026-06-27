@@ -20,3 +20,9 @@ powershell -ExecutionPolicy Bypass -File scripts/start_service.ps1
 Character LoRA presets are documented in [docs/CHARACTER_LORA.md](docs/CHARACTER_LORA.md).
 
 Cloud worker integration for the cloud backend is documented in [docs/CLOUD_WORKER.md](docs/CLOUD_WORKER.md).
+
+To start everything needed for cloud users to generate images, fill `CLOUD_API_URL` and `AI_WORKER_TOKEN` in `.env`, then run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/start_cloud_all.ps1
+```

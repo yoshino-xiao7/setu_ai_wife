@@ -13,6 +13,7 @@ __pycache__/
 # Local runtime data
 data/
 outputs/
+logs/
 
 # Heavy local AI assets and portable runtime
 tools/
