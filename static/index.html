@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>本机 AI 绘图工作台</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>本机 AI 绘图工作台</h1>
+          <p>ComfyUI + Ollama + LoRA 角色预设</p>
+        </div>
+        <div class="status-group">
+          <span class="status-dot"></span>
+          <span>127.0.0.1</span>
+        </div>
+      </header>
+
+      <section class="studio">
+        <aside class="control-panel">
+          <form id="generate-form">
+            <section class="panel-section">
+              <div class="section-title">
+                <h2>角色</h2>
+                <button class="ghost" id="refresh-presets" type="button">刷新</button>
+              </div>
+              <label>角色预设 <select id="character-id"><option value="">不使用预设</option></select></label>
+              <div class="split">
+                <label>LoRA <select id="lora-name"><option value="">不使用 / 角色默认</option></select></label>
+                <label>强度 <input id="lora-strength" type="number" min="0" max="2" step="0.05" value="0" /></label>
+              </div>
+              <label>Trigger Words <input id="trigger-words" type="text" placeholder="LoRA 页面给出的触发词" /></label>
+            </section>
+
+            <section class="panel-section">
+              <div class="section-title">
+                <h2>描述</h2>
+                <button class="ghost" id="translate-btn" type="button">预览 Prompt</button>
+              </div>
+              <textarea id="prompt-cn" required maxlength="1000" placeholder="例如：站在海边，白色长发，蓝色眼睛，柔和光线，精致角色立绘"></textarea>
+              <label>风格 tag <input id="style-tags" type="text" placeholder="anime style, detailed eyes, cinematic lighting" /></label>
+              <pre id="prompt-preview" class="prompt-preview"></pre>
+            </section>
+
+            <section class="panel-section">
+              <h2>参数</h2>
+              <div class="quick-sizes">
+                <button type="button" data-size="768x768">1:1</button>
+                <button type="button" data-size="768x1024">3:4</button>
+                <button type="button" data-size="1024x768">4:3</button>
+              </div>
+              <div class="split four">
+                <label>宽 <input id="width" type="number" min="512" max="1536" step="64" value="768" /></label>
+                <label>高 <input id="height" type="number" min="512" max="1536" step="64" value="768" /></label>
+                <label>步数 <input id="steps" type="number" min="8" max="60" value="12" /></label>
+                <label>CFG <input id="cfg" type="number" min="1" max="15" step="0.5" value="6" /></label>
+              </div>
+              <div class="split">
+                <label>Seed <input id="seed" type="number" min="1" placeholder="随机" /></label>
+                <label>Checkpoint <input id="checkpoint" type="text" placeholder="使用 .env 默认值" /></label>
+              </div>
+            </section>
+
+            <button class="primary-action" type="submit">生成图片</button>
+          </form>
+        </aside>
+
+        <section class="stage-panel">
+          <div class="stage-header">
+            <div>
+              <h2>当前结果</h2>
+              <p id="job-meta">等待新的生成任务</p>
+            </div>
+            <button class="ghost" id="reuse-current" type="button">复用当前</button>
+          </div>
+          <div id="current-result" class="stage-empty">
+            <div class="empty-mark">AI</div>
+            <p>选择角色、写描述，然后生成。</p>
+          </div>
+        </section>
+
+        <aside class="history-panel">
+          <div class="section-title">
+            <h2>历史</h2>
+            <button class="ghost" id="refresh-history" type="button">刷新</button>
+          </div>
+          <div id="history" class="history-list"></div>
+        </aside>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

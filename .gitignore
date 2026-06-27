@@ -1,0 +1,30 @@
+# Environment and secrets
+.env
+*.env
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Local runtime data
+data/
+outputs/
+
+# Heavy local AI assets and portable runtime
+tools/
+models/
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.bin
+
+# Logs and OS files
+*.log
+Thumbs.db
+.DS_Store

@@ -1,0 +1,24 @@
+{
+  "characters": [
+    {
+      "id": "cartethyia",
+      "name": "Cartethyia",
+      "lora_name": "cartethyia-noob-v5.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "cartethyia",
+      "default_positive": "1girl, solo",
+      "style_tags": "anime style, detailed eyes, high quality",
+      "notes": "Preset created from cartethyia-noob-v5.safetensors. Replace trigger_words with the exact trigger words from the LoRA page if different."
+    },
+    {
+      "id": "example_character",
+      "name": "Example Character",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "",
+      "default_positive": "1girl, solo",
+      "style_tags": "anime style, detailed eyes, high quality",
+      "notes": "Put LoRA files into ComfyUI/models/loras, then set lora_name to the real filename and trigger_words to the LoRA page trigger words."
+    }
+  ]
+}
