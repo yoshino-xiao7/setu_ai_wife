@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     characters_path: Path = Field(Path("config/characters.json"), alias="CHARACTERS_PATH")
     comfyui_models_dir: Path = Field(Path("tools/ComfyUI_windows_portable/ComfyUI/models"), alias="COMFYUI_MODELS_DIR")
     default_checkpoint: str = Field("put-your-sdxl-anime-checkpoint.safetensors", alias="DEFAULT_CHECKPOINT")
-    default_steps: int = Field(24, alias="DEFAULT_STEPS")
-    default_cfg: float = Field(7.0, alias="DEFAULT_CFG")
+    default_steps: int = Field(35, alias="DEFAULT_STEPS")
+    default_cfg: float = Field(4.5, alias="DEFAULT_CFG")
     default_sampler: str = Field("euler", alias="DEFAULT_SAMPLER")
     default_scheduler: str = Field("normal", alias="DEFAULT_SCHEDULER")
     prompt_translation_timeout_seconds: float = Field(45, alias="PROMPT_TRANSLATION_TIMEOUT_SECONDS")
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     ai_worker_version: str = Field("0.1.0", alias="AI_WORKER_VERSION")
     ai_worker_poll_seconds: float = Field(5, alias="AI_WORKER_POLL_SECONDS")
     ai_worker_capability_report_seconds: float = Field(60, alias="AI_WORKER_CAPABILITY_REPORT_SECONDS")
-    ai_worker_cleanup_outputs: bool = Field(False, alias="AI_WORKER_CLEANUP_OUTPUTS")
+    ai_worker_cleanup_outputs: bool = Field(True, alias="AI_WORKER_CLEANUP_OUTPUTS")
 
 
 @lru_cache

@@ -20,11 +20,14 @@ app = FastAPI(title="Local AI Drawing Service")
 
 class GenerateRequest(BaseModel):
     prompt_cn: str = Field(..., min_length=1, max_length=1000)
+    prompt_positive: str = ""
+    prompt_negative: str = ""
+    style_notes: str = ""
     character_id: str | None = None
     trigger_words: str = ""
     style_tags: str = ""
-    width: int = Field(768, ge=512, le=1536)
-    height: int = Field(1024, ge=512, le=1536)
+    width: int = Field(832, ge=512, le=1536)
+    height: int = Field(1216, ge=512, le=1536)
     steps: int | None = Field(None, ge=8, le=60)
     cfg: float | None = Field(None, ge=1, le=15)
     seed: int | None = Field(None, ge=1, le=2**32 - 1)
@@ -72,7 +75,14 @@ async def generate(
         character.style_tags if character else "",
         payload.prompt_cn,
     )
-    prompt = await translate_prompt(prompt_source, settings)
+    if payload.prompt_positive.strip():
+        prompt = PromptResult(
+            positive=payload.prompt_positive.strip(),
+            negative=payload.prompt_negative.strip() or PromptResult.model_fields["negative"].default,
+            style_notes=payload.style_notes.strip() or "provided by cloud prompt editor",
+        )
+    else:
+        prompt = await translate_prompt(prompt_source, settings)
     positive_prompt = merge_tags(
         character.trigger_words if character else "",
         character.default_positive if character else "",

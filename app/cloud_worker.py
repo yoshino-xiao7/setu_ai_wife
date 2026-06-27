@@ -146,9 +146,12 @@ class CloudWorker:
     async def _start_local_generation(self, job: dict[str, Any]) -> dict[str, Any]:
         payload = {
             "prompt_cn": job.get("promptCn") or "",
+            "prompt_positive": job.get("promptPositive") or "",
+            "prompt_negative": job.get("promptNegative") or "",
+            "style_notes": job.get("styleNotes") or "",
             "character_id": job.get("characterId") or None,
-            "width": job.get("width") or 768,
-            "height": job.get("height") or 1024,
+            "width": job.get("width") or 832,
+            "height": job.get("height") or 1216,
             "steps": job.get("steps") or None,
             "cfg": job.get("cfg") or None,
             "seed": job.get("seed") or None,
@@ -217,7 +220,11 @@ class CloudWorker:
         safe_name = Path(filename).name
         path = self.settings.output_dir / safe_name
         if path.exists() and path.suffix.lower() in IMAGE_SUFFIXES:
-            path.unlink()
+            try:
+                path.unlink()
+                print(f"[cloud-worker] cleaned local image: {safe_name}")
+            except OSError as exc:
+                print(f"[cloud-worker] cleanup skipped for {safe_name}: {exc}")
 
 
 async def main() -> None:
