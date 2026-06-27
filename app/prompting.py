@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import httpx
 from pydantic import BaseModel
@@ -17,8 +18,12 @@ DEFAULT_NEGATIVE = (
 class PromptResult(BaseModel):
     positive: str
     negative: str = DEFAULT_NEGATIVE
-    style_notes: str = "fallback template"
+    style_notes: str = "translated by local Ollama"
     used_ollama: bool = False
+
+
+class PromptTranslationError(RuntimeError):
+    pass
 
 
 def normalize_prompt_value(value: object) -> str:
@@ -27,29 +32,47 @@ def normalize_prompt_value(value: object) -> str:
     return str(value).strip()
 
 
-def fallback_prompt(prompt_cn: str) -> PromptResult:
-    return PromptResult(
-        positive=(
-            "anime style, high quality, detailed illustration, masterpiece, "
-            f"{prompt_cn}"
-        ),
-        negative=DEFAULT_NEGATIVE,
-        style_notes="Ollama unavailable or returned invalid JSON; used a conservative template.",
-        used_ollama=False,
-    )
+def parse_json_response(raw: str) -> dict:
+    try:
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, dict) else {}
+    except json.JSONDecodeError:
+        start = raw.find("{")
+        end = raw.rfind("}")
+        if start >= 0 and end > start:
+            parsed = json.loads(raw[start : end + 1])
+            return parsed if isinstance(parsed, dict) else {}
+        raise
 
 
-async def translate_prompt(prompt_cn: str, settings: Settings) -> PromptResult:
+def contains_cjk(value: str) -> bool:
+    return bool(re.search(r"[\u3400-\u9fff]", value or ""))
+
+
+async def translate_prompt(
+    prompt_cn: str,
+    settings: Settings,
+    style_tags: str = "",
+    negative_prompt: str = "",
+) -> PromptResult:
     system_prompt = (
-        "You convert Chinese drawing requests into concise English anime image tags. "
-        "Return JSON only with keys positive, negative, style_notes. "
-        "Do not include sexualized minors. Keep negative prompt practical."
+        "You are a Stable Diffusion anime prompt translator. Convert the Chinese drawing request "
+        "into concise English tags. Translate character names, actions, scenes, moods, camera, "
+        "composition, clothes, lighting, and background details. Never copy Chinese text into "
+        "positive or negative. Return JSON only with keys positive, negative, style_notes. "
+        "Use comma-separated English tags. Keep negative prompt practical."
+    )
+    user_prompt = (
+        f"Chinese request: {prompt_cn}\n"
+        f"Extra style tags to keep in English if useful: {style_tags or '(none)'}\n"
+        f"Existing negative prompt to translate/merge if useful: {negative_prompt or '(none)'}\n"
+        "Return the final JSON now."
     )
     payload = {
         "model": settings.ollama_model,
         "stream": False,
         "format": "json",
-        "prompt": f"/no_think\n{system_prompt}\n\nChinese request: {prompt_cn}\n\nJSON:",
+        "prompt": f"/no_think\n{system_prompt}\n\n{user_prompt}\n\nJSON:",
     }
     try:
         async with httpx.AsyncClient(timeout=settings.prompt_translation_timeout_seconds) as client:
@@ -57,18 +80,24 @@ async def translate_prompt(prompt_cn: str, settings: Settings) -> PromptResult:
             response.raise_for_status()
         data = response.json()
         raw = data.get("response") or data.get("thinking") or ""
-        parsed = json.loads(raw)
+        parsed = parse_json_response(raw)
         positive = normalize_prompt_value(parsed.get("positive", ""))
         if not positive:
-            return fallback_prompt(prompt_cn)
-        negative = normalize_prompt_value(parsed.get("negative", DEFAULT_NEGATIVE)) or DEFAULT_NEGATIVE
+            raise PromptTranslationError("Ollama returned an empty positive prompt.")
+        if contains_cjk(positive):
+            raise PromptTranslationError("Ollama returned Chinese text in positive prompt; please retry.")
+        negative = normalize_prompt_value(parsed.get("negative", negative_prompt or DEFAULT_NEGATIVE)) or DEFAULT_NEGATIVE
+        if contains_cjk(negative):
+            negative = DEFAULT_NEGATIVE
         if DEFAULT_NEGATIVE not in negative:
             negative = f"{negative}, {DEFAULT_NEGATIVE}"
         return PromptResult(
             positive=positive,
             negative=negative,
-            style_notes=normalize_prompt_value(parsed.get("style_notes", "")),
+            style_notes=normalize_prompt_value(parsed.get("style_notes", "")) or f"Translated by local Ollama model {settings.ollama_model}.",
             used_ollama=True,
         )
-    except Exception:
-        return fallback_prompt(prompt_cn)
+    except PromptTranslationError:
+        raise
+    except Exception as exc:
+        raise PromptTranslationError(f"Ollama prompt translation failed: {exc}") from exc

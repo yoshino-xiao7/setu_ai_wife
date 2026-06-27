@@ -10,6 +10,7 @@ import httpx
 
 from app.config import Settings, get_settings
 from app.presets import load_characters
+from app.prompting import PromptTranslationError, translate_prompt
 
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
@@ -83,6 +84,10 @@ class CloudWorker:
             while True:
                 try:
                     await self._report_periodic(client)
+                    claimed_prompt = await self._claim_prompt_translation(client)
+                    if claimed_prompt.get("hasJob"):
+                        await self._process_prompt_translation(client, claimed_prompt["job"])
+                        continue
                     claimed = await self._claim(client)
                     if not claimed.get("hasJob"):
                         await asyncio.sleep(self.settings.ai_worker_poll_seconds)
@@ -124,6 +129,38 @@ class CloudWorker:
         )
         response.raise_for_status()
         return response.json()
+
+    async def _claim_prompt_translation(self, client: httpx.AsyncClient) -> dict[str, Any]:
+        response = await client.post(
+            f"{self.cloud_url}/ai-worker/prompt-translations/claim",
+            json={"workerId": self.settings.ai_worker_id},
+        )
+        response.raise_for_status()
+        return response.json()
+
+    async def _process_prompt_translation(self, client: httpx.AsyncClient, job: dict[str, Any]) -> None:
+        job_id = job["id"]
+        try:
+            result = await translate_prompt(
+                job.get("promptCn") or "",
+                self.settings,
+                style_tags=job.get("styleTags") or "",
+                negative_prompt=job.get("negativePrompt") or "",
+            )
+            response = await client.post(
+                f"{self.cloud_url}/ai-worker/prompt-translations/{job_id}/complete",
+                json={
+                    "workerId": self.settings.ai_worker_id,
+                    "positive": result.positive,
+                    "negative": result.negative,
+                    "styleNotes": result.style_notes,
+                },
+            )
+            response.raise_for_status()
+        except PromptTranslationError as exc:
+            await self._fail_prompt_translation(client, job_id, str(exc))
+        except Exception as exc:
+            await self._fail_prompt_translation(client, job_id, f"Prompt translation worker failed: {exc}")
 
     async def _process_job(self, client: httpx.AsyncClient, job: dict[str, Any]) -> None:
         job_id = job["id"]
@@ -210,6 +247,13 @@ class CloudWorker:
     async def _fail_cloud_job(self, client: httpx.AsyncClient, job_id: int, error: str) -> None:
         response = await client.post(
             f"{self.cloud_url}/ai-worker/jobs/{job_id}/fail",
+            json={"workerId": self.settings.ai_worker_id, "errorMessage": error[:1000]},
+        )
+        response.raise_for_status()
+
+    async def _fail_prompt_translation(self, client: httpx.AsyncClient, job_id: int, error: str) -> None:
+        response = await client.post(
+            f"{self.cloud_url}/ai-worker/prompt-translations/{job_id}/fail",
             json={"workerId": self.settings.ai_worker_id, "errorMessage": error[:1000]},
         )
         response.raise_for_status()

@@ -12,7 +12,7 @@ from app.comfyui import ComfyUIClient, build_workflow, random_seed
 from app.config import Settings, get_settings
 from app.db import JobStore
 from app.presets import find_character, list_loras, load_characters, merge_tags
-from app.prompting import PromptResult, translate_prompt
+from app.prompting import PromptResult, PromptTranslationError, translate_prompt
 
 
 app = FastAPI(title="Local AI Drawing Service")
@@ -38,6 +38,8 @@ class GenerateRequest(BaseModel):
 
 class TranslateRequest(BaseModel):
     prompt_cn: str = Field(..., min_length=1, max_length=1000)
+    style_tags: str = ""
+    negative_prompt: str = ""
 
 
 def get_store(settings: Settings = Depends(get_settings)) -> JobStore:
@@ -46,7 +48,15 @@ def get_store(settings: Settings = Depends(get_settings)) -> JobStore:
 
 @app.post("/api/prompt/translate")
 async def translate_api(payload: TranslateRequest, settings: Settings = Depends(get_settings)) -> PromptResult:
-    return await translate_prompt(payload.prompt_cn, settings)
+    try:
+        return await translate_prompt(
+            payload.prompt_cn,
+            settings,
+            style_tags=payload.style_tags,
+            negative_prompt=payload.negative_prompt,
+        )
+    except PromptTranslationError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.get("/api/loras")
@@ -82,7 +92,15 @@ async def generate(
             style_notes=payload.style_notes.strip() or "provided by cloud prompt editor",
         )
     else:
-        prompt = await translate_prompt(prompt_source, settings)
+        try:
+            prompt = await translate_prompt(
+                prompt_source,
+                settings,
+                style_tags=payload.style_tags,
+                negative_prompt=payload.prompt_negative,
+            )
+        except PromptTranslationError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
     positive_prompt = merge_tags(
         character.trigger_words if character else "",
         character.default_positive if character else "",
