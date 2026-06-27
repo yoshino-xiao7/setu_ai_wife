@@ -87,7 +87,7 @@ v1 采用 `CLOUD_COMPLETE_BASE64`：
 5. 用户通过云端签名 URL 查看自己的图片。
 6. 审核通过后，云端复制到 `ai/public/general/{jobId}.png` 或 `ai/public/r18/{jobId}.png`。
 
-如果 `AI_WORKER_CLEANUP_OUTPUTS=true`，worker 在云端 complete 成功后会删除本机 `outputs` 下对应临时图片。
+如果 `AI_WORKER_CLEANUP_OUTPUTS=true`，worker 在云端 complete 成功后会删除本机 `outputs` 下对应临时图片；本地服务复制图片后也会清理 ComfyUI `output/local_ai_drawing` 下的原始输出。
 
 ## 故障排查
 

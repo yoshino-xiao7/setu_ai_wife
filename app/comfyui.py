@@ -10,6 +10,8 @@ import httpx
 
 from app.config import Settings
 
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
+
 
 def build_workflow(
     *,
@@ -109,8 +111,32 @@ class ComfyUIClient:
                 suffix = Path(image["filename"]).suffix or ".png"
                 target = output_dir / f"{job_id}{suffix}"
                 target.write_bytes(response.content)
+                self.cleanup_comfyui_image(image)
                 return target
         raise RuntimeError("ComfyUI completed but returned no image outputs.")
+
+    def cleanup_comfyui_image(self, image: dict[str, Any]) -> None:
+        if image.get("type", "output") != "output":
+            return
+        filename = Path(str(image.get("filename", ""))).name
+        if not filename or Path(filename).suffix.lower() not in IMAGE_SUFFIXES:
+            return
+
+        output_root = self.settings.comfyui_models_dir.parent / "output"
+        subfolder = Path(str(image.get("subfolder", "")))
+        candidate = output_root / subfolder / filename
+        try:
+            resolved_root = output_root.resolve()
+            resolved_candidate = candidate.resolve()
+        except OSError:
+            return
+        if not resolved_candidate.is_relative_to(resolved_root):
+            return
+        try:
+            if resolved_candidate.exists():
+                resolved_candidate.unlink()
+        except OSError as exc:
+            print(f"[comfyui] cleanup skipped for {filename}: {exc}")
 
 
 def random_seed() -> int:
