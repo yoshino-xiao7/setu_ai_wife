@@ -61,8 +61,10 @@ async def translate_prompt(
         "into concise English tags. Translate character names, actions, scenes, moods, camera, "
         "composition, clothes, lighting, and background details. Never copy Chinese text into "
         "positive or negative. Return JSON only with keys positive, negative, style_notes. "
-        "Use comma-separated English tags. Keep negative prompt practical. If local prompt "
-        "knowledge is provided, follow it exactly."
+        "Use comma-separated English tags. Do not prepend generic quality boosters such as "
+        "masterpiece, best quality, high quality, anime illustration, detailed eyes, or clean "
+        "lineart unless the user explicitly asks for them. Keep negative prompt practical. "
+        "If local prompt knowledge is provided, follow it exactly."
     )
     knowledge_context = matched_knowledge_context(prompt_cn, settings.prompt_knowledge_path)
     user_prompt = (
