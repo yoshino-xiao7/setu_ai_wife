@@ -43,6 +43,17 @@
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/0e8f19d2-3f57-4eea-b788-df4e73280513/anim=false,width=450,optimized=true/00009-3338321267.jpeg",
       "notes": "原神角色桑多涅 LoRA。建议通过角色预设使用，会自动注入桑多涅常用角色 tags。"
+    },
+    {
+      "name": "columbina_2a_naiVpred-000039.safetensors",
+      "display_name": "哥伦比亚",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "trigger_words": "columbina (genshin impact), genshin impact",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/f1b6845b-5775-4e00-9266-e799754a79b1/anim=false,width=450,optimized=true/00024-1044239695.jpeg",
+      "notes": "原神角色哥伦比亚 LoRA。建议通过角色预设使用，会自动注入哥伦比亚常用角色 tags。"
     }
   ]
 }

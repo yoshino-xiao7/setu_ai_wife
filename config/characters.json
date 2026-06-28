@@ -55,6 +55,20 @@
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/sandrone_(genshin_impact).jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "notes": "原神角色桑多涅。选择该预设会自动使用 sandrone_genshin_impact_ilxl_goofy.safetensors，并注入桑多涅的常用角色 tags。"
+    },
+    {
+      "id": "columbina",
+      "name": "哥伦比亚",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "columbina_2a_naiVpred-000039.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "columbina (genshin impact), genshin impact",
+      "default_positive": "1girl, eye mask, black hair, two-tone hair, long hair, pink hair, streaked hair, red hair, gradient hair, purple hair, blunt bangs, white mask, fur-trimmed coat, head wings",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/columbina_(genshin_impact).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色哥伦比亚。选择该预设会自动使用 columbina_2a_naiVpred-000039.safetensors，并注入哥伦比亚的常用角色 tags。"
     }
   ]
 }
