@@ -24,7 +24,9 @@ class GenerateRequest(BaseModel):
     prompt_positive: str = ""
     prompt_negative: str = ""
     style_notes: str = ""
+    generation_mode: str = "SINGLE"
     character_id: str | None = None
+    second_character_id: str | None = None
     trigger_words: str = ""
     style_tags: str = ""
     width: int = Field(832, ge=512, le=1536)
@@ -35,6 +37,8 @@ class GenerateRequest(BaseModel):
     checkpoint: str | None = None
     lora_name: str = ""
     lora_strength: float = Field(0, ge=0, le=2)
+    second_lora_name: str = ""
+    second_lora_strength: float = Field(0, ge=0, le=2)
 
 
 class TranslateRequest(BaseModel):
@@ -137,12 +141,18 @@ async def generate(
     store: JobStore = Depends(get_store),
 ) -> dict[str, str]:
     character = find_character(settings, payload.character_id)
+    second_character = find_character(settings, payload.second_character_id)
+    is_dual = is_dual_generation(payload)
     prompt_source = merge_tags(
         character.trigger_words if character else "",
         character.default_positive if character else "",
+        second_character.trigger_words if second_character else "",
+        second_character.default_positive if second_character else "",
         payload.trigger_words,
         payload.style_tags,
         character.style_tags if character else "",
+        second_character.style_tags if second_character else "",
+        dual_character_guard() if is_dual else "",
         payload.prompt_cn,
     )
     if payload.prompt_positive.strip():
@@ -161,16 +171,11 @@ async def generate(
             )
         except PromptTranslationError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
-    positive_prompt = merge_tags(
-        character.trigger_words if character else "",
-        character.default_positive if character else "",
-        payload.trigger_words,
-        payload.style_tags,
-        character.style_tags if character else "",
-        prompt.positive,
-    )
+    positive_prompt = build_positive_prompt(payload, prompt.positive, character, second_character, is_dual)
     lora_name = payload.lora_name or (character.lora_name if character else "")
     lora_strength = payload.lora_strength or (character.lora_strength if character and character.lora_name else 0)
+    second_lora_name = payload.second_lora_name or (second_character.lora_name if second_character else "")
+    second_lora_strength = payload.second_lora_strength or (second_character.lora_strength if second_character and second_character.lora_name else 0)
     job_id = uuid.uuid4().hex
     seed = payload.seed or random_seed()
     job = {
@@ -185,8 +190,13 @@ async def generate(
         "steps": payload.steps or settings.default_steps,
         "cfg": payload.cfg or settings.default_cfg,
         "checkpoint": payload.checkpoint or settings.default_checkpoint,
+        "generation_mode": "DUAL" if is_dual else "SINGLE",
+        "character_id": payload.character_id or "",
+        "second_character_id": payload.second_character_id or "",
         "lora_name": lora_name,
         "lora_strength": lora_strength,
+        "second_lora_name": second_lora_name if is_dual else "",
+        "second_lora_strength": second_lora_strength if is_dual else 0,
         "status": "queued",
     }
     store.create_job(job)
@@ -215,6 +225,8 @@ async def run_generation(job_id: str, settings: Settings) -> None:
             scheduler=settings.default_scheduler,
             lora_name=job["lora_name"],
             lora_strength=job["lora_strength"],
+            second_lora_name=job["second_lora_name"],
+            second_lora_strength=job["second_lora_strength"],
             filename_prefix=f"local_ai_drawing/{job_id}",
         )
         prompt_id = await client.queue_prompt(workflow, client_id=job_id)
@@ -249,3 +261,51 @@ def image(filename: str, settings: Settings = Depends(get_settings)) -> FileResp
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+
+def is_dual_generation(payload: GenerateRequest) -> bool:
+    mode = (payload.generation_mode or "").strip().upper()
+    return (
+        mode == "DUAL"
+        or bool(payload.second_character_id)
+        or bool(payload.second_lora_name)
+    )
+
+
+def character_tags(character) -> str:
+    if not character:
+        return ""
+    return merge_tags(character.trigger_words, character.default_positive, character.style_tags)
+
+
+def dual_character_guard() -> str:
+    return (
+        "2girls, two distinct characters, duo, separate faces, separate outfits, "
+        "left and right characters, no fusion, no mixed features"
+    )
+
+
+def build_positive_prompt(
+    payload: GenerateRequest,
+    translated_positive: str,
+    character,
+    second_character,
+    is_dual: bool,
+) -> str:
+    if not is_dual:
+        return merge_tags(
+            character_tags(character),
+            payload.trigger_words,
+            payload.style_tags,
+            translated_positive,
+        )
+
+    first_tags = merge_tags(character_tags(character), payload.trigger_words)
+    second_tags = character_tags(second_character)
+    return merge_tags(
+        dual_character_guard(),
+        f"left character: {first_tags}" if first_tags else "",
+        f"right character: {second_tags}" if second_tags else "",
+        payload.style_tags,
+        translated_positive,
+    )

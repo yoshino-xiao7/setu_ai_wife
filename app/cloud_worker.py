@@ -187,7 +187,9 @@ class CloudWorker:
             "prompt_positive": job.get("promptPositive") or "",
             "prompt_negative": job.get("promptNegative") or "",
             "style_notes": job.get("styleNotes") or "",
+            "generation_mode": job.get("generationMode") or "SINGLE",
             "character_id": job.get("characterId") or None,
+            "second_character_id": job.get("secondCharacterId") or None,
             "width": job.get("width") or 832,
             "height": job.get("height") or 1216,
             "steps": job.get("steps") or None,
@@ -196,6 +198,8 @@ class CloudWorker:
             "checkpoint": job.get("checkpoint") or None,
             "lora_name": job.get("loraName") or "",
             "lora_strength": job.get("loraStrength") or 0,
+            "second_lora_name": job.get("secondLoraName") or "",
+            "second_lora_strength": job.get("secondLoraStrength") or 0,
         }
         async with httpx.AsyncClient(timeout=30, headers={"User-Agent": USER_AGENT}) as local:
             response = await local.post(f"{self.local_url}/api/generate", json=payload)

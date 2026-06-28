@@ -27,6 +27,8 @@ def build_workflow(
     scheduler: str,
     lora_name: str = "",
     lora_strength: float = 0,
+    second_lora_name: str = "",
+    second_lora_strength: float = 0,
     filename_prefix: str = "local_ai_drawing",
 ) -> dict[str, Any]:
     workflow: dict[str, Any] = {
@@ -52,6 +54,8 @@ def build_workflow(
         "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
         "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]}},
     }
+    model_ref: list[Any] = ["4", 0]
+    clip_ref: list[Any] = ["4", 1]
     if lora_name and lora_strength > 0:
         workflow["10"] = {
             "class_type": "LoraLoader",
@@ -59,13 +63,28 @@ def build_workflow(
                 "lora_name": lora_name,
                 "strength_model": lora_strength,
                 "strength_clip": lora_strength,
-                "model": ["4", 0],
-                "clip": ["4", 1],
+                "model": model_ref,
+                "clip": clip_ref,
             },
         }
-        workflow["3"]["inputs"]["model"] = ["10", 0]
-        workflow["6"]["inputs"]["clip"] = ["10", 1]
-        workflow["7"]["inputs"]["clip"] = ["10", 1]
+        model_ref = ["10", 0]
+        clip_ref = ["10", 1]
+    if second_lora_name and second_lora_strength > 0:
+        workflow["11"] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "lora_name": second_lora_name,
+                "strength_model": second_lora_strength,
+                "strength_clip": second_lora_strength,
+                "model": model_ref,
+                "clip": clip_ref,
+            },
+        }
+        model_ref = ["11", 0]
+        clip_ref = ["11", 1]
+    workflow["3"]["inputs"]["model"] = model_ref
+    workflow["6"]["inputs"]["clip"] = clip_ref
+    workflow["7"]["inputs"]["clip"] = clip_ref
     return workflow
 
 

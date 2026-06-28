@@ -139,4 +139,16 @@ def list_loras(settings: Settings) -> list[dict[str, Any]]:
 
 
 def merge_tags(*parts: str) -> str:
-    return ", ".join(part.strip(" ,") for part in parts if part and part.strip(" ,"))
+    tags: list[str] = []
+    seen: set[str] = set()
+    for part in parts:
+        if not part or not part.strip(" ,"):
+            continue
+        for raw_tag in part.split(","):
+            tag = raw_tag.strip()
+            key = tag.lower()
+            if not tag or key in seen:
+                continue
+            seen.add(key)
+            tags.append(tag)
+    return ", ".join(tags)

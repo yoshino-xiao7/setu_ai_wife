@@ -19,8 +19,13 @@ CREATE TABLE IF NOT EXISTS jobs (
     steps INTEGER NOT NULL,
     cfg REAL NOT NULL,
     checkpoint TEXT NOT NULL,
+    generation_mode TEXT NOT NULL DEFAULT 'SINGLE',
     lora_name TEXT NOT NULL DEFAULT '',
     lora_strength REAL NOT NULL DEFAULT 0,
+    second_lora_name TEXT NOT NULL DEFAULT '',
+    second_lora_strength REAL NOT NULL DEFAULT 0,
+    character_id TEXT NOT NULL DEFAULT '',
+    second_character_id TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL,
     comfy_prompt_id TEXT NOT NULL DEFAULT '',
     image_path TEXT NOT NULL DEFAULT '',
@@ -50,6 +55,17 @@ class JobStore:
     def init(self) -> None:
         with self.connect() as conn:
             conn.executescript(SCHEMA)
+            columns = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
+            additions = {
+                "generation_mode": "TEXT NOT NULL DEFAULT 'SINGLE'",
+                "second_lora_name": "TEXT NOT NULL DEFAULT ''",
+                "second_lora_strength": "REAL NOT NULL DEFAULT 0",
+                "character_id": "TEXT NOT NULL DEFAULT ''",
+                "second_character_id": "TEXT NOT NULL DEFAULT ''",
+            }
+            for name, definition in additions.items():
+                if name not in columns:
+                    conn.execute(f"ALTER TABLE jobs ADD COLUMN {name} {definition}")
 
     def create_job(self, job: dict[str, Any]) -> None:
         keys = ", ".join(job.keys())
@@ -84,4 +100,3 @@ class JobStore:
                 (max(1, min(limit, 200)),),
             ).fetchall()
         return [dict(row) for row in rows]
-
