@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 from pathlib import Path
 
@@ -7,9 +8,10 @@ import httpx
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from PIL import Image, ImageDraw
 from pydantic import BaseModel, Field
 
-from app.comfyui import ComfyUIClient, build_workflow, random_seed
+from app.comfyui import ComfyUIClient, build_inpaint_workflow, build_workflow, random_seed
 from app.config import Settings, get_settings
 from app.db import JobStore
 from app.presets import find_character, list_loras, load_characters, merge_tags
@@ -32,7 +34,8 @@ DUAL_CHARACTER_BLOCKED_TAGS = {
 DUAL_CHARACTER_NEGATIVE_TAGS = (
     "merged characters, fused characters, hybrid character, mixed character features, "
     "same face, identical faces, wrong character on left, wrong character on right, "
-    "shared hair color, shared outfit, duplicated outfit, conjoined bodies"
+    "shared hair color, shared outfit, duplicated outfit, conjoined bodies, "
+    "broken interaction, disconnected hands, tangled limbs"
 )
 
 
@@ -56,6 +59,7 @@ class GenerateRequest(BaseModel):
     lora_strength: float = Field(0, ge=0, le=2)
     second_lora_name: str = ""
     second_lora_strength: float = Field(0, ge=0, le=2)
+    character_mask_json: str = Field("", max_length=120000)
 
 
 class TranslateRequest(BaseModel):
@@ -211,8 +215,8 @@ async def generate(
     second_lora_name = payload.second_lora_name or (second_character.lora_name if second_character else "")
     second_lora_strength = payload.second_lora_strength or (second_character.lora_strength if second_character and second_character.lora_name else 0)
     if is_dual:
-        lora_strength = min(lora_strength, 0.45)
-        second_lora_strength = min(second_lora_strength, 0.45)
+        lora_strength = min(lora_strength, 0.9)
+        second_lora_strength = min(second_lora_strength, 0.9)
     job_id = uuid.uuid4().hex
     seed = payload.seed or random_seed()
     job = {
@@ -230,6 +234,7 @@ async def generate(
         "generation_mode": "DUAL" if is_dual else "SINGLE",
         "character_id": payload.character_id or "",
         "second_character_id": payload.second_character_id or "",
+        "character_mask_json": payload.character_mask_json.strip() if is_dual else "",
         "regional_global_positive": regional_global_positive,
         "regional_left_positive": regional_left_positive,
         "regional_right_positive": regional_right_positive,
@@ -252,29 +257,30 @@ async def run_generation(job_id: str, settings: Settings) -> None:
     store.update_job(job_id, status="running")
     client = ComfyUIClient(settings)
     try:
-        workflow = build_workflow(
-            positive=job.get("regional_global_positive") or job["prompt_positive"],
-            negative=job["prompt_negative"],
-            seed=job["seed"],
-            width=job["width"],
-            height=job["height"],
-            steps=job["steps"],
-            cfg=job["cfg"],
-            checkpoint=job["checkpoint"],
-            sampler=settings.default_sampler,
-            scheduler=settings.default_scheduler,
-            lora_name=job["lora_name"],
-            lora_strength=job["lora_strength"],
-            second_lora_name=job["second_lora_name"],
-            second_lora_strength=job["second_lora_strength"],
-            regional_left_positive=job.get("regional_left_positive") or "",
-            regional_right_positive=job.get("regional_right_positive") or "",
-            filename_prefix=f"local_ai_drawing/{job_id}",
-        )
-        prompt_id = await client.queue_prompt(workflow, client_id=job_id)
-        store.update_job(job_id, comfy_prompt_id=prompt_id)
-        history = await client.wait_for_history(prompt_id)
-        image_path = await client.download_first_image(history, settings.output_dir, job_id)
+        if should_use_dual_inpaint(settings, job):
+            image_path = await run_dual_inpaint_generation(job, settings, store, client)
+        else:
+            workflow = build_workflow(
+                positive=job["prompt_positive"],
+                negative=job["prompt_negative"],
+                seed=job["seed"],
+                width=job["width"],
+                height=job["height"],
+                steps=job["steps"],
+                cfg=job["cfg"],
+                checkpoint=job["checkpoint"],
+                sampler=settings.default_sampler,
+                scheduler=settings.default_scheduler,
+                lora_name=job["lora_name"],
+                lora_strength=job["lora_strength"],
+                second_lora_name=job["second_lora_name"],
+                second_lora_strength=job["second_lora_strength"],
+                filename_prefix=f"local_ai_drawing/{job_id}",
+            )
+            prompt_id = await client.queue_prompt(workflow, client_id=job_id)
+            store.update_job(job_id, comfy_prompt_id=prompt_id)
+            history = await client.wait_for_history(prompt_id)
+            image_path = await client.download_first_image(history, settings.output_dir, job_id)
         store.update_job(job_id, status="completed", image_path=image_path.name)
     except Exception as exc:
         store.update_job(job_id, status="failed", error=str(exc))
@@ -312,6 +318,237 @@ def is_dual_generation(payload: GenerateRequest) -> bool:
         or bool(payload.second_character_id)
         or bool(payload.second_lora_name)
     )
+
+
+def should_use_dual_inpaint(settings: Settings, job: dict) -> bool:
+    return (
+        str(job.get("generation_mode") or "").upper() == "DUAL"
+        and settings.dual_character_strategy.strip().lower() == "inpaint"
+        and bool(job.get("regional_left_positive"))
+        and bool(job.get("regional_right_positive"))
+    )
+
+
+async def run_dual_inpaint_generation(
+    job: dict,
+    settings: Settings,
+    store: JobStore,
+    client: ComfyUIClient,
+) -> Path:
+    job_id = job["id"]
+    base_prompt = job.get("regional_global_positive") or job["prompt_positive"]
+    base_workflow = build_workflow(
+        positive=base_prompt,
+        negative=job["prompt_negative"],
+        seed=job["seed"],
+        width=job["width"],
+        height=job["height"],
+        steps=job["steps"],
+        cfg=job["cfg"],
+        checkpoint=job["checkpoint"],
+        sampler=settings.default_sampler,
+        scheduler=settings.default_scheduler,
+        filename_prefix=f"local_ai_drawing/{job_id}_base",
+    )
+    base_path = await queue_and_download(client, store, job_id, base_workflow, settings.output_dir, f"{job_id}_base")
+
+    mask_dir = settings.database_path.parent / "masks"
+    mask_dir.mkdir(parents=True, exist_ok=True)
+    left_mask = mask_dir / f"{job_id}_left_mask.png"
+    right_mask = mask_dir / f"{job_id}_right_mask.png"
+    create_character_masks(
+        left_mask,
+        right_mask,
+        job["width"],
+        job["height"],
+        job.get("character_mask_json") or "",
+        settings.dual_inpaint_mask_overlap_ratio,
+    )
+
+    uploaded_inputs: list[str] = []
+    temp_paths = [base_path, left_mask, right_mask]
+    try:
+        base_upload = await client.upload_image(base_path, f"{job_id}_base.png")
+        left_mask_upload = await client.upload_image(left_mask, f"{job_id}_left_mask.png")
+        uploaded_inputs.extend([base_upload, left_mask_upload])
+        left_workflow = build_inpaint_workflow(
+            positive=job["regional_left_positive"],
+            negative=job["prompt_negative"],
+            seed=job["seed"] + 101,
+            steps=job["steps"],
+            cfg=job["cfg"],
+            checkpoint=job["checkpoint"],
+            sampler=settings.default_sampler,
+            scheduler=settings.default_scheduler,
+            base_image=base_upload,
+            mask_image=left_mask_upload,
+            denoise=settings.dual_inpaint_denoise,
+            lora_name=job["lora_name"],
+            lora_strength=job["lora_strength"],
+            filename_prefix=f"local_ai_drawing/{job_id}_left",
+        )
+        left_path = await queue_and_download(client, store, job_id, left_workflow, settings.output_dir, f"{job_id}_left")
+        temp_paths.append(left_path)
+
+        left_upload = await client.upload_image(left_path, f"{job_id}_left.png")
+        right_mask_upload = await client.upload_image(right_mask, f"{job_id}_right_mask.png")
+        uploaded_inputs.extend([left_upload, right_mask_upload])
+        right_workflow = build_inpaint_workflow(
+            positive=job["regional_right_positive"],
+            negative=job["prompt_negative"],
+            seed=job["seed"] + 202,
+            steps=job["steps"],
+            cfg=job["cfg"],
+            checkpoint=job["checkpoint"],
+            sampler=settings.default_sampler,
+            scheduler=settings.default_scheduler,
+            base_image=left_upload,
+            mask_image=right_mask_upload,
+            denoise=settings.dual_inpaint_denoise,
+            lora_name=job["second_lora_name"],
+            lora_strength=job["second_lora_strength"],
+            filename_prefix=f"local_ai_drawing/{job_id}",
+        )
+        return await queue_and_download(client, store, job_id, right_workflow, settings.output_dir, job_id)
+    finally:
+        for filename in uploaded_inputs:
+            client.cleanup_comfyui_input_file(filename)
+        cleanup_temp_paths(temp_paths)
+
+
+async def queue_and_download(
+    client: ComfyUIClient,
+    store: JobStore,
+    job_id: str,
+    workflow: dict,
+    output_dir: Path,
+    image_name: str,
+) -> Path:
+    prompt_id = await client.queue_prompt(workflow, client_id=job_id)
+    store.update_job(job_id, comfy_prompt_id=prompt_id)
+    history = await client.wait_for_history(prompt_id)
+    return await client.download_first_image(history, output_dir, image_name)
+
+
+def create_split_mask(path: Path, width: int, height: int, side: str, overlap_ratio: float) -> None:
+    overlap = max(32, min(width // 4, int(width * overlap_ratio)))
+    midpoint = width // 2
+    if side == "left":
+        x0, x1 = 0, min(width, midpoint + overlap)
+    else:
+        x0, x1 = max(0, midpoint - overlap), width
+    image = Image.new("RGB", (width, height), "black")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((x0, 0, x1, height), fill="white")
+    image.save(path)
+
+
+def create_character_masks(
+    left_path: Path,
+    right_path: Path,
+    width: int,
+    height: int,
+    mask_json: str,
+    overlap_ratio: float,
+) -> None:
+    if not mask_json.strip():
+        create_split_mask(left_path, width, height, "left", overlap_ratio)
+        create_split_mask(right_path, width, height, "right", overlap_ratio)
+        return
+
+    left = Image.new("RGB", (width, height), "black")
+    right = Image.new("RGB", (width, height), "black")
+    left_draw = ImageDraw.Draw(left)
+    right_draw = ImageDraw.Draw(right)
+    drawn = {"primary": False, "secondary": False}
+    try:
+        payload = json.loads(mask_json)
+        strokes = payload.get("strokes", []) if isinstance(payload, dict) else []
+        for stroke in strokes:
+            if not isinstance(stroke, dict):
+                continue
+            role = normalize_mask_role(str(stroke.get("role") or ""))
+            points = stroke.get("points") or []
+            if role not in drawn or not isinstance(points, list) or not points:
+                continue
+            brush = mask_brush_width(stroke.get("brush"), width, height)
+            pixel_points = normalized_points(points, width, height)
+            if not pixel_points:
+                continue
+            draw = left_draw if role == "primary" else right_draw
+            if len(pixel_points) == 1:
+                x, y = pixel_points[0]
+                radius = max(brush // 2, 1)
+                draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill="white")
+            else:
+                draw.line(pixel_points, fill="white", width=brush, joint="curve")
+                radius = max(brush // 2, 1)
+                for x, y in (pixel_points[0], pixel_points[-1]):
+                    draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill="white")
+            drawn[role] = True
+    except Exception as exc:
+        print(f"[dual-inpaint] custom mask ignored: {exc}")
+
+    if not drawn["primary"]:
+        create_split_mask(left_path, width, height, "left", overlap_ratio)
+    else:
+        left.save(left_path)
+    if not drawn["secondary"]:
+        create_split_mask(right_path, width, height, "right", overlap_ratio)
+    else:
+        right.save(right_path)
+
+
+def normalize_mask_role(role: str) -> str:
+    normalized = role.strip().lower()
+    if normalized in {"primary", "left", "a", "character_a", "character-a"}:
+        return "primary"
+    if normalized in {"secondary", "right", "b", "character_b", "character-b"}:
+        return "secondary"
+    return ""
+
+
+def mask_brush_width(value, width: int, height: int) -> int:
+    try:
+        brush = float(value)
+    except (TypeError, ValueError):
+        brush = 0.05
+    if brush <= 1:
+        pixels = brush * min(width, height)
+    else:
+        pixels = brush
+    return max(16, min(int(round(pixels)), max(width, height)))
+
+
+def normalized_points(points: list, width: int, height: int) -> list[tuple[int, int]]:
+    result: list[tuple[int, int]] = []
+    for point in points:
+        if not isinstance(point, dict):
+            continue
+        try:
+            x = float(point.get("x"))
+            y = float(point.get("y"))
+        except (TypeError, ValueError):
+            continue
+        if x > 1 or y > 1:
+            px = int(round(x))
+            py = int(round(y))
+        else:
+            px = int(round(x * width))
+            py = int(round(y * height))
+        px = max(0, min(width - 1, px))
+        py = max(0, min(height - 1, py))
+        result.append((px, py))
+    return result
+
+
+def cleanup_temp_paths(paths: list[Path]) -> None:
+    for path in paths:
+        try:
+            if path.exists():
+                path.unlink()
+        except OSError as exc:
+            print(f"[dual-inpaint] cleanup skipped for {path.name}: {exc}")
 
 
 def character_tags(character) -> str:
@@ -417,7 +654,7 @@ def build_regional_global_positive(
     scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
     return merge_tags(
         dual_character_guard(),
-        "balanced two character composition, clear left-right separation",
+        "balanced two character composition, clear left-right separation, natural interaction between two characters",
         scene_tags,
     )
 
@@ -435,12 +672,12 @@ def build_regional_positive_prompts(
     second_tags = filter_dual_character_tags(character_tags(second_character))
     scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
     left_positive = merge_tags(
-        "left side of image, left character, only one character in this region, distinct face, distinct outfit",
+        "left side of image, left character, only one character in this region, distinct face, distinct outfit, preserve pose and interaction with the right character",
         scene_tags,
         first_tags,
     )
     right_positive = merge_tags(
-        "right side of image, right character, only one character in this region, distinct face, distinct outfit",
+        "right side of image, right character, only one character in this region, distinct face, distinct outfit, preserve pose and interaction with the left character",
         scene_tags,
         second_tags,
     )

@@ -190,6 +190,7 @@ class CloudWorker:
             "generation_mode": job.get("generationMode") or "SINGLE",
             "character_id": job.get("characterId") or None,
             "second_character_id": job.get("secondCharacterId") or None,
+            "character_mask_json": job.get("characterMaskJson") or "",
             "width": job.get("width") or 832,
             "height": job.get("height") or 1216,
             "steps": job.get("steps") or None,

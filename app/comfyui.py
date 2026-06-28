@@ -125,6 +125,68 @@ def build_workflow(
     return workflow
 
 
+def build_inpaint_workflow(
+    *,
+    positive: str,
+    negative: str,
+    seed: int,
+    steps: int,
+    cfg: float,
+    checkpoint: str,
+    sampler: str,
+    scheduler: str,
+    base_image: str,
+    mask_image: str,
+    denoise: float,
+    lora_name: str = "",
+    lora_strength: float = 0,
+    filename_prefix: str = "local_ai_drawing_inpaint",
+) -> dict[str, Any]:
+    workflow: dict[str, Any] = {
+        "1": {"class_type": "LoadImage", "inputs": {"image": base_image}},
+        "2": {"class_type": "LoadImageMask", "inputs": {"image": mask_image, "channel": "red"}},
+        "3": {
+            "class_type": "KSampler",
+            "inputs": {
+                "seed": seed,
+                "steps": steps,
+                "cfg": cfg,
+                "sampler_name": sampler,
+                "scheduler": scheduler,
+                "denoise": denoise,
+                "model": ["4", 0],
+                "positive": ["6", 0],
+                "negative": ["7", 0],
+                "latent_image": ["5", 0],
+            },
+        },
+        "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint}},
+        "5": {
+            "class_type": "VAEEncodeForInpaint",
+            "inputs": {"pixels": ["1", 0], "vae": ["4", 2], "mask": ["2", 0], "grow_mask_by": 12},
+        },
+        "6": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["4", 1]}},
+        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["4", 1]}},
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
+        "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]}},
+    }
+    if lora_name and lora_strength > 0:
+        workflow["10"] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "lora_name": lora_name,
+                "strength_model": lora_strength,
+                "strength_clip": lora_strength,
+                "model": ["4", 0],
+                "clip": ["4", 1],
+            },
+        }
+        workflow["3"]["inputs"]["model"] = ["10", 0]
+        workflow["6"]["inputs"]["clip"] = ["10", 1]
+        workflow["7"]["inputs"]["clip"] = ["10", 1]
+    return workflow
+
+
 def regional_area_geometry(width: int) -> tuple[int, int, int]:
     overlap = round_to_multiple_of_8(max(64, min(160, width // 10)))
     half_width = round_to_multiple_of_8(width // 2)
@@ -150,6 +212,16 @@ class ComfyUIClient:
             if response.is_error:
                 raise RuntimeError(f"ComfyUI rejected prompt: {response.status_code} {response.text}")
         return response.json()["prompt_id"]
+
+    async def upload_image(self, path: Path, filename: str | None = None) -> str:
+        upload_name = filename or path.name
+        data = {"type": "input", "overwrite": "true"}
+        with path.open("rb") as file:
+            files = {"image": (upload_name, file, "image/png")}
+            async with httpx.AsyncClient(timeout=self.settings.comfyui_timeout_seconds) as client:
+                response = await client.post(f"{self.base_url}/upload/image", data=data, files=files)
+                response.raise_for_status()
+        return response.json()["name"]
 
     async def wait_for_history(self, prompt_id: str, timeout_seconds: int = 600) -> dict[str, Any]:
         deadline = asyncio.get_running_loop().time() + timeout_seconds
@@ -206,6 +278,26 @@ class ComfyUIClient:
                 resolved_candidate.unlink()
         except OSError as exc:
             print(f"[comfyui] cleanup skipped for {filename}: {exc}")
+
+    def cleanup_comfyui_input_file(self, filename: str) -> None:
+        safe_name = Path(filename).name
+        if not safe_name or Path(safe_name).suffix.lower() not in IMAGE_SUFFIXES:
+            return
+
+        input_root = self.settings.comfyui_models_dir.parent / "input"
+        candidate = input_root / safe_name
+        try:
+            resolved_root = input_root.resolve()
+            resolved_candidate = candidate.resolve()
+        except OSError:
+            return
+        if not resolved_candidate.is_relative_to(resolved_root):
+            return
+        try:
+            if resolved_candidate.exists():
+                resolved_candidate.unlink()
+        except OSError as exc:
+            print(f"[comfyui] input cleanup skipped for {safe_name}: {exc}")
 
 
 def random_seed() -> int:
