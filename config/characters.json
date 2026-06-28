@@ -2,7 +2,7 @@
   "characters": [
     {
       "id": "cartethyia",
-      "name": "Cartethyia",
+      "name": "卡提希娅",
       "category": "鸣潮",
       "category_type": "游戏角色",
       "lora_name": "cartethyia-noob-v5.safetensors",
@@ -10,23 +10,9 @@
       "trigger_words": "cartethyia",
       "default_positive": "1girl, solo",
       "style_tags": "anime style, detailed eyes, high quality",
-      "preview_image": "",
-      "recommended_checkpoint": "",
-      "notes": "Preset created from cartethyia-noob-v5.safetensors. Replace trigger_words with the exact trigger words from the LoRA page if different."
-    },
-    {
-      "id": "example_character",
-      "name": "Example Character",
-      "category": "示例",
-      "category_type": "角色模板",
-      "lora_name": "",
-      "lora_strength": 0.8,
-      "trigger_words": "",
-      "default_positive": "1girl, solo",
-      "style_tags": "anime style, detailed eyes, high quality",
-      "preview_image": "",
-      "recommended_checkpoint": "",
-      "notes": "Put LoRA files into ComfyUI/models/loras, then set lora_name to the real filename and trigger_words to the LoRA page trigger words."
+      "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/af0b3526-1fc3-4ed7-868a-377ee0b68015/anim=false,width=450,optimized=true/01.jpeg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "鸣潮角色卡提希娅，推荐强度 0.7-0.9，适合竖屏人像、半身和全身立绘。"
     }
   ]
 }
