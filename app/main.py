@@ -35,6 +35,8 @@ DUAL_CHARACTER_NEGATIVE_TAGS = (
     "merged characters, fused characters, hybrid character, mixed character features, "
     "same face, identical faces, wrong character on left, wrong character on right, "
     "shared hair color, shared outfit, duplicated outfit, conjoined bodies, "
+    "more than two people, extra people, three girls, crowd, duplicate character, "
+    "extra arms, extra hands, extra legs, extra feet, too many limbs, "
     "broken interaction, disconnected hands, tangled limbs"
 )
 
@@ -126,6 +128,11 @@ async def health(settings: Settings = Depends(get_settings)) -> dict:
         "cloudApiUrl": settings.cloud_api_url,
         "cloudConfigured": bool(settings.cloud_api_url and settings.ai_worker_token),
         "cleanupOutputs": settings.ai_worker_cleanup_outputs,
+        "dualCharacter": {
+            "strategy": settings.dual_character_strategy,
+            "loraStrengthCap": settings.dual_lora_strength_cap,
+            "maskConditioningStrength": settings.dual_mask_conditioning_strength,
+        },
         "capabilities": capabilities,
         "checks": checks,
     }
@@ -164,7 +171,7 @@ async def generate(
     character = find_character(settings, payload.character_id)
     second_character = find_character(settings, payload.second_character_id)
     is_dual = is_dual_generation(payload)
-    has_custom_mask = has_custom_character_mask(payload.character_mask_json)
+    has_custom_mask = has_complete_character_mask(payload.character_mask_json)
     prompt_source = merge_tags(
         character.trigger_words if character else "",
         character.default_positive if character else "",
@@ -218,8 +225,8 @@ async def generate(
     second_lora_name = payload.second_lora_name or (second_character.lora_name if second_character else "")
     second_lora_strength = payload.second_lora_strength or (second_character.lora_strength if second_character and second_character.lora_name else 0)
     if is_dual:
-        lora_strength = min(lora_strength, 0.9)
-        second_lora_strength = min(second_lora_strength, 0.9)
+        lora_strength = min(lora_strength, settings.dual_lora_strength_cap)
+        second_lora_strength = min(second_lora_strength, settings.dual_lora_strength_cap)
     job_id = uuid.uuid4().hex
     seed = payload.seed or random_seed()
     job = {
@@ -325,19 +332,24 @@ def is_dual_generation(payload: GenerateRequest) -> bool:
     )
 
 
-def has_custom_character_mask(mask_json: str) -> bool:
+def has_complete_character_mask(mask_json: str) -> bool:
+    roles = character_mask_roles(mask_json)
+    return "primary" in roles and "secondary" in roles
+
+
+def character_mask_roles(mask_json: str) -> set[str]:
     if not mask_json.strip():
-        return False
+        return set()
     try:
         payload = json.loads(mask_json)
     except json.JSONDecodeError:
-        return False
+        return set()
     if not isinstance(payload, dict):
-        return False
+        return set()
     roles: set[str] = set()
     strokes = payload.get("strokes")
     if not isinstance(strokes, list):
-        return False
+        return set()
     for stroke in strokes:
         if not isinstance(stroke, dict):
             continue
@@ -345,7 +357,7 @@ def has_custom_character_mask(mask_json: str) -> bool:
         points = stroke.get("points")
         if role and isinstance(points, list) and points:
             roles.add(role)
-    return "primary" in roles or "secondary" in roles
+    return roles
 
 
 def should_use_dual_inpaint(settings: Settings, job: dict) -> bool:
@@ -359,6 +371,14 @@ def should_use_dual_inpaint(settings: Settings, job: dict) -> bool:
 
 def should_use_dual_mask_conditioning(settings: Settings, job: dict) -> bool:
     strategy = settings.dual_character_strategy.strip().lower()
+    has_custom_mask = bool(str(job.get("character_mask_json") or "").strip())
+    if strategy in {"auto", "region-auto", "smart"}:
+        return (
+            str(job.get("generation_mode") or "").upper() == "DUAL"
+            and has_custom_mask
+            and bool(job.get("regional_left_positive"))
+            and bool(job.get("regional_right_positive"))
+        )
     return (
         str(job.get("generation_mode") or "").upper() == "DUAL"
         and strategy in {"mask", "masked", "mask-conditioning", "conditioning", "regional-mask"}
@@ -378,7 +398,7 @@ async def run_dual_mask_conditioning_generation(
     mask_dir.mkdir(parents=True, exist_ok=True)
     left_mask = mask_dir / f"{job_id}_left_mask.png"
     right_mask = mask_dir / f"{job_id}_right_mask.png"
-    create_character_masks(
+    create_character_conditioning_masks(
         left_mask,
         right_mask,
         job["width"],
@@ -536,6 +556,91 @@ def create_split_mask(path: Path, width: int, height: int, side: str, overlap_ra
     image.save(path)
 
 
+def create_split_conditioning_mask(path: Path, width: int, height: int, side: str) -> None:
+    midpoint = width // 2
+    if side == "left":
+        x0, x1 = 0, midpoint
+    else:
+        x0, x1 = midpoint, width
+    image = Image.new("RGB", (width, height), "black")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((x0, 0, x1, height), fill="white")
+    image.save(path)
+
+
+def create_character_conditioning_masks(
+    left_path: Path,
+    right_path: Path,
+    width: int,
+    height: int,
+    mask_json: str,
+    overlap_ratio: float,
+) -> None:
+    if not mask_json.strip():
+        create_split_conditioning_mask(left_path, width, height, "left")
+        create_split_conditioning_mask(right_path, width, height, "right")
+        return
+
+    left = Image.new("L", (width, height), 0)
+    right = Image.new("L", (width, height), 0)
+    left_draw = ImageDraw.Draw(left)
+    right_draw = ImageDraw.Draw(right)
+    drawn = {"primary": False, "secondary": False}
+    try:
+        payload = json.loads(mask_json)
+        strokes = payload.get("strokes", []) if isinstance(payload, dict) else []
+        for stroke in strokes:
+            if not isinstance(stroke, dict):
+                continue
+            role = normalize_mask_role(str(stroke.get("role") or ""))
+            points = stroke.get("points") or []
+            if role not in drawn or not isinstance(points, list) or not points:
+                continue
+            brush = mask_brush_width(stroke.get("brush"), width, height)
+            pixel_points = normalized_points(points, width, height)
+            if not pixel_points:
+                continue
+            draw = left_draw if role == "primary" else right_draw
+            draw_painted_character_region(draw, pixel_points, brush)
+            drawn[role] = True
+    except Exception as exc:
+        print(f"[dual-mask-conditioning] custom mask ignored: {exc}")
+
+    if not drawn["primary"]:
+        create_split_conditioning_mask(left_path, width, height, "left")
+    else:
+        finalize_conditioning_mask(left, width, height).save(left_path)
+    if not drawn["secondary"]:
+        create_split_conditioning_mask(right_path, width, height, "right")
+    else:
+        finalize_conditioning_mask(right, width, height).save(right_path)
+
+
+def draw_painted_character_region(
+    draw: ImageDraw.ImageDraw,
+    points: list[tuple[int, int]],
+    brush: int,
+) -> None:
+    radius = max(brush // 2, 1)
+    if len(points) == 1:
+        x, y = points[0]
+        draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=255)
+        return
+
+    draw.line(points, fill=255, width=brush, joint="curve")
+    for x, y in points:
+        draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=255)
+
+
+def finalize_conditioning_mask(mask: Image.Image, width: int, height: int) -> Image.Image:
+    expansion = max(3, int(min(width, height) * 0.008))
+    if expansion % 2 == 0:
+        expansion += 1
+    expanded = mask.filter(ImageFilter.MaxFilter(expansion))
+    softened = expanded.filter(ImageFilter.GaussianBlur(radius=max(1, expansion // 2)))
+    return softened.convert("RGB")
+
+
 def create_character_masks(
     left_path: Path,
     right_path: Path,
@@ -685,7 +790,10 @@ def character_tags(character) -> str:
 
 
 def dual_character_guard(custom_mask: bool = False) -> str:
-    base = "2girls, two distinct characters, duo, separate faces, separate outfits, no fusion, no mixed features"
+    base = (
+        "2girls, exactly two characters total, two distinct characters, duo, "
+        "separate faces, separate outfits, no extra people, no fusion, no mixed features"
+    )
     if custom_mask:
         return merge_tags(base, "natural close interaction, clear individual character identities")
     return merge_tags(base, "left and right characters")
@@ -746,8 +854,8 @@ def build_positive_prompt(
     first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
     second_tags = filter_dual_character_tags(character_tags(second_character))
     scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
-    first_label = "character A" if custom_mask else "left character"
-    second_label = "character B" if custom_mask else "right character"
+    first_label = "character A" if custom_mask else "character A on the left side"
+    second_label = "character B" if custom_mask else "character B on the right side"
     return merge_tags(
         dual_character_guard(custom_mask),
         scene_tags,
@@ -785,9 +893,9 @@ def build_regional_global_positive(
     second_tags = filter_dual_character_tags(character_tags(second_character))
     scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
     composition_tags = (
-        "natural close interaction between two characters, preserve the requested contact and relative positions"
+        "natural close interaction between exactly two characters, preserve the requested contact and relative positions, no extra people"
         if custom_mask
-        else "balanced two character composition, clear left-right separation, natural interaction between two characters"
+        else "balanced two character composition, clear left-right separation, exactly one character on each side, no extra people"
     )
     return merge_tags(
         dual_character_guard(custom_mask),
@@ -808,25 +916,22 @@ def build_regional_positive_prompts(
         return "", ""
     first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
     second_tags = filter_dual_character_tags(character_tags(second_character))
-    scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
     first_region = (
-        "character A region, only the first character in this masked region, distinct face, distinct outfit, preserve pose and close interaction"
+        "character A only, one person only in this region, no character B, no second person, one complete body, distinct face, distinct outfit"
         if custom_mask
-        else "left side of image, left character, only one character in this region, distinct face, distinct outfit, preserve pose and interaction with the right character"
+        else "left side of image, character A only, one person only in this region, no character B, no second person, one complete body, distinct face, distinct outfit"
     )
     second_region = (
-        "character B region, only the second character in this masked region, distinct face, distinct outfit, preserve pose and close interaction"
+        "character B only, one person only in this region, no character A, no second person, one complete body, distinct face, distinct outfit"
         if custom_mask
-        else "right side of image, right character, only one character in this region, distinct face, distinct outfit, preserve pose and interaction with the left character"
+        else "right side of image, character B only, one person only in this region, no character A, no second person, one complete body, distinct face, distinct outfit"
     )
     left_positive = merge_tags(
         first_region,
-        scene_tags,
         first_tags,
     )
     right_positive = merge_tags(
         second_region,
-        scene_tags,
         second_tags,
     )
     return left_positive, right_positive

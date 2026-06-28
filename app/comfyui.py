@@ -180,7 +180,7 @@ def build_mask_conditioning_workflow(
                 "conditioning": ["12", 0],
                 "mask": ["1", 0],
                 "strength": mask_strength,
-                "set_cond_area": "mask bounds",
+                "set_cond_area": "default",
             },
         },
         "15": {
@@ -189,7 +189,7 @@ def build_mask_conditioning_workflow(
                 "conditioning": ["13", 0],
                 "mask": ["2", 0],
                 "strength": mask_strength,
-                "set_cond_area": "mask bounds",
+                "set_cond_area": "default",
             },
         },
         "16": {
