@@ -32,6 +32,17 @@
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/abbfe4d7-d72f-4783-860e-cd970efc0a7a/anim=false,width=450,optimized=true/00025-2713605955.jpeg",
       "notes": "原神角色雷电将军 LoRA。建议通过角色预设使用，会自动注入雷电将军常用角色 tags。"
+    },
+    {
+      "name": "sandrone_genshin_impact_ilxl_goofy.safetensors",
+      "display_name": "桑多涅",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "trigger_words": "sandrone (genshin impact), genshin impact",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/0e8f19d2-3f57-4eea-b788-df4e73280513/anim=false,width=450,optimized=true/00009-3338321267.jpeg",
+      "notes": "原神角色桑多涅 LoRA。建议通过角色预设使用，会自动注入桑多涅常用角色 tags。"
     }
   ]
 }

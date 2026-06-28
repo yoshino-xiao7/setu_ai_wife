@@ -41,6 +41,20 @@
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/raiden_shogun.jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "notes": "原神角色雷电将军。选择该预设会自动使用 RaidenShogun-HandsFix.safetensors，并注入雷电将军的常用角色 tags。"
+    },
+    {
+      "id": "sandrone",
+      "name": "桑多涅",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "sandrone_genshin_impact_ilxl_goofy.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "sandrone (genshin impact), genshin impact",
+      "default_positive": "1girl, blue eyes, short hair with long locks, brown hair, blonde hair, sidelocks, fur-trimmed coat, white gloves, headdress",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/sandrone_(genshin_impact).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色桑多涅。选择该预设会自动使用 sandrone_genshin_impact_ilxl_goofy.safetensors，并注入桑多涅的常用角色 tags。"
     }
   ]
 }
