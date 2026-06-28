@@ -19,8 +19,19 @@
       "trigger_words": "yae miko, genshin impact",
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
-      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/yae_miko.jpg",
+      "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/a5e824f9-c5b0-48de-1120-289a1166a100/anim=false,width=450,optimized=true/341491.jpeg",
       "notes": "原神角色八重神子 LoRA。建议通过角色预设使用，会自动注入官方常用角色 tags。"
+    },
+    {
+      "name": "RaidenShogun-HandsFix.safetensors",
+      "display_name": "雷电将军",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "trigger_words": "raiden shogun, genshin impact",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/abbfe4d7-d72f-4783-860e-cd970efc0a7a/anim=false,width=450,optimized=true/00025-2713605955.jpeg",
+      "notes": "原神角色雷电将军 LoRA。建议通过角色预设使用，会自动注入雷电将军常用角色 tags。"
     }
   ]
 }

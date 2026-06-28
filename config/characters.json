@@ -27,6 +27,20 @@
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/yae_miko.jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "notes": "原神角色八重神子。选择该预设会自动使用 yae_miko_offset_9_6.safetensors，并注入八重神子的常用角色 tags。"
+    },
+    {
+      "id": "raiden_shogun",
+      "name": "雷电将军",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "RaidenShogun-HandsFix.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "raiden shogun, genshin impact",
+      "default_positive": "1girl, purple eyes, mole under eye, purple hair, long hair, very long hair, braided ponytail, hair ornament, large breasts, cleavage, thighs, purple kimono, purple nails, obi, bridal gauntlets",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/raiden_shogun.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色雷电将军。选择该预设会自动使用 RaidenShogun-HandsFix.safetensors，并注入雷电将军的常用角色 tags。"
     }
   ]
 }
