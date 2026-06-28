@@ -3,11 +3,13 @@
     {
       "name": "cartethyia-noob-v5.safetensors",
       "display_name": "Cartethyia",
-      "trigger_words": "",
-      "recommended_strength": 1.0,
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "trigger_words": "cartethyia",
+      "recommended_strength": 0.8,
       "recommended_checkpoint": "",
       "preview_image": "",
-      "notes": "示例：把 name 改成实际 LoRA 文件名后，云端会展示这里的说明、触发词和推荐强度。"
+      "notes": "示例：把 preview_image 填成 OSS/公网图片 URL 后，云端选择器会展示预览图。"
     }
   ]
 }

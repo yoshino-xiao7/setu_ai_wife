@@ -178,7 +178,7 @@ models/vae/           VAE 文件
 1. 把 `.safetensors` 文件放入 `models/loras/`。
 2. 重启 `scripts/start_cloud_all.ps1`，或者等待 Worker 下次能力上报。
 3. 打开云端 `/dashboard/ai-draw`，点击刷新模型。
-4. LoRA 下拉框里应该能看到新文件。
+4. 云端 LoRA 选择器里应该能看到新文件。
 
 LoRA 和角色预设说明：
 
@@ -186,7 +186,25 @@ LoRA 和角色预设说明：
 - 角色预设文件：`config/characters.json`
 - LoRA 展示名、触发词、推荐强度等元数据文件：`config/lora_metadata.json`
 
-`config/lora_metadata.json` 是可选的；不填写时云端仍会显示 LoRA 文件名。填写后云端会展示更友好的名称、触发词和说明。
+`config/lora_metadata.json` 是可选的；不填写时云端仍会显示 LoRA 文件名。填写后云端会展示更友好的名称、分类、触发词、推荐强度、适配 checkpoint、说明和预览图。
+
+分类字段用于云端选择器的大目录，例如：
+
+```json
+{
+  "name": "yae_miko.safetensors",
+  "display_name": "八重神子",
+  "category": "原神",
+  "category_type": "游戏角色",
+  "trigger_words": "yae miko",
+  "recommended_strength": 0.8,
+  "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+  "preview_image": "https://your-oss.example/ai-presets/yae-miko.webp",
+  "notes": "适合二次元半身和全身插画。"
+}
+```
+
+`category` 可以是游戏名、作品名，也可以是风格名，例如 `原神`、`鸣潮`、`萝莉风格`、`校园制服`。`preview_image` 建议填写 OSS 或公网图片 URL；本机磁盘路径不会被云端用户正常访问。
 
 ## 本机健康检查
 

@@ -12,6 +12,8 @@ from app.config import Settings
 class CharacterPreset(BaseModel):
     id: str
     name: str
+    category: str = "未分类角色"
+    category_type: str = ""
     lora_name: str = ""
     lora_strength: float = 0.8
     trigger_words: str = ""
@@ -25,6 +27,8 @@ class CharacterPreset(BaseModel):
 class LoraMetadata(BaseModel):
     name: str
     display_name: str = ""
+    category: str = "未分类"
+    category_type: str = ""
     trigger_words: str = ""
     recommended_strength: float = 1.0
     recommended_checkpoint: str = ""
