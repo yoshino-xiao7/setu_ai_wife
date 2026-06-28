@@ -39,6 +39,7 @@ worker 会扫描：
 - `COMFYUI_MODELS_DIR/loras`
 - `COMFYUI_MODELS_DIR/vae`
 - `CHARACTERS_PATH` 指向的角色预设 JSON
+- `LORA_METADATA_PATH` 指向的 LoRA 展示元数据 JSON
 
 默认 `COMFYUI_MODELS_DIR` 为：
 
@@ -57,7 +58,7 @@ cd C:\Users\rdpuser\Documents\setu_cd\setu_ai_wife
 powershell -ExecutionPolicy Bypass -File scripts/start_cloud_all.ps1
 ```
 
-这个脚本会依次启动 ComfyUI、本机 FastAPI 服务和 cloud worker，并把日志写到 `logs/`。
+这个脚本会依次启动 ComfyUI、本机 FastAPI 服务和 cloud worker，并把日志写到 `logs/`。启动成功后会自动打开 `http://127.0.0.1:7861` 本机 Worker 控制台。
 
 也可以按下面步骤手动启动。
 
@@ -88,6 +89,8 @@ v1 采用 `CLOUD_COMPLETE_BASE64`：
 6. 审核通过后，云端复制到 `ai/public/general/{jobId}.png` 或 `ai/public/r18/{jobId}.png`。
 
 如果 `AI_WORKER_CLEANUP_OUTPUTS=true`，worker 在云端 complete 成功后会删除本机 `outputs` 下对应临时图片；本地服务复制图片后也会清理 ComfyUI `output/local_ai_drawing` 下的原始输出。
+
+本机控制台提供 `GET /api/health`，用于检查 ComfyUI、Ollama、云端连接、模型目录和默认 checkpoint。
 
 ## 故障排查
 

@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     output_dir: Path = Field(Path("outputs"), alias="OUTPUT_DIR")
     database_path: Path = Field(Path("data/jobs.sqlite3"), alias="DATABASE_PATH")
     characters_path: Path = Field(Path("config/characters.json"), alias="CHARACTERS_PATH")
+    lora_metadata_path: Path = Field(Path("config/lora_metadata.json"), alias="LORA_METADATA_PATH")
     prompt_knowledge_path: Path = Field(Path("config/prompt_knowledge.json"), alias="PROMPT_KNOWLEDGE_PATH")
     comfyui_models_dir: Path = Field(Path("tools/ComfyUI_windows_portable/ComfyUI/models"), alias="COMFYUI_MODELS_DIR")
     default_checkpoint: str = Field("put-your-sdxl-anime-checkpoint.safetensors", alias="DEFAULT_CHECKPOINT")
@@ -46,5 +47,6 @@ def get_settings() -> Settings:
     settings.output_dir.mkdir(parents=True, exist_ok=True)
     settings.database_path.parent.mkdir(parents=True, exist_ok=True)
     settings.characters_path.parent.mkdir(parents=True, exist_ok=True)
+    settings.lora_metadata_path.parent.mkdir(parents=True, exist_ok=True)
     settings.prompt_knowledge_path.parent.mkdir(parents=True, exist_ok=True)
     return settings

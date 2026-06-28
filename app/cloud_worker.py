@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 
 from app.config import Settings, get_settings
-from app.presets import load_characters
+from app.presets import list_loras, load_characters
 from app.prompting import PromptTranslationError, translate_prompt
 
 
@@ -58,7 +58,7 @@ def scan_capabilities(settings: Settings) -> dict[str, Any]:
         "nodeName": settings.ai_worker_name,
         "version": settings.ai_worker_version,
         "checkpoints": _list_model_files(settings.comfyui_models_dir, "checkpoints"),
-        "loras": _list_model_files(settings.comfyui_models_dir, "loras"),
+        "loras": list_loras(settings),
         "vaes": _list_model_files(settings.comfyui_models_dir, "vae"),
         "characters": characters,
     }
@@ -174,6 +174,7 @@ class CloudWorker:
                 },
             )
             local_result = await self._wait_local_job(local_job["job_id"])
+            await self._mark_uploading(client, job_id)
             image_bytes, filename = await self._download_local_image(local_result)
             await self._complete_cloud_job(client, job_id, local_result, image_bytes, filename)
             self._cleanup_local_image(filename)
@@ -222,6 +223,13 @@ class CloudWorker:
             response = await local.get(f"{self.local_url}/api/images/{filename}")
             response.raise_for_status()
             return response.content, filename
+
+    async def _mark_uploading(self, client: httpx.AsyncClient, job_id: int) -> None:
+        response = await client.post(
+            f"{self.cloud_url}/ai-worker/jobs/{job_id}/uploading",
+            json={"workerId": self.settings.ai_worker_id},
+        )
+        response.raise_for_status()
 
     async def _complete_cloud_job(
         self,

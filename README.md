@@ -71,6 +71,7 @@ OLLAMA_MODEL=qwen3:4b
 OUTPUT_DIR=outputs
 DATABASE_PATH=data/jobs.sqlite3
 CHARACTERS_PATH=config/characters.json
+LORA_METADATA_PATH=config/lora_metadata.json
 PROMPT_KNOWLEDGE_PATH=config/prompt_knowledge.json
 COMFYUI_MODELS_DIR=tools/ComfyUI_windows_portable/ComfyUI/models
 DEFAULT_CHECKPOINT=waiIllustriousSDXL_v170.safetensors
@@ -120,7 +121,7 @@ powershell -ExecutionPolicy Bypass -File scripts\start_cloud_all.ps1
 
 启动成功后：
 
-- 本机页面能打开 `http://127.0.0.1:7861`
+- 本机 Worker 控制台能打开 `http://127.0.0.1:7861`
 - ComfyUI 能打开 `http://127.0.0.1:8188`
 - 云端 `/dashboard/ai-draw` 刷新模型后能看到本机 checkpoint 和 LoRA
 - 云端用户提交任务后，本机会自动领取并出图
@@ -183,6 +184,19 @@ LoRA 和角色预设说明：
 
 - [docs/CHARACTER_LORA.md](docs/CHARACTER_LORA.md)
 - 角色预设文件：`config/characters.json`
+- LoRA 展示名、触发词、推荐强度等元数据文件：`config/lora_metadata.json`
+
+`config/lora_metadata.json` 是可选的；不填写时云端仍会显示 LoRA 文件名。填写后云端会展示更友好的名称、触发词和说明。
+
+## 本机健康检查
+
+本机控制台会调用：
+
+```text
+GET http://127.0.0.1:7861/api/health
+```
+
+它会检查 FastAPI、ComfyUI、Ollama、云端 Worker Token、模型目录和默认 checkpoint。云端用户无法直接访问这个接口，它只服务本机运维排查。
 
 ## 生成图保存和清理
 

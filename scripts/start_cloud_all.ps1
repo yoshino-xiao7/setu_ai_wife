@@ -209,3 +209,10 @@ Write-Host ""
 Write-Host "Cloud users can generate images when the cloud backend is running and AI_WORKER_TOKEN matches." -ForegroundColor Green
 Write-Host "Local UI: http://127.0.0.1:7861"
 Write-Host "Logs: $LogDir"
+
+try {
+    Start-Process "http://127.0.0.1:7861"
+}
+catch {
+    Write-Host "Could not open the local Worker console automatically. Open http://127.0.0.1:7861 manually." -ForegroundColor Yellow
+}

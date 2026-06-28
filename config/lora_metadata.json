@@ -1,0 +1,13 @@
+{
+  "loras": [
+    {
+      "name": "cartethyia-noob-v5.safetensors",
+      "display_name": "Cartethyia",
+      "trigger_words": "",
+      "recommended_strength": 1.0,
+      "recommended_checkpoint": "",
+      "preview_image": "",
+      "notes": "示例：把 name 改成实际 LoRA 文件名后，云端会展示这里的说明、触发词和推荐强度。"
+    }
+  ]
+}

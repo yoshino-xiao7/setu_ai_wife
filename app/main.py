@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
+import httpx
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -67,6 +68,65 @@ def loras(settings: Settings = Depends(get_settings)) -> list[dict]:
 @app.get("/api/characters")
 def characters(settings: Settings = Depends(get_settings)) -> list[dict]:
     return [character.model_dump() for character in load_characters(settings.characters_path)]
+
+
+@app.get("/api/health")
+async def health(settings: Settings = Depends(get_settings)) -> dict:
+    checkpoints_dir = settings.comfyui_models_dir / "checkpoints"
+    default_checkpoint_path = checkpoints_dir / settings.default_checkpoint
+    capabilities = {
+        "checkpoints": len(list(checkpoints_dir.glob("*"))) if checkpoints_dir.exists() else 0,
+        "loras": len(list_loras(settings)),
+        "vaes": len(list((settings.comfyui_models_dir / "vae").glob("*"))) if (settings.comfyui_models_dir / "vae").exists() else 0,
+        "characters": len(load_characters(settings.characters_path)),
+    }
+    checks = {
+        "localService": {"ok": True, "message": "FastAPI is running."},
+        "comfyui": await probe_http(f"{settings.comfyui_url.rstrip('/')}/system_stats"),
+        "ollama": await probe_http(f"{settings.ollama_url.rstrip('/')}/api/tags"),
+        "cloud": await probe_cloud(settings),
+        "models": {
+            "ok": settings.comfyui_models_dir.exists(),
+            "message": str(settings.comfyui_models_dir),
+        },
+        "defaultCheckpoint": {
+            "ok": default_checkpoint_path.exists(),
+            "message": settings.default_checkpoint,
+        },
+    }
+    return {
+        "ok": all(item.get("ok") for item in checks.values()),
+        "workerId": settings.ai_worker_id,
+        "workerName": settings.ai_worker_name,
+        "cloudApiUrl": settings.cloud_api_url,
+        "cloudConfigured": bool(settings.cloud_api_url and settings.ai_worker_token),
+        "cleanupOutputs": settings.ai_worker_cleanup_outputs,
+        "capabilities": capabilities,
+        "checks": checks,
+    }
+
+
+async def probe_http(url: str) -> dict:
+    try:
+        async with httpx.AsyncClient(timeout=4) as client:
+            response = await client.get(url)
+        return {"ok": response.status_code < 500, "message": f"HTTP {response.status_code}"}
+    except Exception as exc:
+        return {"ok": False, "message": str(exc)}
+
+
+async def probe_cloud(settings: Settings) -> dict:
+    if not settings.cloud_api_url or not settings.ai_worker_token:
+        return {"ok": False, "message": "CLOUD_API_URL or AI_WORKER_TOKEN is empty."}
+    try:
+        async with httpx.AsyncClient(
+            timeout=6,
+            headers={"X-AI-Worker-Token": settings.ai_worker_token},
+        ) as client:
+            response = await client.get(f"{settings.cloud_api_url.rstrip('/')}/ai-worker/health")
+        return {"ok": response.status_code < 500, "message": f"HTTP {response.status_code}"}
+    except Exception as exc:
+        return {"ok": False, "message": str(exc)}
 
 
 @app.post("/api/generate")

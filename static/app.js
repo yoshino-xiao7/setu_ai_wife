@@ -6,11 +6,15 @@ const historyEl = document.querySelector("#history");
 const translateBtn = document.querySelector("#translate-btn");
 const refreshHistoryBtn = document.querySelector("#refresh-history");
 const refreshPresetsBtn = document.querySelector("#refresh-presets");
-const reuseCurrentBtn = document.querySelector("#reuse-current");
+const refreshHealthBtn = document.querySelector("#refresh-health");
 const characterSelect = document.querySelector("#character-id");
 const loraSelect = document.querySelector("#lora-name");
+const healthGrid = document.querySelector("#health-grid");
+const overallStatus = document.querySelector("#overall-status");
+const capabilitySummary = document.querySelector("#capability-summary");
+const loraList = document.querySelector("#lora-list");
+const characterList = document.querySelector("#character-list");
 let characters = [];
-let currentJob = null;
 
 function field(id) {
   return document.querySelector(id);
@@ -33,9 +37,106 @@ function escapeHtml(text) {
     .replaceAll('"', "&quot;");
 }
 
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, {
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+    ...options,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || `请求失败：${response.status}`);
+  }
+  return data;
+}
+
+function parseMetadata(item) {
+  try {
+    return item.metadataJson ? JSON.parse(item.metadataJson) : {};
+  } catch {
+    return {};
+  }
+}
+
+function renderHealth(data) {
+  const checks = data.checks || {};
+  const cards = Object.entries(checks).map(([key, item]) => {
+    const label = {
+      localService: "本机服务",
+      comfyui: "ComfyUI",
+      ollama: "Ollama",
+      cloud: "云端连接",
+      models: "模型目录",
+      defaultCheckpoint: "默认模型",
+    }[key] || key;
+    return `
+      <div class="health-card ${item.ok ? "ok" : "bad"}">
+        <strong>${label}</strong>
+        <span>${item.ok ? "正常" : "异常"}</span>
+        <p>${escapeHtml(item.message)}</p>
+      </div>
+    `;
+  });
+  healthGrid.innerHTML = cards.join("");
+  overallStatus.innerHTML = `
+    <span class="status-dot ${data.ok ? "" : "bad"}"></span>
+    <span>${data.ok ? "本机就绪" : "需要检查"}</span>
+  `;
+  const caps = data.capabilities || {};
+  capabilitySummary.innerHTML = `
+    <div><strong>${caps.checkpoints || 0}</strong><span>Checkpoint</span></div>
+    <div><strong>${caps.loras || 0}</strong><span>LoRA</span></div>
+    <div><strong>${caps.vaes || 0}</strong><span>VAE</span></div>
+    <div><strong>${caps.characters || 0}</strong><span>角色</span></div>
+  `;
+}
+
+async function loadHealth() {
+  healthGrid.innerHTML = `<div class="job-state slim">正在检测本机服务...</div>`;
+  try {
+    renderHealth(await requestJson("/api/health"));
+  } catch (error) {
+    healthGrid.innerHTML = `<div class="job-state error slim">${escapeHtml(error.message)}</div>`;
+    overallStatus.innerHTML = `<span class="status-dot bad"></span><span>检测失败</span>`;
+  }
+}
+
+async function loadPresets() {
+  try {
+    characters = await requestJson("/api/characters");
+    characterSelect.innerHTML =
+      `<option value="">不使用预设</option>` +
+      characters.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
+    characterList.innerHTML = characters.length
+      ? characters.map((item) => {
+          const tags = [item.trigger_words, item.default_positive, item.style_tags].filter(Boolean).join(", ");
+          return `<article><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.lora_name || "无默认 LoRA")}</span><p>${escapeHtml(tags || item.notes || "未配置触发词")}</p></article>`;
+        }).join("")
+      : `<p class="muted-line">没有角色预设。</p>`;
+  } catch (error) {
+    characterSelect.innerHTML = `<option value="">角色预设加载失败</option>`;
+    characterList.innerHTML = `<p class="error-text">${escapeHtml(error.message)}</p>`;
+  }
+
+  try {
+    const loras = await requestJson("/api/loras");
+    loraSelect.innerHTML =
+      `<option value="">不使用 LoRA</option>` +
+      loras.map((item) => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.displayName || item.name)}</option>`).join("");
+    loraList.innerHTML = loras.length
+      ? loras.map((item) => {
+          const metadata = parseMetadata(item);
+          return `<article><strong>${escapeHtml(item.displayName || item.name)}</strong><span>${escapeHtml(item.name)}</span><p>${escapeHtml(metadata.trigger_words || metadata.notes || "未配置触发词")}</p></article>`;
+        }).join("")
+      : `<p class="muted-line">没有扫描到 LoRA。</p>`;
+  } catch (error) {
+    loraSelect.innerHTML = `<option value="">LoRA 列表加载失败</option>`;
+    loraList.innerHTML = `<p class="error-text">${escapeHtml(error.message)}</p>`;
+  }
+}
+
 function buildPayload() {
   return {
-    prompt_cn: value("#prompt-cn"),
+    prompt_cn: value("#prompt-cn") || value("#style-tags") || "local debug image",
     character_id: value("#character-id") || null,
     trigger_words: value("#trigger-words"),
     style_tags: value("#style-tags"),
@@ -50,27 +151,14 @@ function buildPayload() {
   };
 }
 
-async function requestJson(url, options = {}) {
-  const response = await fetch(url, {
-    headers: { "Content-Type": "application/json; charset=utf-8" },
-    ...options,
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.detail || `请求失败：${response.status}`);
-  }
-  return data;
-}
-
 function setStageLoading(message) {
-  currentResult.className = "job-state";
+  currentResult.className = "job-state compact-stage";
   currentResult.innerHTML = `<div><div class="empty-mark">...</div><p>${escapeHtml(message)}</p></div>`;
 }
 
 function showJob(job) {
-  currentJob = job;
   jobMeta.textContent = `${job.width}x${job.height} · steps ${job.steps} · seed ${job.seed}`;
-  if (job.status === "completed") {
+  if (job.status === "completed" && job.image_path) {
     currentResult.className = "result-view";
     currentResult.innerHTML = `
       <img src="/api/images/${encodeURIComponent(job.image_path)}" alt="生成结果" />
@@ -78,18 +166,18 @@ function showJob(job) {
     `;
     return;
   }
-  currentResult.className = job.status === "failed" ? "job-state error" : "job-state";
+  currentResult.className = job.status === "failed" ? "job-state error compact-stage" : "job-state compact-stage";
   currentResult.textContent = job.error || `任务状态：${job.status}`;
 }
 
 translateBtn.addEventListener("click", async () => {
   preview.style.display = "block";
-  preview.textContent = "正在转换 prompt...";
+  preview.textContent = "正在调用本机 Ollama...";
   try {
     const prompt = [value("#trigger-words"), value("#style-tags"), value("#prompt-cn")].filter(Boolean).join(", ");
     const data = await requestJson("/api/prompt/translate", {
       method: "POST",
-      body: JSON.stringify({ prompt_cn: prompt }),
+      body: JSON.stringify({ prompt_cn: prompt || "anime portrait" }),
     });
     preview.textContent = `Positive:\n${data.positive}\n\nNegative:\n${data.negative}\n\nNotes:\n${data.style_notes}`;
   } catch (error) {
@@ -99,7 +187,7 @@ translateBtn.addEventListener("click", async () => {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  setStageLoading("已提交，等待 ComfyUI 生成...");
+  setStageLoading("已提交本机测试任务，等待 ComfyUI...");
   jobMeta.textContent = "正在排队";
   try {
     const data = await requestJson("/api/generate", {
@@ -108,7 +196,7 @@ form.addEventListener("submit", async (event) => {
     });
     pollJob(data.job_id);
   } catch (error) {
-    currentResult.className = "job-state error";
+    currentResult.className = "job-state error compact-stage";
     currentResult.textContent = error.message;
     jobMeta.textContent = "提交失败";
   }
@@ -128,7 +216,7 @@ async function pollJob(jobId) {
       }
     } catch (error) {
       clearInterval(timer);
-      currentResult.className = "job-state error";
+      currentResult.className = "job-state error compact-stage";
       currentResult.textContent = error.message;
       jobMeta.textContent = "轮询失败";
     }
@@ -137,60 +225,17 @@ async function pollJob(jobId) {
 
 async function loadHistory() {
   try {
-    const jobs = await requestJson("/api/history?limit=36");
-    historyEl.innerHTML = jobs
-      .map((job) => {
-        const image = job.image_path
-          ? `<img class="history-thumb" src="/api/images/${encodeURIComponent(job.image_path)}" alt="历史图片" />`
-          : `<div class="history-missing">${escapeHtml(job.status)}</div>`;
-        const title = escapeHtml(job.prompt_cn || job.prompt_positive);
-        const meta = job.status === "completed" ? `${job.width}x${job.height} · seed ${job.seed}` : escapeHtml(job.error || job.status);
-        return `
-          <article class="history-card" data-job-id="${job.id}">
-            ${image}
-            <div>
-              <h3>${title}</h3>
-              <p>${meta}</p>
-            </div>
-          </article>
-        `;
-      })
-      .join("");
+    const jobs = await requestJson("/api/history?limit=12");
+    historyEl.innerHTML = jobs.length
+      ? jobs.map((job) => {
+          const meta = job.status === "completed" ? `${job.width}x${job.height} · seed ${job.seed}` : escapeHtml(job.error || job.status);
+          return `<article class="history-line"><strong>#${escapeHtml(job.id)}</strong><span>${escapeHtml(job.prompt_cn || job.prompt_positive)}</span><p>${meta}</p></article>`;
+        }).join("")
+      : `<p class="muted-line">暂无本机调试任务。</p>`;
   } catch (error) {
-    historyEl.innerHTML = `<div class="job-state error">${escapeHtml(error.message)}</div>`;
+    historyEl.innerHTML = `<div class="job-state error slim">${escapeHtml(error.message)}</div>`;
   }
 }
-
-historyEl.addEventListener("click", async (event) => {
-  const card = event.target.closest(".history-card");
-  if (!card) return;
-  const job = await requestJson(`/api/jobs/${card.dataset.jobId}`);
-  showJob(job);
-});
-
-reuseCurrentBtn.addEventListener("click", () => {
-  if (!currentJob) return;
-  field("#prompt-cn").value = currentJob.prompt_cn || "";
-  field("#width").value = currentJob.width || 768;
-  field("#height").value = currentJob.height || 768;
-  field("#steps").value = currentJob.steps || 12;
-  field("#cfg").value = currentJob.cfg || 6;
-  field("#seed").value = currentJob.seed || "";
-  field("#checkpoint").value = currentJob.checkpoint || "";
-  field("#lora-name").value = currentJob.lora_name || "";
-  field("#lora-strength").value = currentJob.lora_strength || 0;
-});
-
-document.querySelectorAll("[data-size]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const [width, height] = button.dataset.size.split("x");
-    field("#width").value = width;
-    field("#height").value = height;
-  });
-});
-
-refreshHistoryBtn.addEventListener("click", loadHistory);
-refreshPresetsBtn.addEventListener("click", loadPresets);
 
 characterSelect.addEventListener("change", () => {
   const selected = characters.find((item) => item.id === characterSelect.value);
@@ -203,25 +248,21 @@ characterSelect.addEventListener("change", () => {
   field("#lora-strength").value = selected.lora_strength || 0.8;
 });
 
-async function loadPresets() {
-  try {
-    characters = await requestJson("/api/characters");
-    characterSelect.innerHTML =
-      `<option value="">不使用预设</option>` +
-      characters.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
-  } catch (error) {
-    characterSelect.innerHTML = `<option value="">角色预设加载失败</option>`;
-  }
+document.querySelectorAll("[data-size]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const [width, height] = button.dataset.size.split("x");
+    field("#width").value = width;
+    field("#height").value = height;
+  });
+});
 
-  try {
-    const loras = await requestJson("/api/loras");
-    loraSelect.innerHTML =
-      `<option value="">不使用 / 角色默认</option>` +
-      loras.map((item) => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.name)}</option>`).join("");
-  } catch (error) {
-    loraSelect.innerHTML = `<option value="">LoRA 列表加载失败</option>`;
-  }
-}
+refreshHealthBtn.addEventListener("click", loadHealth);
+refreshHistoryBtn.addEventListener("click", loadHistory);
+refreshPresetsBtn.addEventListener("click", async () => {
+  await loadPresets();
+  await loadHealth();
+});
 
+loadHealth();
 loadPresets();
 loadHistory();
