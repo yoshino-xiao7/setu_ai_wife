@@ -8,7 +8,7 @@ import httpx
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 from pydantic import BaseModel, Field
 
 from app.comfyui import ComfyUIClient, build_inpaint_workflow, build_workflow, random_seed
@@ -164,6 +164,7 @@ async def generate(
     character = find_character(settings, payload.character_id)
     second_character = find_character(settings, payload.second_character_id)
     is_dual = is_dual_generation(payload)
+    has_custom_mask = has_custom_character_mask(payload.character_mask_json)
     prompt_source = merge_tags(
         character.trigger_words if character else "",
         character.default_positive if character else "",
@@ -173,7 +174,7 @@ async def generate(
         payload.style_tags,
         character.style_tags if character else "",
         second_character.style_tags if second_character else "",
-        dual_character_guard() if is_dual else "",
+        dual_character_guard(has_custom_mask) if is_dual else "",
         payload.prompt_cn,
     )
     if is_dual:
@@ -194,13 +195,14 @@ async def generate(
             )
         except PromptTranslationError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
-    positive_prompt = build_positive_prompt(payload, prompt.positive, character, second_character, is_dual)
+    positive_prompt = build_positive_prompt(payload, prompt.positive, character, second_character, is_dual, has_custom_mask)
     regional_global_positive = build_regional_global_positive(
         payload,
         prompt.positive,
         character,
         second_character,
         is_dual,
+        has_custom_mask,
     )
     regional_left_positive, regional_right_positive = build_regional_positive_prompts(
         payload,
@@ -208,6 +210,7 @@ async def generate(
         character,
         second_character,
         is_dual,
+        has_custom_mask,
     )
     negative_prompt = build_negative_prompt(prompt.negative, is_dual)
     lora_name = payload.lora_name or (character.lora_name if character else "")
@@ -234,7 +237,7 @@ async def generate(
         "generation_mode": "DUAL" if is_dual else "SINGLE",
         "character_id": payload.character_id or "",
         "second_character_id": payload.second_character_id or "",
-        "character_mask_json": payload.character_mask_json.strip() if is_dual else "",
+        "character_mask_json": payload.character_mask_json.strip() if is_dual and has_custom_mask else "",
         "regional_global_positive": regional_global_positive,
         "regional_left_positive": regional_left_positive,
         "regional_right_positive": regional_right_positive,
@@ -318,6 +321,29 @@ def is_dual_generation(payload: GenerateRequest) -> bool:
         or bool(payload.second_character_id)
         or bool(payload.second_lora_name)
     )
+
+
+def has_custom_character_mask(mask_json: str) -> bool:
+    if not mask_json.strip():
+        return False
+    try:
+        payload = json.loads(mask_json)
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    roles: set[str] = set()
+    strokes = payload.get("strokes")
+    if not isinstance(strokes, list):
+        return False
+    for stroke in strokes:
+        if not isinstance(stroke, dict):
+            continue
+        role = normalize_mask_role(str(stroke.get("role") or ""))
+        points = stroke.get("points")
+        if role and isinstance(points, list) and points:
+            roles.add(role)
+    return "primary" in roles or "secondary" in roles
 
 
 def should_use_dual_inpaint(settings: Settings, job: dict) -> bool:
@@ -456,8 +482,8 @@ def create_character_masks(
         create_split_mask(right_path, width, height, "right", overlap_ratio)
         return
 
-    left = Image.new("RGB", (width, height), "black")
-    right = Image.new("RGB", (width, height), "black")
+    left = Image.new("L", (width, height), 0)
+    right = Image.new("L", (width, height), 0)
     left_draw = ImageDraw.Draw(left)
     right_draw = ImageDraw.Draw(right)
     drawn = {"primary": False, "secondary": False}
@@ -476,15 +502,7 @@ def create_character_masks(
             if not pixel_points:
                 continue
             draw = left_draw if role == "primary" else right_draw
-            if len(pixel_points) == 1:
-                x, y = pixel_points[0]
-                radius = max(brush // 2, 1)
-                draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill="white")
-            else:
-                draw.line(pixel_points, fill="white", width=brush, joint="curve")
-                radius = max(brush // 2, 1)
-                for x, y in (pixel_points[0], pixel_points[-1]):
-                    draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill="white")
+            draw_expanded_character_region(draw, pixel_points, brush, width, height)
             drawn[role] = True
     except Exception as exc:
         print(f"[dual-inpaint] custom mask ignored: {exc}")
@@ -492,11 +510,53 @@ def create_character_masks(
     if not drawn["primary"]:
         create_split_mask(left_path, width, height, "left", overlap_ratio)
     else:
-        left.save(left_path)
+        finalize_character_mask(left, width, height).save(left_path)
     if not drawn["secondary"]:
         create_split_mask(right_path, width, height, "right", overlap_ratio)
     else:
-        right.save(right_path)
+        finalize_character_mask(right, width, height).save(right_path)
+
+
+def draw_expanded_character_region(
+    draw: ImageDraw.ImageDraw,
+    points: list[tuple[int, int]],
+    brush: int,
+    width: int,
+    height: int,
+) -> None:
+    radius = max(brush // 2, 1)
+    if len(points) == 1:
+        x, y = points[0]
+        draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=255)
+    else:
+        draw.line(points, fill=255, width=brush, joint="curve")
+        for x, y in (points[0], points[-1]):
+            draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=255)
+
+    x_values = [point[0] for point in points]
+    y_values = [point[1] for point in points]
+    region_padding = max(brush * 2, int(min(width, height) * 0.08))
+    x0 = max(0, min(x_values) - region_padding)
+    y0 = max(0, min(y_values) - region_padding)
+    x1 = min(width - 1, max(x_values) + region_padding)
+    y1 = min(height - 1, max(y_values) + region_padding)
+    if x1 - x0 < brush * 2:
+        center = (x0 + x1) // 2
+        x0 = max(0, center - brush)
+        x1 = min(width - 1, center + brush)
+    if y1 - y0 < brush * 2:
+        center = (y0 + y1) // 2
+        y0 = max(0, center - brush)
+        y1 = min(height - 1, center + brush)
+    draw.rounded_rectangle((x0, y0, x1, y1), radius=max(brush, 12), fill=255)
+
+
+def finalize_character_mask(mask: Image.Image, width: int, height: int) -> Image.Image:
+    expansion = max(9, int(min(width, height) * 0.035))
+    if expansion % 2 == 0:
+        expansion += 1
+    expanded = mask.filter(ImageFilter.MaxFilter(expansion))
+    return expanded.convert("RGB")
 
 
 def normalize_mask_role(role: str) -> str:
@@ -557,11 +617,11 @@ def character_tags(character) -> str:
     return merge_tags(character.trigger_words, character.default_positive, character.style_tags)
 
 
-def dual_character_guard() -> str:
-    return (
-        "2girls, two distinct characters, duo, separate faces, separate outfits, "
-        "left and right characters, no fusion, no mixed features"
-    )
+def dual_character_guard(custom_mask: bool = False) -> str:
+    base = "2girls, two distinct characters, duo, separate faces, separate outfits, no fusion, no mixed features"
+    if custom_mask:
+        return merge_tags(base, "natural close interaction, clear individual character identities")
+    return merge_tags(base, "left and right characters")
 
 
 def normalize_tag_key(tag: str) -> str:
@@ -606,6 +666,7 @@ def build_positive_prompt(
     character,
     second_character,
     is_dual: bool,
+    custom_mask: bool = False,
 ) -> str:
     if not is_dual:
         return merge_tags(
@@ -618,11 +679,13 @@ def build_positive_prompt(
     first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
     second_tags = filter_dual_character_tags(character_tags(second_character))
     scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
+    first_label = "character A" if custom_mask else "left character"
+    second_label = "character B" if custom_mask else "right character"
     return merge_tags(
-        dual_character_guard(),
+        dual_character_guard(custom_mask),
         scene_tags,
-        f"left character: {first_tags}" if first_tags else "",
-        f"right character: {second_tags}" if second_tags else "",
+        f"{first_label}: {first_tags}" if first_tags else "",
+        f"{second_label}: {second_tags}" if second_tags else "",
     )
 
 
@@ -636,7 +699,8 @@ def build_dual_scene_tags(
         merge_tags(payload.style_tags, translated_positive),
         first_tags,
         second_tags,
-        dual_character_guard(),
+        dual_character_guard(True),
+        dual_character_guard(False),
     )
 
 
@@ -646,15 +710,21 @@ def build_regional_global_positive(
     character,
     second_character,
     is_dual: bool,
+    custom_mask: bool = False,
 ) -> str:
     if not is_dual:
         return ""
     first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
     second_tags = filter_dual_character_tags(character_tags(second_character))
     scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
+    composition_tags = (
+        "natural close interaction between two characters, preserve the requested contact and relative positions"
+        if custom_mask
+        else "balanced two character composition, clear left-right separation, natural interaction between two characters"
+    )
     return merge_tags(
-        dual_character_guard(),
-        "balanced two character composition, clear left-right separation, natural interaction between two characters",
+        dual_character_guard(custom_mask),
+        composition_tags,
         scene_tags,
     )
 
@@ -665,19 +735,30 @@ def build_regional_positive_prompts(
     character,
     second_character,
     is_dual: bool,
+    custom_mask: bool = False,
 ) -> tuple[str, str]:
     if not is_dual:
         return "", ""
     first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
     second_tags = filter_dual_character_tags(character_tags(second_character))
     scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
+    first_region = (
+        "character A region, only the first character in this masked region, distinct face, distinct outfit, preserve pose and close interaction"
+        if custom_mask
+        else "left side of image, left character, only one character in this region, distinct face, distinct outfit, preserve pose and interaction with the right character"
+    )
+    second_region = (
+        "character B region, only the second character in this masked region, distinct face, distinct outfit, preserve pose and close interaction"
+        if custom_mask
+        else "right side of image, right character, only one character in this region, distinct face, distinct outfit, preserve pose and interaction with the left character"
+    )
     left_positive = merge_tags(
-        "left side of image, left character, only one character in this region, distinct face, distinct outfit, preserve pose and interaction with the right character",
+        first_region,
         scene_tags,
         first_tags,
     )
     right_positive = merge_tags(
-        "right side of image, right character, only one character in this region, distinct face, distinct outfit, preserve pose and interaction with the left character",
+        second_region,
         scene_tags,
         second_tags,
     )
