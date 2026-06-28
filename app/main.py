@@ -18,6 +18,17 @@ from app.prompting import PromptResult, PromptTranslationError, translate_prompt
 
 app = FastAPI(title="Local AI Drawing Service")
 
+DUAL_CHARACTER_BLOCKED_TAGS = {
+    "1girl",
+    "1boy",
+    "solo",
+    "solo focus",
+    "single girl",
+    "single boy",
+    "one girl",
+    "one boy",
+}
+
 
 class GenerateRequest(BaseModel):
     prompt_cn: str = Field(..., min_length=1, max_length=1000)
@@ -155,6 +166,8 @@ async def generate(
         dual_character_guard() if is_dual else "",
         payload.prompt_cn,
     )
+    if is_dual:
+        prompt_source = filter_dual_character_tags(prompt_source)
     if payload.prompt_positive.strip():
         prompt = PromptResult(
             positive=payload.prompt_positive.strip(),
@@ -285,6 +298,22 @@ def dual_character_guard() -> str:
     )
 
 
+def normalize_tag_key(tag: str) -> str:
+    return " ".join(tag.strip().lower().replace("_", " ").split())
+
+
+def filter_dual_character_tags(prompt: str) -> str:
+    if not prompt:
+        return ""
+    tags: list[str] = []
+    for raw_tag in prompt.split(","):
+        tag = raw_tag.strip()
+        if not tag or normalize_tag_key(tag) in DUAL_CHARACTER_BLOCKED_TAGS:
+            continue
+        tags.append(tag)
+    return ", ".join(tags)
+
+
 def build_positive_prompt(
     payload: GenerateRequest,
     translated_positive: str,
@@ -300,12 +329,12 @@ def build_positive_prompt(
             translated_positive,
         )
 
-    first_tags = merge_tags(character_tags(character), payload.trigger_words)
-    second_tags = character_tags(second_character)
+    first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
+    second_tags = filter_dual_character_tags(character_tags(second_character))
     return merge_tags(
         dual_character_guard(),
         f"left character: {first_tags}" if first_tags else "",
         f"right character: {second_tags}" if second_tags else "",
-        payload.style_tags,
-        translated_positive,
+        filter_dual_character_tags(payload.style_tags),
+        filter_dual_character_tags(translated_positive),
     )
