@@ -172,6 +172,7 @@ async def generate(
     second_character = find_character(settings, payload.second_character_id)
     is_dual = is_dual_generation(payload)
     has_custom_mask = has_complete_character_mask(payload.character_mask_json)
+    layout_hint = build_character_layout_hint(payload.character_mask_json) if is_dual and has_custom_mask else ""
     prompt_source = merge_tags(
         character.trigger_words if character else "",
         character.default_positive if character else "",
@@ -182,6 +183,7 @@ async def generate(
         character.style_tags if character else "",
         second_character.style_tags if second_character else "",
         dual_character_guard(has_custom_mask) if is_dual else "",
+        layout_hint,
         payload.prompt_cn,
     )
     if is_dual:
@@ -202,7 +204,7 @@ async def generate(
             )
         except PromptTranslationError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
-    positive_prompt = build_positive_prompt(payload, prompt.positive, character, second_character, is_dual, has_custom_mask)
+    positive_prompt = build_positive_prompt(payload, prompt.positive, character, second_character, is_dual, has_custom_mask, layout_hint)
     regional_global_positive = build_regional_global_positive(
         payload,
         prompt.positive,
@@ -210,6 +212,7 @@ async def generate(
         second_character,
         is_dual,
         has_custom_mask,
+        layout_hint,
     )
     regional_left_positive, regional_right_positive = build_regional_positive_prompts(
         payload,
@@ -360,6 +363,118 @@ def character_mask_roles(mask_json: str) -> set[str]:
     return roles
 
 
+def build_character_layout_hint(mask_json: str) -> str:
+    role_points = character_mask_points(mask_json)
+    primary = role_points.get("primary", [])
+    secondary = role_points.get("secondary", [])
+    if not primary or not secondary:
+        return ""
+
+    primary_box = normalized_bounds(primary)
+    secondary_box = normalized_bounds(secondary)
+    relation = describe_character_relation(primary_box, secondary_box)
+    return merge_tags(
+        "use the drawn A/B regions as a rough composition guide only",
+        f"character A position: {describe_box_position(primary_box)}",
+        f"character B position: {describe_box_position(secondary_box)}",
+        relation,
+        "exactly two separate characters, preserve two distinct faces and two distinct bodies",
+    )
+
+
+def character_mask_points(mask_json: str) -> dict[str, list[tuple[float, float]]]:
+    if not mask_json.strip():
+        return {}
+    try:
+        payload = json.loads(mask_json)
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+
+    result: dict[str, list[tuple[float, float]]] = {"primary": [], "secondary": []}
+    strokes = payload.get("strokes")
+    if not isinstance(strokes, list):
+        return result
+    for stroke in strokes:
+        if not isinstance(stroke, dict):
+            continue
+        role = normalize_mask_role(str(stroke.get("role") or ""))
+        points = stroke.get("points")
+        if role not in result or not isinstance(points, list):
+            continue
+        for point in points:
+            if not isinstance(point, dict):
+                continue
+            try:
+                x = float(point.get("x"))
+                y = float(point.get("y"))
+            except (TypeError, ValueError):
+                continue
+            if x > 1:
+                x = x / max(float(payload.get("width") or 1), 1)
+            if y > 1:
+                y = y / max(float(payload.get("height") or 1), 1)
+            result[role].append((max(0.0, min(1.0, x)), max(0.0, min(1.0, y))))
+    return result
+
+
+def normalized_bounds(points: list[tuple[float, float]]) -> tuple[float, float, float, float]:
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def describe_box_position(bounds: tuple[float, float, float, float]) -> str:
+    x0, y0, x1, y1 = bounds
+    cx = (x0 + x1) / 2
+    cy = (y0 + y1) / 2
+    horizontal = "left" if cx < 0.38 else "right" if cx > 0.62 else "center"
+    vertical = "upper" if cy < 0.38 else "lower" if cy > 0.62 else "middle"
+    if horizontal == "center" and vertical == "middle":
+        return "near the center"
+    return f"{vertical} {horizontal}".strip()
+
+
+def describe_character_relation(
+    primary: tuple[float, float, float, float],
+    secondary: tuple[float, float, float, float],
+) -> str:
+    ax0, ay0, ax1, ay1 = primary
+    bx0, by0, bx1, by1 = secondary
+    acx, acy = (ax0 + ax1) / 2, (ay0 + ay1) / 2
+    bcx, bcy = (bx0 + bx1) / 2, (by0 + by1) / 2
+    dx = bcx - acx
+    dy = bcy - acy
+    distance = (dx * dx + dy * dy) ** 0.5
+    overlap = normalized_iou(primary, secondary)
+
+    if overlap > 0.08 or distance < 0.24:
+        return "close interaction, overlapping composition, keep two separate heads and bodies"
+    if abs(dx) >= abs(dy):
+        if dx > 0:
+            return "character A is left of character B"
+        return "character A is right of character B"
+    if dy > 0:
+        return "character A is above character B"
+    return "character A is below character B"
+
+
+def normalized_iou(
+    first: tuple[float, float, float, float],
+    second: tuple[float, float, float, float],
+) -> float:
+    ax0, ay0, ax1, ay1 = first
+    bx0, by0, bx1, by1 = second
+    ix0, iy0 = max(ax0, bx0), max(ay0, by0)
+    ix1, iy1 = min(ax1, bx1), min(ay1, by1)
+    intersection = max(0.0, ix1 - ix0) * max(0.0, iy1 - iy0)
+    area_a = max(0.0, ax1 - ax0) * max(0.0, ay1 - ay0)
+    area_b = max(0.0, bx1 - bx0) * max(0.0, by1 - by0)
+    union = area_a + area_b - intersection
+    return intersection / union if union > 0 else 0.0
+
+
 def should_use_dual_inpaint(settings: Settings, job: dict) -> bool:
     return (
         str(job.get("generation_mode") or "").upper() == "DUAL"
@@ -371,17 +486,10 @@ def should_use_dual_inpaint(settings: Settings, job: dict) -> bool:
 
 def should_use_dual_mask_conditioning(settings: Settings, job: dict) -> bool:
     strategy = settings.dual_character_strategy.strip().lower()
-    has_custom_mask = bool(str(job.get("character_mask_json") or "").strip())
-    if strategy in {"auto", "region-auto", "smart"}:
-        return (
-            str(job.get("generation_mode") or "").upper() == "DUAL"
-            and has_custom_mask
-            and bool(job.get("regional_left_positive"))
-            and bool(job.get("regional_right_positive"))
-        )
     return (
         str(job.get("generation_mode") or "").upper() == "DUAL"
         and strategy in {"mask", "masked", "mask-conditioning", "conditioning", "regional-mask"}
+        and bool(str(job.get("character_mask_json") or "").strip())
         and bool(job.get("regional_left_positive"))
         and bool(job.get("regional_right_positive"))
     )
@@ -842,6 +950,7 @@ def build_positive_prompt(
     second_character,
     is_dual: bool,
     custom_mask: bool = False,
+    layout_hint: str = "",
 ) -> str:
     if not is_dual:
         return merge_tags(
@@ -858,6 +967,7 @@ def build_positive_prompt(
     second_label = "character B" if custom_mask else "character B on the right side"
     return merge_tags(
         dual_character_guard(custom_mask),
+        layout_hint,
         scene_tags,
         f"{first_label}: {first_tags}" if first_tags else "",
         f"{second_label}: {second_tags}" if second_tags else "",
@@ -886,6 +996,7 @@ def build_regional_global_positive(
     second_character,
     is_dual: bool,
     custom_mask: bool = False,
+    layout_hint: str = "",
 ) -> str:
     if not is_dual:
         return ""
@@ -900,6 +1011,7 @@ def build_regional_global_positive(
     return merge_tags(
         dual_character_guard(custom_mask),
         composition_tags,
+        layout_hint,
         scene_tags,
     )
 
