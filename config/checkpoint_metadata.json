@@ -1,0 +1,12 @@
+{
+  "checkpoints": [
+    {
+      "name": "waiIllustriousSDXL_v170.safetensors",
+      "display_name": "二次元动漫 WAI",
+      "category": "二次元动漫",
+      "category_type": "基础模型",
+      "preview_image": "",
+      "notes": "当前默认使用的 SDXL 动漫风格 checkpoint。文件名保留给 ComfyUI 调用，云端前端展示此友好名称。"
+    }
+  ]
+}

@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 
 from app.config import Settings, get_settings
-from app.presets import list_loras, load_characters
+from app.presets import list_checkpoints, list_loras, load_characters
 from app.prompting import PromptTranslationError, translate_prompt
 
 
@@ -57,7 +57,7 @@ def scan_capabilities(settings: Settings) -> dict[str, Any]:
         "workerId": settings.ai_worker_id,
         "nodeName": settings.ai_worker_name,
         "version": settings.ai_worker_version,
-        "checkpoints": _list_model_files(settings.comfyui_models_dir, "checkpoints"),
+        "checkpoints": list_checkpoints(settings),
         "loras": list_loras(settings),
         "vaes": _list_model_files(settings.comfyui_models_dir, "vae"),
         "characters": characters,

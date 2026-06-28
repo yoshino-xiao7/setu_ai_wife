@@ -37,6 +37,29 @@ DEFAULT_CHECKPOINT=your-checkpoint-filename.safetensors
 
 Restart the service after changing `.env`.
 
+## Checkpoint display names
+
+ComfyUI still needs the real checkpoint filename, but the cloud frontend should show a friendly model name. Maintain checkpoint metadata here:
+
+```text
+config\checkpoint_metadata.json
+```
+
+Current default model:
+
+```json
+{
+  "name": "waiIllustriousSDXL_v170.safetensors",
+  "display_name": "二次元动漫 WAI",
+  "category": "二次元动漫",
+  "category_type": "基础模型",
+  "preview_image": "",
+  "notes": "当前默认使用的 SDXL 动漫风格 checkpoint。"
+}
+```
+
+After editing this file, restart the cloud worker or wait for the next capability report, then click refresh on the cloud AI draw page.
+
 ## Character LoRA presets
 
 Put LoRA files here:

@@ -36,6 +36,15 @@ class LoraMetadata(BaseModel):
     notes: str = ""
 
 
+class CheckpointMetadata(BaseModel):
+    name: str
+    display_name: str = ""
+    category: str = "未分类模型"
+    category_type: str = "Checkpoint"
+    preview_image: str = ""
+    notes: str = ""
+
+
 def load_characters(path: Path) -> list[CharacterPreset]:
     if not path.exists():
         return []
@@ -58,6 +67,19 @@ def load_lora_metadata(path: Path) -> dict[str, LoraMetadata]:
     return result
 
 
+def load_checkpoint_metadata(path: Path) -> dict[str, CheckpointMetadata]:
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(data, dict):
+        data = data.get("checkpoints", [])
+    result: dict[str, CheckpointMetadata] = {}
+    for item in data:
+        metadata = CheckpointMetadata(**item)
+        result[metadata.name] = metadata
+    return result
+
+
 def find_character(settings: Settings, character_id: str | None) -> CharacterPreset | None:
     if not character_id:
         return None
@@ -65,6 +87,31 @@ def find_character(settings: Settings, character_id: str | None) -> CharacterPre
         if character.id == character_id:
             return character
     return None
+
+
+def list_checkpoints(settings: Settings) -> list[dict[str, Any]]:
+    checkpoint_dir = settings.comfyui_models_dir / "checkpoints"
+    if not checkpoint_dir.exists():
+        return []
+    metadata_by_name = load_checkpoint_metadata(settings.checkpoint_metadata_path)
+    suffixes = {".safetensors", ".pt", ".ckpt"}
+    items: list[dict[str, Any]] = []
+    for file in sorted(checkpoint_dir.rglob("*"), key=lambda item: str(item).lower()):
+        if not file.is_file() or file.suffix.lower() not in suffixes:
+            continue
+        relative_name = str(file.relative_to(checkpoint_dir)).replace("\\", "/")
+        metadata = metadata_by_name.get(relative_name) or metadata_by_name.get(file.name)
+        metadata_json = metadata.model_dump_json() if metadata else ""
+        items.append(
+            {
+                "name": relative_name,
+                "displayName": metadata.display_name if metadata and metadata.display_name else file.stem,
+                "size": file.stat().st_size,
+                "sizeBytes": file.stat().st_size,
+                "metadataJson": metadata_json,
+            }
+        )
+    return items
 
 
 def list_loras(settings: Settings) -> list[dict[str, Any]]:

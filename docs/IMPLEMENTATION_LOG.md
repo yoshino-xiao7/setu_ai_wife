@@ -26,6 +26,7 @@
 - Added worker polling for cloud jobs, local FastAPI generation, cloud completion, and optional local output cleanup.
 - Removed local prompt safety blocking from the FastAPI translate/generate entry points for the v1 no-blocking requirement.
 - Added `docs\CLOUD_WORKER.md` for cloud worker configuration, startup, OSS flow, and troubleshooting.
+- Added checkpoint metadata support and configured `waiIllustriousSDXL_v170.safetensors` to display as `二次元动漫 WAI`.
 
 ## Pending machine-local steps
 
