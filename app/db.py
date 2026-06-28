@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS jobs (
     second_lora_strength REAL NOT NULL DEFAULT 0,
     character_id TEXT NOT NULL DEFAULT '',
     second_character_id TEXT NOT NULL DEFAULT '',
+    regional_global_positive TEXT NOT NULL DEFAULT '',
+    regional_left_positive TEXT NOT NULL DEFAULT '',
+    regional_right_positive TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL,
     comfy_prompt_id TEXT NOT NULL DEFAULT '',
     image_path TEXT NOT NULL DEFAULT '',
@@ -62,6 +65,9 @@ class JobStore:
                 "second_lora_strength": "REAL NOT NULL DEFAULT 0",
                 "character_id": "TEXT NOT NULL DEFAULT ''",
                 "second_character_id": "TEXT NOT NULL DEFAULT ''",
+                "regional_global_positive": "TEXT NOT NULL DEFAULT ''",
+                "regional_left_positive": "TEXT NOT NULL DEFAULT ''",
+                "regional_right_positive": "TEXT NOT NULL DEFAULT ''",
             }
             for name, definition in additions.items():
                 if name not in columns:

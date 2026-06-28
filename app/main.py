@@ -29,6 +29,12 @@ DUAL_CHARACTER_BLOCKED_TAGS = {
     "one boy",
 }
 
+DUAL_CHARACTER_NEGATIVE_TAGS = (
+    "merged characters, fused characters, hybrid character, mixed character features, "
+    "same face, identical faces, wrong character on left, wrong character on right, "
+    "shared hair color, shared outfit, duplicated outfit, conjoined bodies"
+)
+
 
 class GenerateRequest(BaseModel):
     prompt_cn: str = Field(..., min_length=1, max_length=1000)
@@ -185,17 +191,35 @@ async def generate(
         except PromptTranslationError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
     positive_prompt = build_positive_prompt(payload, prompt.positive, character, second_character, is_dual)
+    regional_global_positive = build_regional_global_positive(
+        payload,
+        prompt.positive,
+        character,
+        second_character,
+        is_dual,
+    )
+    regional_left_positive, regional_right_positive = build_regional_positive_prompts(
+        payload,
+        prompt.positive,
+        character,
+        second_character,
+        is_dual,
+    )
+    negative_prompt = build_negative_prompt(prompt.negative, is_dual)
     lora_name = payload.lora_name or (character.lora_name if character else "")
     lora_strength = payload.lora_strength or (character.lora_strength if character and character.lora_name else 0)
     second_lora_name = payload.second_lora_name or (second_character.lora_name if second_character else "")
     second_lora_strength = payload.second_lora_strength or (second_character.lora_strength if second_character and second_character.lora_name else 0)
+    if is_dual:
+        lora_strength = min(lora_strength, 0.45)
+        second_lora_strength = min(second_lora_strength, 0.45)
     job_id = uuid.uuid4().hex
     seed = payload.seed or random_seed()
     job = {
         "id": job_id,
         "prompt_cn": payload.prompt_cn,
         "prompt_positive": positive_prompt,
-        "prompt_negative": prompt.negative,
+        "prompt_negative": negative_prompt,
         "style_notes": prompt.style_notes,
         "seed": seed,
         "width": payload.width,
@@ -206,6 +230,9 @@ async def generate(
         "generation_mode": "DUAL" if is_dual else "SINGLE",
         "character_id": payload.character_id or "",
         "second_character_id": payload.second_character_id or "",
+        "regional_global_positive": regional_global_positive,
+        "regional_left_positive": regional_left_positive,
+        "regional_right_positive": regional_right_positive,
         "lora_name": lora_name,
         "lora_strength": lora_strength,
         "second_lora_name": second_lora_name if is_dual else "",
@@ -226,7 +253,7 @@ async def run_generation(job_id: str, settings: Settings) -> None:
     client = ComfyUIClient(settings)
     try:
         workflow = build_workflow(
-            positive=job["prompt_positive"],
+            positive=job.get("regional_global_positive") or job["prompt_positive"],
             negative=job["prompt_negative"],
             seed=job["seed"],
             width=job["width"],
@@ -240,6 +267,8 @@ async def run_generation(job_id: str, settings: Settings) -> None:
             lora_strength=job["lora_strength"],
             second_lora_name=job["second_lora_name"],
             second_lora_strength=job["second_lora_strength"],
+            regional_left_positive=job.get("regional_left_positive") or "",
+            regional_right_positive=job.get("regional_right_positive") or "",
             filename_prefix=f"local_ai_drawing/{job_id}",
         )
         prompt_id = await client.queue_prompt(workflow, client_id=job_id)
@@ -314,6 +343,26 @@ def filter_dual_character_tags(prompt: str) -> str:
     return ", ".join(tags)
 
 
+def subtract_prompt_tags(prompt: str, *remove_prompts: str) -> str:
+    remove_keys: set[str] = set()
+    for remove_prompt in remove_prompts:
+        for raw_tag in remove_prompt.split(","):
+            tag = raw_tag.strip()
+            if tag:
+                remove_keys.add(normalize_tag_key(tag))
+
+    tags: list[str] = []
+    for raw_tag in prompt.split(","):
+        tag = raw_tag.strip()
+        if not tag:
+            continue
+        key = normalize_tag_key(tag)
+        if key in remove_keys or key in DUAL_CHARACTER_BLOCKED_TAGS:
+            continue
+        tags.append(tag)
+    return ", ".join(tags)
+
+
 def build_positive_prompt(
     payload: GenerateRequest,
     translated_positive: str,
@@ -331,10 +380,74 @@ def build_positive_prompt(
 
     first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
     second_tags = filter_dual_character_tags(character_tags(second_character))
+    scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
     return merge_tags(
         dual_character_guard(),
+        scene_tags,
         f"left character: {first_tags}" if first_tags else "",
         f"right character: {second_tags}" if second_tags else "",
-        filter_dual_character_tags(payload.style_tags),
-        filter_dual_character_tags(translated_positive),
     )
+
+
+def build_dual_scene_tags(
+    payload: GenerateRequest,
+    translated_positive: str,
+    first_tags: str,
+    second_tags: str,
+) -> str:
+    return subtract_prompt_tags(
+        merge_tags(payload.style_tags, translated_positive),
+        first_tags,
+        second_tags,
+        dual_character_guard(),
+    )
+
+
+def build_regional_global_positive(
+    payload: GenerateRequest,
+    translated_positive: str,
+    character,
+    second_character,
+    is_dual: bool,
+) -> str:
+    if not is_dual:
+        return ""
+    first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
+    second_tags = filter_dual_character_tags(character_tags(second_character))
+    scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
+    return merge_tags(
+        dual_character_guard(),
+        "balanced two character composition, clear left-right separation",
+        scene_tags,
+    )
+
+
+def build_regional_positive_prompts(
+    payload: GenerateRequest,
+    translated_positive: str,
+    character,
+    second_character,
+    is_dual: bool,
+) -> tuple[str, str]:
+    if not is_dual:
+        return "", ""
+    first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
+    second_tags = filter_dual_character_tags(character_tags(second_character))
+    scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
+    left_positive = merge_tags(
+        "left side of image, left character, only one character in this region, distinct face, distinct outfit",
+        scene_tags,
+        first_tags,
+    )
+    right_positive = merge_tags(
+        "right side of image, right character, only one character in this region, distinct face, distinct outfit",
+        scene_tags,
+        second_tags,
+    )
+    return left_positive, right_positive
+
+
+def build_negative_prompt(translated_negative: str, is_dual: bool) -> str:
+    if not is_dual:
+        return translated_negative
+    return merge_tags(translated_negative, DUAL_CHARACTER_NEGATIVE_TAGS)

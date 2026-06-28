@@ -29,6 +29,8 @@ def build_workflow(
     lora_strength: float = 0,
     second_lora_name: str = "",
     second_lora_strength: float = 0,
+    regional_left_positive: str = "",
+    regional_right_positive: str = "",
     filename_prefix: str = "local_ai_drawing",
 ) -> dict[str, Any]:
     workflow: dict[str, Any] = {
@@ -85,7 +87,55 @@ def build_workflow(
     workflow["3"]["inputs"]["model"] = model_ref
     workflow["6"]["inputs"]["clip"] = clip_ref
     workflow["7"]["inputs"]["clip"] = clip_ref
+    if regional_left_positive and regional_right_positive:
+        left_width, right_width, right_x = regional_area_geometry(width)
+        workflow["12"] = {"class_type": "CLIPTextEncode", "inputs": {"text": regional_left_positive, "clip": clip_ref}}
+        workflow["13"] = {"class_type": "CLIPTextEncode", "inputs": {"text": regional_right_positive, "clip": clip_ref}}
+        workflow["14"] = {
+            "class_type": "ConditioningSetArea",
+            "inputs": {
+                "conditioning": ["12", 0],
+                "width": left_width,
+                "height": height,
+                "x": 0,
+                "y": 0,
+                "strength": 1.15,
+            },
+        }
+        workflow["15"] = {
+            "class_type": "ConditioningSetArea",
+            "inputs": {
+                "conditioning": ["13", 0],
+                "width": right_width,
+                "height": height,
+                "x": right_x,
+                "y": 0,
+                "strength": 1.15,
+            },
+        }
+        workflow["16"] = {
+            "class_type": "ConditioningCombine",
+            "inputs": {"conditioning_1": ["6", 0], "conditioning_2": ["14", 0]},
+        }
+        workflow["17"] = {
+            "class_type": "ConditioningCombine",
+            "inputs": {"conditioning_1": ["16", 0], "conditioning_2": ["15", 0]},
+        }
+        workflow["3"]["inputs"]["positive"] = ["17", 0]
     return workflow
+
+
+def regional_area_geometry(width: int) -> tuple[int, int, int]:
+    overlap = round_to_multiple_of_8(max(64, min(160, width // 10)))
+    half_width = round_to_multiple_of_8(width // 2)
+    left_width = min(width, round_to_multiple_of_8(half_width + overlap))
+    right_width = min(width, round_to_multiple_of_8(width - half_width + overlap))
+    right_x = max(0, round_to_multiple_of_8(width - right_width))
+    return left_width, right_width, right_x
+
+
+def round_to_multiple_of_8(value: int) -> int:
+    return max(64, int(round(value / 8)) * 8)
 
 
 class ComfyUIClient:
