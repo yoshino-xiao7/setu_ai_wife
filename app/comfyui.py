@@ -125,6 +125,118 @@ def build_workflow(
     return workflow
 
 
+def build_mask_conditioning_workflow(
+    *,
+    positive: str,
+    negative: str,
+    regional_left_positive: str,
+    regional_right_positive: str,
+    left_mask_image: str,
+    right_mask_image: str,
+    seed: int,
+    width: int,
+    height: int,
+    steps: int,
+    cfg: float,
+    checkpoint: str,
+    sampler: str,
+    scheduler: str,
+    lora_name: str = "",
+    lora_strength: float = 0,
+    second_lora_name: str = "",
+    second_lora_strength: float = 0,
+    mask_strength: float = 1.15,
+    filename_prefix: str = "local_ai_drawing",
+) -> dict[str, Any]:
+    workflow: dict[str, Any] = {
+        "1": {"class_type": "LoadImageMask", "inputs": {"image": left_mask_image, "channel": "red"}},
+        "2": {"class_type": "LoadImageMask", "inputs": {"image": right_mask_image, "channel": "red"}},
+        "3": {
+            "class_type": "KSampler",
+            "inputs": {
+                "seed": seed,
+                "steps": steps,
+                "cfg": cfg,
+                "sampler_name": sampler,
+                "scheduler": scheduler,
+                "denoise": 1,
+                "model": ["4", 0],
+                "positive": ["17", 0],
+                "negative": ["7", 0],
+                "latent_image": ["5", 0],
+            },
+        },
+        "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint}},
+        "5": {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": 1}},
+        "6": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["4", 1]}},
+        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["4", 1]}},
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
+        "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]}},
+        "12": {"class_type": "CLIPTextEncode", "inputs": {"text": regional_left_positive, "clip": ["4", 1]}},
+        "13": {"class_type": "CLIPTextEncode", "inputs": {"text": regional_right_positive, "clip": ["4", 1]}},
+        "14": {
+            "class_type": "ConditioningSetMask",
+            "inputs": {
+                "conditioning": ["12", 0],
+                "mask": ["1", 0],
+                "strength": mask_strength,
+                "set_cond_area": "mask bounds",
+            },
+        },
+        "15": {
+            "class_type": "ConditioningSetMask",
+            "inputs": {
+                "conditioning": ["13", 0],
+                "mask": ["2", 0],
+                "strength": mask_strength,
+                "set_cond_area": "mask bounds",
+            },
+        },
+        "16": {
+            "class_type": "ConditioningCombine",
+            "inputs": {"conditioning_1": ["6", 0], "conditioning_2": ["14", 0]},
+        },
+        "17": {
+            "class_type": "ConditioningCombine",
+            "inputs": {"conditioning_1": ["16", 0], "conditioning_2": ["15", 0]},
+        },
+    }
+    model_ref: list[Any] = ["4", 0]
+    clip_ref: list[Any] = ["4", 1]
+    if lora_name and lora_strength > 0:
+        workflow["10"] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "lora_name": lora_name,
+                "strength_model": lora_strength,
+                "strength_clip": lora_strength,
+                "model": model_ref,
+                "clip": clip_ref,
+            },
+        }
+        model_ref = ["10", 0]
+        clip_ref = ["10", 1]
+    if second_lora_name and second_lora_strength > 0:
+        workflow["11"] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "lora_name": second_lora_name,
+                "strength_model": second_lora_strength,
+                "strength_clip": second_lora_strength,
+                "model": model_ref,
+                "clip": clip_ref,
+            },
+        }
+        model_ref = ["11", 0]
+        clip_ref = ["11", 1]
+    workflow["3"]["inputs"]["model"] = model_ref
+    workflow["6"]["inputs"]["clip"] = clip_ref
+    workflow["7"]["inputs"]["clip"] = clip_ref
+    workflow["12"]["inputs"]["clip"] = clip_ref
+    workflow["13"]["inputs"]["clip"] = clip_ref
+    return workflow
+
+
 def build_inpaint_workflow(
     *,
     positive: str,

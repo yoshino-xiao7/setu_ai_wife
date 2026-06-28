@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageDraw, ImageFilter
 from pydantic import BaseModel, Field
 
-from app.comfyui import ComfyUIClient, build_inpaint_workflow, build_workflow, random_seed
+from app.comfyui import ComfyUIClient, build_inpaint_workflow, build_mask_conditioning_workflow, build_workflow, random_seed
 from app.config import Settings, get_settings
 from app.db import JobStore
 from app.presets import find_character, list_loras, load_characters, merge_tags
@@ -262,6 +262,8 @@ async def run_generation(job_id: str, settings: Settings) -> None:
     try:
         if should_use_dual_inpaint(settings, job):
             image_path = await run_dual_inpaint_generation(job, settings, store, client)
+        elif should_use_dual_mask_conditioning(settings, job):
+            image_path = await run_dual_mask_conditioning_generation(job, settings, store, client)
         else:
             workflow = build_workflow(
                 positive=job["prompt_positive"],
@@ -353,6 +355,71 @@ def should_use_dual_inpaint(settings: Settings, job: dict) -> bool:
         and bool(job.get("regional_left_positive"))
         and bool(job.get("regional_right_positive"))
     )
+
+
+def should_use_dual_mask_conditioning(settings: Settings, job: dict) -> bool:
+    strategy = settings.dual_character_strategy.strip().lower()
+    return (
+        str(job.get("generation_mode") or "").upper() == "DUAL"
+        and strategy in {"mask", "masked", "mask-conditioning", "conditioning", "regional-mask"}
+        and bool(job.get("regional_left_positive"))
+        and bool(job.get("regional_right_positive"))
+    )
+
+
+async def run_dual_mask_conditioning_generation(
+    job: dict,
+    settings: Settings,
+    store: JobStore,
+    client: ComfyUIClient,
+) -> Path:
+    job_id = job["id"]
+    mask_dir = settings.database_path.parent / "masks"
+    mask_dir.mkdir(parents=True, exist_ok=True)
+    left_mask = mask_dir / f"{job_id}_left_mask.png"
+    right_mask = mask_dir / f"{job_id}_right_mask.png"
+    create_character_masks(
+        left_mask,
+        right_mask,
+        job["width"],
+        job["height"],
+        job.get("character_mask_json") or "",
+        settings.dual_inpaint_mask_overlap_ratio,
+    )
+
+    uploaded_inputs: list[str] = []
+    temp_paths = [left_mask, right_mask]
+    try:
+        left_mask_upload = await client.upload_image(left_mask, f"{job_id}_left_mask.png")
+        right_mask_upload = await client.upload_image(right_mask, f"{job_id}_right_mask.png")
+        uploaded_inputs.extend([left_mask_upload, right_mask_upload])
+        workflow = build_mask_conditioning_workflow(
+            positive=job.get("regional_global_positive") or job["prompt_positive"],
+            negative=job["prompt_negative"],
+            regional_left_positive=job["regional_left_positive"],
+            regional_right_positive=job["regional_right_positive"],
+            left_mask_image=left_mask_upload,
+            right_mask_image=right_mask_upload,
+            seed=job["seed"],
+            width=job["width"],
+            height=job["height"],
+            steps=job["steps"],
+            cfg=job["cfg"],
+            checkpoint=job["checkpoint"],
+            sampler=settings.default_sampler,
+            scheduler=settings.default_scheduler,
+            lora_name=job["lora_name"],
+            lora_strength=job["lora_strength"],
+            second_lora_name=job["second_lora_name"],
+            second_lora_strength=job["second_lora_strength"],
+            mask_strength=settings.dual_mask_conditioning_strength,
+            filename_prefix=f"local_ai_drawing/{job_id}",
+        )
+        return await queue_and_download(client, store, job_id, workflow, settings.output_dir, job_id)
+    finally:
+        for filename in uploaded_inputs:
+            client.cleanup_comfyui_input_file(filename)
+        cleanup_temp_paths(temp_paths)
 
 
 async def run_dual_inpaint_generation(

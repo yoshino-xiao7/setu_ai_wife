@@ -40,7 +40,8 @@ class Settings(BaseSettings):
     ai_worker_poll_seconds: float = Field(5, alias="AI_WORKER_POLL_SECONDS")
     ai_worker_capability_report_seconds: float = Field(60, alias="AI_WORKER_CAPABILITY_REPORT_SECONDS")
     ai_worker_cleanup_outputs: bool = Field(True, alias="AI_WORKER_CLEANUP_OUTPUTS")
-    dual_character_strategy: str = Field("inpaint", alias="DUAL_CHARACTER_STRATEGY")
+    dual_character_strategy: str = Field("mask-conditioning", alias="DUAL_CHARACTER_STRATEGY")
+    dual_mask_conditioning_strength: float = Field(1.15, alias="DUAL_MASK_CONDITIONING_STRENGTH")
     dual_inpaint_denoise: float = Field(0.62, alias="DUAL_INPAINT_DENOISE")
     dual_inpaint_mask_overlap_ratio: float = Field(0.08, alias="DUAL_INPAINT_MASK_OVERLAP_RATIO")
 

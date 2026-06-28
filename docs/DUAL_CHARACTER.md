@@ -2,17 +2,33 @@
 
 ## 当前默认策略
 
-双角色默认使用 `DUAL_CHARACTER_STRATEGY=inpaint`。
+双角色默认使用 `DUAL_CHARACTER_STRATEGY=mask-conditioning`。
 
-流程是三步：
+流程是一轮采样：
 
-1. 先生成一张没有角色 LoRA 的底图，负责构图、场景和互动关系。
-2. 上传底图和角色 A 遮罩，只加载角色 A 的 LoRA，对角色 A 区域局部重绘。
-3. 上传角色 A 修正后的图和角色 B 遮罩，只加载角色 B 的 LoRA，对角色 B 区域局部重绘。
+1. 云端前端提交两个角色、两个 LoRA、正向/反向提示词和可选角色 A/B 区域。
+2. Worker 生成角色 A/B 的黑白区域图。
+3. ComfyUI 使用内置 `ConditioningSetMask` 节点，让角色 A/B 的提示词主要影响对应区域。
+4. 最终仍然只从空 latent 生成一次图片，不对已有图片做二次局部重绘。
 
-这样两个角色 LoRA 不会在同一次采样里同时加载，可以明显减少特征互相污染。
+这个策略的重点是：区域图只约束提示词作用范围，不作为 inpaint 遮罩参与像素重绘，因此不会把画面某块抹掉再盖上一层。
 
-如果前端没有提交手动遮罩，Worker 会自动使用默认左右半屏遮罩。前端提交了 `characterMaskJson` 后，Worker 会按用户涂抹的区域生成本机临时 mask PNG。
+## 为什么不再默认 inpaint
+
+之前默认使用 `DUAL_CHARACTER_STRATEGY=inpaint`，流程是：
+
+1. 先生成一张没有角色 LoRA 的底图。
+2. 用角色 A 遮罩对底图局部重绘。
+3. 再用角色 B 遮罩对第二张图局部重绘。
+
+这个流程确实能减少一部分 LoRA 特征混合，但副作用很重：
+
+- 不画手动区域时，默认左右半屏遮罩也会触发大面积 inpaint。
+- 手动画范围时，画出来的区域会被当作需要重绘的像素区域，而不是单纯的构图提示。
+- 亲密互动、遮挡、上下叠放时，两次重绘会互相覆盖，容易出现遮蔽、硬边、身体被盖住、互动姿势被破坏。
+- 遮罩越大、`DUAL_INPAINT_DENOISE` 越高，角色越像 LoRA，但越容易破坏原图结构。
+
+所以 inpaint 现在保留为实验模式，不再作为默认策略。
 
 ## 互动场景怎么写
 
@@ -22,60 +38,44 @@
 八重神子和雷电影在沙滩上牵手奔跑，阳光，海浪，动态构图
 ```
 
-底图阶段会先生成“两个人牵手奔跑”的姿势和构图；局部重绘阶段只负责把左边修成第一个角色，把右边修成第二个角色。
+亲密互动可以更明确，例如：
 
-适合当前自动版的互动：
+```text
+Yae Miko and Raiden Shogun hugging, close interaction, one character leaning over another, intimate composition, two distinct characters
+```
 
-- 并排站立
-- 牵手
-- 一起奔跑
-- 对视
-- 背靠背
-- 坐在一起
+## 角色 A/B 区域
 
-较难的互动：
+云端前端在双角色模式下提供“角色区域提示”：
 
-- 拥抱
-- 接吻
-- 身体大面积交叉
-- 一个人挡住另一个人
-- 两个角色都在画面中心重叠
+- 角色 A：第一个角色或第一个角色预设。
+- 角色 B：第二个角色或第二个角色预设。
+- 不画区域：Worker 使用默认左右区域作为提示词范围。
+- 画了区域：Worker 使用你画出的 A/B 区域作为提示词范围，适合拥抱、接吻、上下叠放、遮挡互动。
 
-这些场景以后最好加“手动遮罩”或“自动人像分割”，让用户能指定每个角色的实际区域。
-
-## 手动遮罩
-
-云端前端在双角色模式下提供“角色区域遮罩”：
-
-- 蓝色画笔：角色 A。
-- 玫红画笔：角色 B。
-- 不画遮罩：自动左右区域。
-- 画错了可以撤销一笔或清空。
-
-拥抱、接吻、遮挡较多时，建议把每个角色的头发、脸、上半身、主要服装区域都粗略涂上。遮罩不用非常精细，重点是告诉 Worker 哪些区域应该由哪个角色 LoRA 负责。
-
-如果 A/B 遮罩重叠，当前流程会先重绘 A，再重绘 B，因此重叠区域最终更偏角色 B。后续可以增加“重绘顺序”选项。
+区域不用精确描边，最好覆盖角色的头发、脸、上半身、主要服装范围。它现在不会作为重绘遮罩盖住画面，只是给 ComfyUI 的区域提示词使用。
 
 ## 可调参数
 
 `.env` 可配置：
 
 ```dotenv
-DUAL_CHARACTER_STRATEGY=inpaint
+DUAL_CHARACTER_STRATEGY=mask-conditioning
+DUAL_MASK_CONDITIONING_STRENGTH=1.15
 DUAL_INPAINT_DENOISE=0.62
 DUAL_INPAINT_MASK_OVERLAP_RATIO=0.08
 ```
 
-- `DUAL_INPAINT_DENOISE` 越高，角色 LoRA 越容易生效，但越容易破坏底图姿势。
-- `DUAL_INPAINT_DENOISE` 越低，互动姿势越稳定，但角色特征可能不够强。
-- 推荐范围：`0.55` 到 `0.68`。
-- `DUAL_INPAINT_MASK_OVERLAP_RATIO` 控制左右遮罩在中间区域的重叠比例，默认 `0.08`。
+- `DUAL_CHARACTER_STRATEGY=mask-conditioning`：推荐默认值，单次生成，区域提示词约束。
+- `DUAL_CHARACTER_STRATEGY=single`：完全不使用区域，只把两个角色和两个 LoRA 放入一次生成。
+- `DUAL_CHARACTER_STRATEGY=inpaint`：旧实验模式，会二次局部重绘，容易产生遮蔽，只建议调试时临时使用。
+- `DUAL_MASK_CONDITIONING_STRENGTH`：区域提示词强度，建议范围 `0.9` 到 `1.3`。
+- `DUAL_INPAINT_DENOISE` 和 `DUAL_INPAINT_MASK_OVERLAP_RATIO` 只在 `inpaint` 策略下生效。
 
 ## 后续更强方案
 
 如果还要继续提高双角色稳定性，可以考虑：
 
-- 前端增加手动遮罩编辑。
-- 接入人像/角色自动分割模型，自动生成每个角色的遮罩。
 - 安装区域 LoRA 或 attention couple 类 ComfyUI 自定义节点。
-- 对脸部和服装再做二次局部修复。
+- 接入人像/角色自动分割模型，自动生成更准确的角色区域。
+- 对脸部和服装做可选局部修复，但不作为默认双角色流程。
