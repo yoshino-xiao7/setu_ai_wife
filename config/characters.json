@@ -69,6 +69,20 @@
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/columbina_(genshin_impact).jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "notes": "原神角色哥伦比亚。选择该预设会自动使用 columbina_2a_naiVpred-000039.safetensors，并注入哥伦比亚的常用角色 tags。"
+    },
+    {
+      "id": "citlali",
+      "name": "茜特菈莉",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "c_citlali (genshin impact)_nbe11_xl.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "citlali (genshin impact), genshin impact",
+      "default_positive": "1girl, blue eyes, pink hair, very long hair, long hair, twin braids, braid, medium breasts, bare shoulders, forehead mark",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/citlali_(genshin_impact).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色茜特菈莉。选择该预设会自动使用 c_citlali (genshin impact)_nbe11_xl.safetensors，并注入茜特菈莉的常用角色 tags。"
     }
   ]
 }

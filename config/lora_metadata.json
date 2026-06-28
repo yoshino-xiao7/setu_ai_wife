@@ -54,6 +54,17 @@
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/f1b6845b-5775-4e00-9266-e799754a79b1/anim=false,width=450,optimized=true/00024-1044239695.jpeg",
       "notes": "原神角色哥伦比亚 LoRA。建议通过角色预设使用，会自动注入哥伦比亚常用角色 tags。"
+    },
+    {
+      "name": "c_citlali (genshin impact)_nbe11_xl.safetensors",
+      "display_name": "茜特菈莉",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "trigger_words": "citlali (genshin impact), genshin impact",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/34afcc2e-c655-4b85-ace5-04d152154880/anim=false,width=450,optimized=true/00107-756123321.jpeg",
+      "notes": "原神角色茜特菈莉 LoRA。建议通过角色预设使用，会自动注入茜特菈莉常用角色 tags。"
     }
   ]
 }
