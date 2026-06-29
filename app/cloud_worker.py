@@ -18,6 +18,16 @@ MODEL_SUFFIXES = {".safetensors", ".ckpt", ".pt"}
 USER_AGENT = "Xueliang-AI-Worker/0.1"
 
 
+class LocalGenerationError(RuntimeError):
+    def __init__(self, message: str, local_job: dict[str, Any] | None = None):
+        super().__init__(message)
+        self.local_job = local_job or {}
+
+    @property
+    def comfy_prompt_id(self) -> str:
+        return str(self.local_job.get("comfy_prompt_id") or "")
+
+
 def _capability_item(file: Path, root: Path) -> dict[str, Any]:
     try:
         name = str(file.relative_to(root)).replace("\\", "/")
@@ -164,22 +174,47 @@ class CloudWorker:
 
     async def _process_job(self, client: httpx.AsyncClient, job: dict[str, Any]) -> None:
         job_id = job["id"]
+        local_job_id = ""
+        comfy_prompt_id = ""
+        stage = "CLAIMED"
+        detail = "Cloud job claimed by worker."
         try:
+            stage = "STARTING_LOCAL_GENERATION"
+            detail = "Posting generation request to local FastAPI."
             local_job = await self._start_local_generation(job)
-            await client.post(
+            local_job_id = local_job["job_id"]
+            stage = "LOCAL_GENERATION_RUNNING"
+            detail = "Local FastAPI accepted generation request."
+            running_response = await client.post(
                 f"{self.cloud_url}/ai-worker/jobs/{job_id}/running",
                 json={
                     "workerId": self.settings.ai_worker_id,
-                    "localJobId": local_job["job_id"],
+                    "localJobId": local_job_id,
+                    "workerStage": stage,
+                    "workerDetail": detail,
                 },
             )
-            local_result = await self._wait_local_job(local_job["job_id"])
-            await self._mark_uploading(client, job_id)
+            self._raise_for_status(running_response, "mark cloud job running")
+            try:
+                local_result = await self._wait_local_job(local_job_id)
+            except LocalGenerationError as exc:
+                comfy_prompt_id = exc.comfy_prompt_id
+                stage = "LOCAL_GENERATION_FAILED"
+                detail = str(exc)
+                raise
+            comfy_prompt_id = str(local_result.get("comfy_prompt_id") or "")
+            stage = "UPLOADING_TO_CLOUD"
+            detail = "Local image generated; preparing cloud OSS upload."
+            await self._mark_uploading(client, job_id, local_job_id, comfy_prompt_id, stage, detail)
+            stage = "DOWNLOADING_LOCAL_IMAGE"
             image_bytes, filename = await self._download_local_image(local_result)
-            await self._complete_cloud_job(client, job_id, local_result, image_bytes, filename)
+            stage = "COMPLETING_CLOUD_JOB"
+            detail = f"Sending {filename} to cloud complete endpoint."
+            await self._complete_cloud_job(client, job_id, local_job_id, comfy_prompt_id, local_result, image_bytes, filename)
+            stage = "CLEANING_LOCAL_OUTPUT"
             self._cleanup_local_image(filename)
         except Exception as exc:
-            await self._fail_cloud_job(client, job_id, str(exc))
+            await self._fail_cloud_job(client, job_id, str(exc), local_job_id, comfy_prompt_id, stage, detail)
 
     async def _start_local_generation(self, job: dict[str, Any]) -> dict[str, Any]:
         payload = {
@@ -204,20 +239,20 @@ class CloudWorker:
         }
         async with httpx.AsyncClient(timeout=30, headers={"User-Agent": USER_AGENT}) as local:
             response = await local.post(f"{self.local_url}/api/generate", json=payload)
-            response.raise_for_status()
+            self._raise_for_status(response, "start local generation")
             return response.json()
 
     async def _wait_local_job(self, local_job_id: str) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=30, headers={"User-Agent": USER_AGENT}) as local:
             while True:
                 response = await local.get(f"{self.local_url}/api/jobs/{local_job_id}")
-                response.raise_for_status()
+                self._raise_for_status(response, "poll local generation")
                 job = response.json()
                 status = job.get("status")
                 if status == "completed":
                     return job
                 if status == "failed":
-                    raise RuntimeError(job.get("error") or "Local generation failed")
+                    raise LocalGenerationError(job.get("error") or "Local generation failed", job)
                 await asyncio.sleep(2)
 
     async def _download_local_image(self, local_job: dict[str, Any]) -> tuple[bytes, str]:
@@ -226,26 +261,46 @@ class CloudWorker:
             raise RuntimeError("Local generation completed without image_path.")
         async with httpx.AsyncClient(timeout=60, headers={"User-Agent": USER_AGENT}) as local:
             response = await local.get(f"{self.local_url}/api/images/{filename}")
-            response.raise_for_status()
+            self._raise_for_status(response, "download local image")
             return response.content, filename
 
-    async def _mark_uploading(self, client: httpx.AsyncClient, job_id: int) -> None:
+    async def _mark_uploading(
+        self,
+        client: httpx.AsyncClient,
+        job_id: int,
+        local_job_id: str,
+        comfy_prompt_id: str,
+        stage: str,
+        detail: str,
+    ) -> None:
         response = await client.post(
             f"{self.cloud_url}/ai-worker/jobs/{job_id}/uploading",
-            json={"workerId": self.settings.ai_worker_id},
+            json={
+                "workerId": self.settings.ai_worker_id,
+                "localJobId": local_job_id,
+                "comfyPromptId": comfy_prompt_id,
+                "workerStage": stage,
+                "workerDetail": detail,
+            },
         )
-        response.raise_for_status()
+        self._raise_for_status(response, "mark cloud job uploading")
 
     async def _complete_cloud_job(
         self,
         client: httpx.AsyncClient,
         job_id: int,
+        local_job_id: str,
+        comfy_prompt_id: str,
         local_result: dict[str, Any],
         image_bytes: bytes,
         filename: str,
     ) -> None:
         payload = {
             "workerId": self.settings.ai_worker_id,
+            "localJobId": local_job_id,
+            "comfyPromptId": comfy_prompt_id,
+            "workerStage": "COMPLETED",
+            "workerDetail": f"Cloud accepted local image {filename}.",
             "imageBase64": base64.b64encode(image_bytes).decode("ascii"),
             "contentType": "image/png",
             "filename": filename,
@@ -255,14 +310,30 @@ class CloudWorker:
             "seed": local_result.get("seed"),
         }
         response = await client.post(f"{self.cloud_url}/ai-worker/jobs/{job_id}/complete", json=payload, timeout=120)
-        response.raise_for_status()
+        self._raise_for_status(response, "complete cloud job")
 
-    async def _fail_cloud_job(self, client: httpx.AsyncClient, job_id: int, error: str) -> None:
+    async def _fail_cloud_job(
+        self,
+        client: httpx.AsyncClient,
+        job_id: int,
+        error: str,
+        local_job_id: str = "",
+        comfy_prompt_id: str = "",
+        stage: str = "FAILED",
+        detail: str = "",
+    ) -> None:
         response = await client.post(
             f"{self.cloud_url}/ai-worker/jobs/{job_id}/fail",
-            json={"workerId": self.settings.ai_worker_id, "errorMessage": error[:1000]},
+            json={
+                "workerId": self.settings.ai_worker_id,
+                "localJobId": local_job_id,
+                "comfyPromptId": comfy_prompt_id,
+                "workerStage": stage,
+                "workerDetail": detail,
+                "errorMessage": error[:1000],
+            },
         )
-        response.raise_for_status()
+        self._raise_for_status(response, "fail cloud job")
 
     async def _fail_prompt_translation(self, client: httpx.AsyncClient, job_id: int, error: str) -> None:
         response = await client.post(
@@ -282,6 +353,15 @@ class CloudWorker:
                 print(f"[cloud-worker] cleaned local image: {safe_name}")
             except OSError as exc:
                 print(f"[cloud-worker] cleanup skipped for {safe_name}: {exc}")
+
+    @staticmethod
+    def _raise_for_status(response: httpx.Response, action: str) -> None:
+        if response.status_code < 400:
+            return
+        body = response.text.strip()
+        if len(body) > 500:
+            body = body[:500] + "..."
+        raise RuntimeError(f"{action} failed: HTTP {response.status_code} {body}")
 
 
 async def main() -> None:
