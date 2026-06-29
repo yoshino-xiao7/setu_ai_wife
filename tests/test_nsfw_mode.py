@@ -37,6 +37,14 @@ class NsfwModeTest(unittest.TestCase):
             "adult woman, rainy night, cinematic lighting",
         )
 
+    def test_removes_miko_clothing_tag_but_keeps_yae_miko_identity(self) -> None:
+        self.assertEqual(
+            filter_nsfw_incompatible_tags(
+                "yae miko, genshin impact, fox ears, nontraditional miko, purple eyes"
+            ),
+            "yae miko, genshin impact, fox ears, purple eyes",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

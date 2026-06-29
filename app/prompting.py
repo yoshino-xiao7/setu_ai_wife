@@ -52,6 +52,10 @@ NSFW_INCOMPATIBLE_TAG_TOKENS = {
     "leotard",
     "swimsuit",
 }
+NSFW_INCOMPATIBLE_EXACT_TAGS = {
+    "nontraditional miko",
+    "traditional miko",
+}
 
 
 class PromptResult(BaseModel):
@@ -72,6 +76,8 @@ def normalize_prompt_value(value: object) -> str:
 
 
 def parse_json_response(raw: str) -> dict:
+    if not raw or not raw.strip():
+        raise PromptTranslationError("Ollama returned an empty JSON response.")
     try:
         parsed = json.loads(raw)
         return parsed if isinstance(parsed, dict) else {}
@@ -86,6 +92,10 @@ def parse_json_response(raw: str) -> dict:
 
 def contains_cjk(value: str) -> bool:
     return bool(re.search(r"[\u3400-\u9fff]", value or ""))
+
+
+def ollama_output_text(data: dict) -> str:
+    return str(data.get("response") or data.get("thinking") or "").strip()
 
 
 def remove_cjk_tags(value: str) -> str:
@@ -106,8 +116,13 @@ def filter_nsfw_incompatible_tags(prompt: str) -> str:
     tags: list[str] = []
     for raw_tag in prompt.split(","):
         tag = raw_tag.strip()
-        tokens = set(re.findall(r"[a-z]+", normalize_tag_key(tag)))
-        if not tag or tokens.intersection(NSFW_INCOMPATIBLE_TAG_TOKENS):
+        key = normalize_tag_key(tag)
+        tokens = set(re.findall(r"[a-z]+", key))
+        if (
+            not tag
+            or key in NSFW_INCOMPATIBLE_EXACT_TAGS
+            or tokens.intersection(NSFW_INCOMPATIBLE_TAG_TOKENS)
+        ):
             continue
         tags.append(tag)
     return ", ".join(tags)
@@ -133,9 +148,16 @@ async def translate_prompt(
         "If local prompt knowledge is provided, follow it exactly."
     )
     knowledge_context = matched_knowledge_context(prompt_cn, settings.prompt_knowledge_path)
+    style_tag_instruction = (
+        f"Preset/style tags to sanitize: {style_tags or '(none)'}. Keep identity, face, hair, "
+        "body, pose, camera, lighting, and background tags, but remove every garment, outfit, "
+        "uniform, sleeve, glove, stocking, footwear, armor, and miko-clothing tag."
+        if nsfw_mode
+        else f"Extra style tags to keep in English if useful: {style_tags or '(none)'}"
+    )
     user_prompt = (
         f"Chinese request: {prompt_cn}\n"
-        f"Extra style tags to keep in English if useful: {style_tags or '(none)'}\n"
+        f"{style_tag_instruction}\n"
         f"Existing negative prompt to translate/merge if useful: {negative_prompt or '(none)'}\n"
         f"NSFW compatibility mode: {'enabled' if nsfw_mode else 'disabled'}\n"
         f"{knowledge_context or 'Local prompt knowledge matched: (none)'}\n"
@@ -156,10 +178,12 @@ async def translate_prompt(
             response = await client.post(f"{settings.ollama_url.rstrip('/')}/api/generate", json=payload)
             response.raise_for_status()
         data = response.json()
-        raw = data.get("response") or data.get("thinking") or ""
+        raw = ollama_output_text(data)
         parsed = parse_json_response(raw)
         positive = normalize_prompt_value(parsed.get("positive", ""))
         if contains_cjk(positive):
+            original_parsed = parsed
+            original_positive = positive
             correction_prompt = (
                 "/no_think\n"
                 "Rewrite the following Stable Diffusion prompt JSON into English only. "
@@ -181,17 +205,23 @@ async def translate_prompt(
                     "num_predict": 512,
                 },
             }
-            async with httpx.AsyncClient(timeout=settings.prompt_translation_timeout_seconds) as client:
-                correction_response = await client.post(
-                    f"{settings.ollama_url.rstrip('/')}/api/generate",
-                    json=correction_payload,
-                )
-                correction_response.raise_for_status()
-            correction_data = correction_response.json()
-            correction_raw = correction_data.get("response") or ""
-            correction_parsed = parse_json_response(correction_raw)
-            parsed = correction_parsed
-            positive = normalize_prompt_value(correction_parsed.get("positive", ""))
+            try:
+                async with httpx.AsyncClient(timeout=settings.prompt_translation_timeout_seconds) as client:
+                    correction_response = await client.post(
+                        f"{settings.ollama_url.rstrip('/')}/api/generate",
+                        json=correction_payload,
+                    )
+                    correction_response.raise_for_status()
+                correction_data = correction_response.json()
+                correction_raw = ollama_output_text(correction_data)
+                correction_parsed = parse_json_response(correction_raw)
+                corrected_positive = normalize_prompt_value(correction_parsed.get("positive", ""))
+                if corrected_positive:
+                    parsed = correction_parsed
+                    positive = corrected_positive
+            except (httpx.HTTPError, json.JSONDecodeError, PromptTranslationError, ValueError):
+                parsed = original_parsed
+                positive = original_positive
         if contains_cjk(positive):
             positive = remove_cjk_tags(positive)
         if nsfw_mode:
