@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from app.prompting import filter_nsfw_incompatible_tags
+from app.prompting import filter_nsfw_incompatible_tags, remove_cjk_tags
 
 
 class NsfwModeTest(unittest.TestCase):
@@ -29,6 +29,12 @@ class NsfwModeTest(unittest.TestCase):
                 "adult woman, (red dress:1.2), cropped jacket, thighhighs, detailed eyes, bedroom"
             ),
             "adult woman, detailed eyes, bedroom",
+        )
+
+    def test_removes_only_tags_that_still_contain_chinese(self) -> None:
+        self.assertEqual(
+            remove_cjk_tags("adult woman, 银发, rainy night, 霓虹灯, cinematic lighting"),
+            "adult woman, rainy night, cinematic lighting",
         )
 
 
