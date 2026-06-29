@@ -16,6 +16,8 @@ from app.prompting import PromptTranslationError, translate_prompt
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 MODEL_SUFFIXES = {".safetensors", ".ckpt", ".pt"}
 USER_AGENT = "Xueliang-AI-Worker/0.1"
+COMPLETE_MAX_ATTEMPTS = 5
+COMPLETE_RETRY_BASE_SECONDS = 1.0
 
 
 class LocalGenerationError(RuntimeError):
@@ -26,6 +28,10 @@ class LocalGenerationError(RuntimeError):
     @property
     def comfy_prompt_id(self) -> str:
         return str(self.local_job.get("comfy_prompt_id") or "")
+
+
+class CloudCompletionDeliveryError(RuntimeError):
+    """The generated image could not be delivered after retryable cloud errors."""
 
 
 def _capability_item(file: Path, root: Path) -> dict[str, Any]:
@@ -213,6 +219,11 @@ class CloudWorker:
             await self._complete_cloud_job(client, job_id, local_job_id, comfy_prompt_id, local_result, image_bytes, filename)
             stage = "CLEANING_LOCAL_OUTPUT"
             self._cleanup_local_image(filename)
+        except CloudCompletionDeliveryError as exc:
+            print(
+                f"[cloud-worker] completion delivery pending for job {job_id}; "
+                f"local output was kept and the job was not marked failed: {exc}"
+            )
         except Exception as exc:
             await self._fail_cloud_job(client, job_id, str(exc), local_job_id, comfy_prompt_id, stage, detail)
 
@@ -309,8 +320,45 @@ class CloudWorker:
             "styleNotes": local_result.get("style_notes"),
             "seed": local_result.get("seed"),
         }
-        response = await client.post(f"{self.cloud_url}/ai-worker/jobs/{job_id}/complete", json=payload, timeout=120)
-        self._raise_for_status(response, "complete cloud job")
+        for attempt in range(1, COMPLETE_MAX_ATTEMPTS + 1):
+            try:
+                response = await client.post(
+                    f"{self.cloud_url}/ai-worker/jobs/{job_id}/complete",
+                    json=payload,
+                    timeout=120,
+                )
+            except httpx.TransportError as exc:
+                if attempt == COMPLETE_MAX_ATTEMPTS:
+                    raise CloudCompletionDeliveryError(
+                        f"transport error after {attempt} attempts: {exc}"
+                    ) from exc
+                await self._wait_before_complete_retry(job_id, attempt, str(exc))
+                continue
+
+            if response.status_code < 400:
+                return
+            if response.status_code < 500 and response.status_code not in {408, 429}:
+                self._raise_for_status(response, "complete cloud job")
+            if attempt == COMPLETE_MAX_ATTEMPTS:
+                body = response.text.strip()
+                if len(body) > 500:
+                    body = body[:500] + "..."
+                raise CloudCompletionDeliveryError(
+                    f"HTTP {response.status_code} after {attempt} attempts: {body}"
+                )
+            await self._wait_before_complete_retry(
+                job_id,
+                attempt,
+                f"HTTP {response.status_code}",
+            )
+
+    async def _wait_before_complete_retry(self, job_id: int, attempt: int, reason: str) -> None:
+        delay = COMPLETE_RETRY_BASE_SECONDS * (2 ** (attempt - 1))
+        print(
+            f"[cloud-worker] retrying completion for job {job_id} in {delay:.0f}s "
+            f"after attempt {attempt}: {reason}"
+        )
+        await asyncio.sleep(delay)
 
     async def _fail_cloud_job(
         self,
