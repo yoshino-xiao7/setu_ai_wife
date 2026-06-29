@@ -15,7 +15,7 @@ from app.comfyui import ComfyUIClient, build_inpaint_workflow, build_mask_condit
 from app.config import Settings, get_settings
 from app.db import JobStore
 from app.presets import find_character, list_loras, load_characters, merge_tags
-from app.prompting import PromptResult, PromptTranslationError, translate_prompt
+from app.prompting import PromptResult, PromptTranslationError, filter_nsfw_incompatible_tags, translate_prompt
 
 
 app = FastAPI(title="Local AI Drawing Service")
@@ -41,24 +41,6 @@ DUAL_CHARACTER_NEGATIVE_TAGS = (
 )
 NSFW_DEFAULT_LORA_STRENGTH = 0.6
 NSFW_MAX_LORA_STRENGTH = 0.65
-NSFW_INCOMPATIBLE_TAGS = {
-    "japanese clothes",
-    "detached sleeves",
-    "wide sleeves",
-    "long sleeves",
-    "purple kimono",
-    "kimono",
-    "obi",
-    "bridal gauntlets",
-    "white gloves",
-    "gloves",
-    "black pantyhose",
-    "pantyhose",
-    "fur-trimmed coat",
-    "coat",
-    "school uniform",
-    "uniform",
-}
 
 
 class GenerateRequest(BaseModel):
@@ -89,6 +71,7 @@ class TranslateRequest(BaseModel):
     prompt_cn: str = Field(..., min_length=1, max_length=1000)
     style_tags: str = ""
     negative_prompt: str = ""
+    nsfw_mode: bool = False
 
 
 def get_store(settings: Settings = Depends(get_settings)) -> JobStore:
@@ -103,6 +86,7 @@ async def translate_api(payload: TranslateRequest, settings: Settings = Depends(
             settings,
             style_tags=payload.style_tags,
             negative_prompt=payload.negative_prompt,
+            nsfw_mode=payload.nsfw_mode,
         )
     except PromptTranslationError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -224,6 +208,7 @@ async def generate(
                 settings,
                 style_tags=payload.style_tags,
                 negative_prompt=payload.prompt_negative,
+                nsfw_mode=payload.nsfw_mode,
             )
         except PromptTranslationError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -954,18 +939,6 @@ def filter_dual_character_tags(prompt: str) -> str:
     for raw_tag in prompt.split(","):
         tag = raw_tag.strip()
         if not tag or normalize_tag_key(tag) in DUAL_CHARACTER_BLOCKED_TAGS:
-            continue
-        tags.append(tag)
-    return ", ".join(tags)
-
-
-def filter_nsfw_incompatible_tags(prompt: str) -> str:
-    if not prompt:
-        return ""
-    tags: list[str] = []
-    for raw_tag in prompt.split(","):
-        tag = raw_tag.strip()
-        if not tag or normalize_tag_key(tag) in NSFW_INCOMPATIBLE_TAGS:
             continue
         tags.append(tag)
     return ", ".join(tags)

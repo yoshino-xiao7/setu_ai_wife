@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from app.main import filter_nsfw_incompatible_tags
+from app.prompting import filter_nsfw_incompatible_tags
 
 
 class NsfwModeTest(unittest.TestCase):
@@ -21,6 +21,14 @@ class NsfwModeTest(unittest.TestCase):
         self.assertEqual(
             filter_nsfw_incompatible_tags("Pink Hair, JAPANESE_CLOTHES, White Gloves"),
             "Pink Hair",
+        )
+
+    def test_filters_colored_and_synonym_clothing_tags(self) -> None:
+        self.assertEqual(
+            filter_nsfw_incompatible_tags(
+                "adult woman, (red dress:1.2), cropped jacket, thighhighs, detailed eyes, bedroom"
+            ),
+            "adult woman, detailed eyes, bedroom",
         )
 
 

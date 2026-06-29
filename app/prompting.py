@@ -14,6 +14,44 @@ DEFAULT_NEGATIVE = (
     "low quality, worst quality, bad anatomy, bad hands, extra fingers, "
     "missing fingers, deformed, blurry, text, watermark, logo, cropped"
 )
+NSFW_INCOMPATIBLE_TAG_TOKENS = {
+    "clothes",
+    "clothing",
+    "outfit",
+    "uniform",
+    "dress",
+    "skirt",
+    "shirt",
+    "blouse",
+    "jacket",
+    "coat",
+    "kimono",
+    "sleeve",
+    "sleeves",
+    "glove",
+    "gloves",
+    "gauntlet",
+    "gauntlets",
+    "pantyhose",
+    "stocking",
+    "stockings",
+    "thighhigh",
+    "thighhighs",
+    "sock",
+    "socks",
+    "shoe",
+    "shoes",
+    "boot",
+    "boots",
+    "obi",
+    "robe",
+    "cape",
+    "cloak",
+    "armor",
+    "bodysuit",
+    "leotard",
+    "swimsuit",
+}
 
 
 class PromptResult(BaseModel):
@@ -50,11 +88,29 @@ def contains_cjk(value: str) -> bool:
     return bool(re.search(r"[\u3400-\u9fff]", value or ""))
 
 
+def normalize_tag_key(tag: str) -> str:
+    return " ".join(tag.strip().lower().replace("_", " ").split())
+
+
+def filter_nsfw_incompatible_tags(prompt: str) -> str:
+    if not prompt:
+        return ""
+    tags: list[str] = []
+    for raw_tag in prompt.split(","):
+        tag = raw_tag.strip()
+        tokens = set(re.findall(r"[a-z]+", normalize_tag_key(tag)))
+        if not tag or tokens.intersection(NSFW_INCOMPATIBLE_TAG_TOKENS):
+            continue
+        tags.append(tag)
+    return ", ".join(tags)
+
+
 async def translate_prompt(
     prompt_cn: str,
     settings: Settings,
     style_tags: str = "",
     negative_prompt: str = "",
+    nsfw_mode: bool = False,
 ) -> PromptResult:
     system_prompt = (
         "You are a Stable Diffusion anime prompt translator. Convert the Chinese drawing request "
@@ -64,6 +120,8 @@ async def translate_prompt(
         "Use comma-separated English tags. Do not prepend generic quality boosters such as "
         "masterpiece, best quality, high quality, anime illustration, detailed eyes, or clean "
         "lineart unless the user explicitly asks for them. Keep negative prompt practical. "
+        "When NSFW compatibility mode is enabled, omit garment and clothing tags while preserving "
+        "identity, anatomy, pose, expression, camera, lighting, and background tags. "
         "If local prompt knowledge is provided, follow it exactly."
     )
     knowledge_context = matched_knowledge_context(prompt_cn, settings.prompt_knowledge_path)
@@ -71,6 +129,7 @@ async def translate_prompt(
         f"Chinese request: {prompt_cn}\n"
         f"Extra style tags to keep in English if useful: {style_tags or '(none)'}\n"
         f"Existing negative prompt to translate/merge if useful: {negative_prompt or '(none)'}\n"
+        f"NSFW compatibility mode: {'enabled' if nsfw_mode else 'disabled'}\n"
         f"{knowledge_context or 'Local prompt knowledge matched: (none)'}\n"
         "Return the final JSON now."
     )
@@ -88,6 +147,8 @@ async def translate_prompt(
         raw = data.get("response") or data.get("thinking") or ""
         parsed = parse_json_response(raw)
         positive = normalize_prompt_value(parsed.get("positive", ""))
+        if nsfw_mode:
+            positive = filter_nsfw_incompatible_tags(positive)
         if not positive:
             raise PromptTranslationError("Ollama returned an empty positive prompt.")
         if contains_cjk(positive):

@@ -162,6 +162,7 @@ class CloudWorker:
                 self.settings,
                 style_tags=job.get("styleTags") or "",
                 negative_prompt=job.get("negativePrompt") or "",
+                nsfw_mode=job.get("nsfwMode") is True,
             )
             response = await client.post(
                 f"{self.cloud_url}/ai-worker/prompt-translations/{job_id}/complete",
