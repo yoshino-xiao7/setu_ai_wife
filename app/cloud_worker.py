@@ -247,6 +247,7 @@ class CloudWorker:
             "lora_strength": job.get("loraStrength") or 0,
             "second_lora_name": job.get("secondLoraName") or "",
             "second_lora_strength": job.get("secondLoraStrength") or 0,
+            "nsfw_mode": job.get("nsfwMode") is True,
         }
         async with httpx.AsyncClient(timeout=30, headers={"User-Agent": USER_AGENT}) as local:
             response = await local.post(f"{self.local_url}/api/generate", json=payload)

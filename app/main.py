@@ -39,6 +39,26 @@ DUAL_CHARACTER_NEGATIVE_TAGS = (
     "extra arms, extra hands, extra legs, extra feet, too many limbs, "
     "broken interaction, disconnected hands, tangled limbs"
 )
+NSFW_DEFAULT_LORA_STRENGTH = 0.6
+NSFW_MAX_LORA_STRENGTH = 0.65
+NSFW_INCOMPATIBLE_TAGS = {
+    "japanese clothes",
+    "detached sleeves",
+    "wide sleeves",
+    "long sleeves",
+    "purple kimono",
+    "kimono",
+    "obi",
+    "bridal gauntlets",
+    "white gloves",
+    "gloves",
+    "black pantyhose",
+    "pantyhose",
+    "fur-trimmed coat",
+    "coat",
+    "school uniform",
+    "uniform",
+}
 
 
 class GenerateRequest(BaseModel):
@@ -62,6 +82,7 @@ class GenerateRequest(BaseModel):
     second_lora_name: str = ""
     second_lora_strength: float = Field(0, ge=0, le=2)
     character_mask_json: str = Field("", max_length=120000)
+    nsfw_mode: bool = False
 
 
 class TranslateRequest(BaseModel):
@@ -188,6 +209,8 @@ async def generate(
     )
     if is_dual:
         prompt_source = filter_dual_character_tags(prompt_source)
+    if payload.nsfw_mode:
+        prompt_source = filter_nsfw_incompatible_tags(prompt_source)
     if payload.prompt_positive.strip():
         prompt = PromptResult(
             positive=payload.prompt_positive.strip(),
@@ -222,6 +245,11 @@ async def generate(
         is_dual,
         has_custom_mask,
     )
+    if payload.nsfw_mode:
+        positive_prompt = filter_nsfw_incompatible_tags(positive_prompt)
+        regional_global_positive = filter_nsfw_incompatible_tags(regional_global_positive)
+        regional_left_positive = filter_nsfw_incompatible_tags(regional_left_positive)
+        regional_right_positive = filter_nsfw_incompatible_tags(regional_right_positive)
     negative_prompt = build_negative_prompt(prompt.negative, is_dual)
     lora_name = payload.lora_name or (character.lora_name if character else "")
     lora_strength = payload.lora_strength or (character.lora_strength if character and character.lora_name else 0)
@@ -230,6 +258,14 @@ async def generate(
     if is_dual:
         lora_strength = min(lora_strength, settings.dual_lora_strength_cap)
         second_lora_strength = min(second_lora_strength, settings.dual_lora_strength_cap)
+    if payload.nsfw_mode:
+        if lora_name:
+            lora_strength = min(lora_strength or NSFW_DEFAULT_LORA_STRENGTH, NSFW_MAX_LORA_STRENGTH)
+        if second_lora_name:
+            second_lora_strength = min(
+                second_lora_strength or NSFW_DEFAULT_LORA_STRENGTH,
+                NSFW_MAX_LORA_STRENGTH,
+            )
     job_id = uuid.uuid4().hex
     seed = payload.seed or random_seed()
     job = {
@@ -918,6 +954,18 @@ def filter_dual_character_tags(prompt: str) -> str:
     for raw_tag in prompt.split(","):
         tag = raw_tag.strip()
         if not tag or normalize_tag_key(tag) in DUAL_CHARACTER_BLOCKED_TAGS:
+            continue
+        tags.append(tag)
+    return ", ".join(tags)
+
+
+def filter_nsfw_incompatible_tags(prompt: str) -> str:
+    if not prompt:
+        return ""
+    tags: list[str] = []
+    for raw_tag in prompt.split(","):
+        tag = raw_tag.strip()
+        if not tag or normalize_tag_key(tag) in NSFW_INCOMPATIBLE_TAGS:
             continue
         tags.append(tag)
     return ", ".join(tags)
