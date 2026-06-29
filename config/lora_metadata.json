@@ -34,6 +34,17 @@
       "notes": "原神角色雷电将军 LoRA。建议通过角色预设使用，会自动注入雷电将军常用角色 tags。"
     },
     {
+      "name": "Genshin_Lynette_AP_v1.safetensors",
+      "display_name": "琳妮特",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "trigger_words": "lynette (genshin impact), genshin impact",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/eacdff64-5caa-4e96-bd5a-092b0ca79a1d/anim=false,width=450,optimized=true/01631-2804914936-masterpiece,%20best%20quality,%201girl,%20purple%20eyes,%20official,%20dynamic%20angle,%20simple%20background,%20(green%20background),%20white%20background,.jpeg",
+      "notes": "原神角色琳妮特 LoRA。建议通过角色预设使用，会自动注入琳妮特常用角色 tags。"
+    },
+    {
       "name": "sandrone_genshin_impact_ilxl_goofy.safetensors",
       "display_name": "桑多涅",
       "category": "原神",

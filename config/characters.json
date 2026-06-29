@@ -43,6 +43,20 @@
       "notes": "原神角色雷电将军。选择该预设会自动使用 RaidenShogun-HandsFix.safetensors，并注入雷电将军的常用角色 tags。"
     },
     {
+      "id": "lynette",
+      "name": "琳妮特",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "Genshin_Lynette_AP_v1.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "lynette (genshin impact), genshin impact",
+      "default_positive": "1girl, cat girl, cat ears, cat tail, animal ear fluff, purple eyes, grey hair, long hair, medium breasts, cleavage, star tattoo, black pantyhose, long sleeves, aqua bow, star facial mark",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/lynette_(genshin_impact).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色琳妮特。选择该预设会自动使用 Genshin_Lynette_AP_v1.safetensors，并注入琳妮特的常用角色 tags。"
+    },
+    {
       "id": "sandrone",
       "name": "桑多涅",
       "category": "原神",
