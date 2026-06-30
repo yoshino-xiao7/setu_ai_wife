@@ -61,6 +61,14 @@ class NsfwModeTest(unittest.TestCase):
             "yae miko, moonlight",
         )
 
+    def test_preserves_requested_anatomy_visibility_tags(self) -> None:
+        self.assertEqual(
+            filter_nsfw_incompatible_tags(
+                "yae miko, cutaway view, x-ray view, internal anatomy, purple kimono"
+            ),
+            "yae miko, cutaway view, x-ray view, internal anatomy",
+        )
+
     def test_adds_visibility_conditions_without_adult_age_tag(self) -> None:
         positive = apply_nsfw_visibility_positive("yae miko, moonlight")
         negative = apply_nsfw_visibility_negative("low quality")

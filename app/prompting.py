@@ -79,6 +79,18 @@ NSFW_INCOMPATIBLE_EXACT_TAGS = {
     "bar censor",
     "black censor bar",
 }
+NSFW_ANATOMY_VISIBILITY_PROTECTED_PHRASES = {
+    "cross section",
+    "cross-section",
+    "cutaway",
+    "cutaway view",
+    "x ray",
+    "x-ray",
+    "internal anatomy",
+    "visible anatomy",
+    "anatomical view",
+    "anatomical detail",
+}
 NSFW_VISIBILITY_POSITIVE_TAGS = (
     "clear frontal view",
     "full body visible",
@@ -238,6 +250,9 @@ def filter_nsfw_incompatible_tags(prompt: str) -> str:
         key = normalize_tag_key(tag)
         tokens = set(re.findall(r"[a-z]+", key))
         plain_key = " ".join(re.findall(r"[a-z]+", key))
+        if any(phrase in key for phrase in NSFW_ANATOMY_VISIBILITY_PROTECTED_PHRASES):
+            tags.append(tag)
+            continue
         if (
             not tag
             or plain_key in NSFW_INCOMPATIBLE_EXACT_TAGS
@@ -266,8 +281,9 @@ async def translate_prompt(
         "lineart unless the user explicitly asks for them. Keep negative prompt practical. "
         "When NSFW compatibility mode is enabled, omit garment, clothing, censorship, occlusion, "
         "covering, foreground-blocking, and cropped-composition tags while preserving identity, "
-        "anatomy, pose, expression, camera, lighting, and background tags. Favor an unobstructed "
-        "frontal composition with the requested anatomy clearly visible. "
+        "anatomy, pose, expression, camera, lighting, and background tags. Preserve requested "
+        "cross-section, cutaway, x-ray, internal-anatomy, and anatomical-visibility descriptors. "
+        "Favor an unobstructed frontal composition with the requested anatomy clearly visible. "
         "If local prompt knowledge is provided, follow it exactly."
     )
     knowledge_context = matched_knowledge_context(prompt_cn, settings.prompt_knowledge_path)

@@ -727,6 +727,7 @@ def create_manual_inpaint_mask(
     mask = Image.new("L", (width, height), 0)
     draw = ImageDraw.Draw(mask)
     painted = False
+    max_brush = 0
     for stroke in strokes:
         if not isinstance(stroke, dict):
             continue
@@ -739,12 +740,13 @@ def create_manual_inpaint_mask(
             height,
         )
         draw_painted_character_region(draw, points, brush)
+        max_brush = max(max_brush, brush)
         painted = True
     if not painted:
         raise RuntimeError("Inpaint mask contains no painted area.")
 
-    softened = mask.filter(ImageFilter.GaussianBlur(radius=max(2, int(min(width, height) * 0.004))))
-    softened.convert("RGB").save(path)
+    region_mask = finalize_manual_inpaint_mask(mask, width, height, max_brush)
+    region_mask.save(path)
 
 
 async def run_dual_mask_conditioning_generation(
@@ -995,6 +997,16 @@ def draw_painted_character_region(
     draw.line(points, fill=255, width=brush, joint="curve")
     for x, y in points:
         draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=255)
+
+
+def finalize_manual_inpaint_mask(mask: Image.Image, width: int, height: int, max_brush: int) -> Image.Image:
+    min_side = min(width, height)
+    expansion = max(9, int(min_side * 0.025), int(max_brush * 0.65))
+    if expansion % 2 == 0:
+        expansion += 1
+    expanded = mask.filter(ImageFilter.MaxFilter(expansion))
+    softened = expanded.filter(ImageFilter.GaussianBlur(radius=max(3, expansion // 3)))
+    return softened.convert("RGB")
 
 
 def finalize_conditioning_mask(mask: Image.Image, width: int, height: int) -> Image.Image:

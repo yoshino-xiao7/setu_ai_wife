@@ -31,6 +31,26 @@ class InpaintTest(unittest.TestCase):
                 self.assertGreater(mask.convert("L").getpixel((50, 100)), 0)
                 self.assertEqual(mask.size, (100, 200))
 
+    def test_manual_mask_expands_painted_line_into_soft_repair_region(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mask.png"
+            create_manual_inpaint_mask(
+                path,
+                200,
+                200,
+                json.dumps({
+                    "strokes": [{
+                        "brush": 0.02,
+                        "points": [{"x": 0.5, "y": 0.5}, {"x": 0.52, "y": 0.5}],
+                    }],
+                }),
+            )
+
+            with Image.open(path) as mask:
+                pixels = mask.convert("L")
+                self.assertGreater(pixels.getpixel((100, 100)), 0)
+                self.assertGreater(pixels.getpixel((100, 112)), 0)
+
     def test_strong_profile_uses_more_denoise_and_mask_growth(self) -> None:
         self.assertEqual(inpaint_profile("LIGHT"), (0.45, 8))
         self.assertEqual(inpaint_profile("STRONG"), (0.68, 20))
