@@ -80,8 +80,6 @@ NSFW_INCOMPATIBLE_EXACT_TAGS = {
     "black censor bar",
 }
 NSFW_VISIBILITY_POSITIVE_TAGS = (
-    "unobstructed anatomy",
-    "explicit anatomy visible",
     "clear frontal view",
     "full body visible",
 )
