@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     dual_mask_conditioning_strength: float = Field(0.95, alias="DUAL_MASK_CONDITIONING_STRENGTH")
     dual_inpaint_denoise: float = Field(0.62, alias="DUAL_INPAINT_DENOISE")
     dual_inpaint_mask_overlap_ratio: float = Field(0.08, alias="DUAL_INPAINT_MASK_OVERLAP_RATIO")
+    inpaint_engine: str = Field("auto", alias="INPAINT_ENGINE")
+    brushnet_model: str = Field("", alias="BRUSHNET_MODEL")
+    brushnet_dtype: str = Field("float16", alias="BRUSHNET_DTYPE")
+    brushnet_scale: float = Field(1.0, alias="BRUSHNET_SCALE")
 
 
 @lru_cache

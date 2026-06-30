@@ -323,6 +323,108 @@ def build_inpaint_workflow(
     return workflow
 
 
+def build_brushnet_inpaint_workflow(
+    *,
+    positive: str,
+    negative: str,
+    seed: int,
+    steps: int,
+    cfg: float,
+    checkpoint: str,
+    sampler: str,
+    scheduler: str,
+    base_image: str,
+    mask_image: str,
+    denoise: float,
+    brushnet_model: str,
+    brushnet_dtype: str = "float16",
+    brushnet_scale: float = 1.0,
+    lora_name: str = "",
+    lora_strength: float = 0,
+    second_lora_name: str = "",
+    second_lora_strength: float = 0,
+    filename_prefix: str = "local_ai_drawing_brushnet_inpaint",
+) -> dict[str, Any]:
+    workflow: dict[str, Any] = {
+        "1": {"class_type": "LoadImage", "inputs": {"image": base_image}},
+        "2": {"class_type": "LoadImageMask", "inputs": {"image": mask_image, "channel": "red"}},
+        "3": {
+            "class_type": "KSampler",
+            "inputs": {
+                "seed": seed,
+                "steps": steps,
+                "cfg": cfg,
+                "sampler_name": sampler,
+                "scheduler": scheduler,
+                "denoise": denoise,
+                "model": ["12", 0],
+                "positive": ["12", 1],
+                "negative": ["12", 2],
+                "latent_image": ["12", 3],
+            },
+        },
+        "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint}},
+        "5": {
+            "class_type": "BrushNetLoader",
+            "inputs": {
+                "brushnet": brushnet_model,
+                "dtype": brushnet_dtype if brushnet_dtype in {"float16", "bfloat16", "float32", "float64"} else "float16",
+            },
+        },
+        "6": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["4", 1]}},
+        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["4", 1]}},
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
+        "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]}},
+        "12": {
+            "class_type": "BrushNet",
+            "inputs": {
+                "model": ["4", 0],
+                "vae": ["4", 2],
+                "image": ["1", 0],
+                "mask": ["2", 0],
+                "brushnet": ["5", 0],
+                "positive": ["6", 0],
+                "negative": ["7", 0],
+                "scale": max(0.0, brushnet_scale),
+                "start_at": 0,
+                "end_at": 10000,
+            },
+        },
+    }
+    model_ref: list[Any] = ["4", 0]
+    clip_ref: list[Any] = ["4", 1]
+    if lora_name and lora_strength > 0:
+        workflow["10"] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "lora_name": lora_name,
+                "strength_model": lora_strength,
+                "strength_clip": lora_strength,
+                "model": model_ref,
+                "clip": clip_ref,
+            },
+        }
+        model_ref = ["10", 0]
+        clip_ref = ["10", 1]
+    if second_lora_name and second_lora_strength > 0:
+        workflow["11"] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "lora_name": second_lora_name,
+                "strength_model": second_lora_strength,
+                "strength_clip": second_lora_strength,
+                "model": model_ref,
+                "clip": clip_ref,
+            },
+        }
+        model_ref = ["11", 0]
+        clip_ref = ["11", 1]
+    workflow["12"]["inputs"]["model"] = model_ref
+    workflow["6"]["inputs"]["clip"] = clip_ref
+    workflow["7"]["inputs"]["clip"] = clip_ref
+    return workflow
+
+
 def regional_area_geometry(width: int) -> tuple[int, int, int]:
     overlap = round_to_multiple_of_8(max(64, min(160, width // 10)))
     half_width = round_to_multiple_of_8(width // 2)

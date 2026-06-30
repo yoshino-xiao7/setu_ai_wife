@@ -13,7 +13,14 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image, ImageDraw, ImageFilter
 from pydantic import BaseModel, Field
 
-from app.comfyui import ComfyUIClient, build_inpaint_workflow, build_mask_conditioning_workflow, build_workflow, random_seed
+from app.comfyui import (
+    ComfyUIClient,
+    build_brushnet_inpaint_workflow,
+    build_inpaint_workflow,
+    build_mask_conditioning_workflow,
+    build_workflow,
+    random_seed,
+)
 from app.config import Settings, get_settings
 from app.db import JobStore
 from app.presets import find_character, list_loras, load_characters, merge_tags
@@ -664,37 +671,77 @@ async def run_manual_inpaint_generation(
     mask_dir = settings.database_path.parent / "masks"
     mask_dir.mkdir(parents=True, exist_ok=True)
     mask_path = mask_dir / f"{job_id}_repair_mask.png"
+    crop_source_path = mask_dir / f"{job_id}_repair_source_crop.png"
+    crop_mask_path = mask_dir / f"{job_id}_repair_mask_crop.png"
 
     uploaded_inputs: list[str] = []
-    temp_paths = [source_path, mask_path]
+    temp_paths = [source_path, mask_path, crop_source_path, crop_mask_path]
     try:
         create_manual_inpaint_mask(mask_path, width, height, job.get("inpaint_mask_json") or "")
-        source_upload = await client.upload_image(source_path, f"{job_id}_source.png")
-        mask_upload = await client.upload_image(mask_path, f"{job_id}_repair_mask.png")
+        crop_box = create_manual_inpaint_crop(
+            source_path,
+            mask_path,
+            crop_source_path,
+            crop_mask_path,
+        )
+        source_upload = await client.upload_image(crop_source_path, f"{job_id}_source_crop.png")
+        mask_upload = await client.upload_image(crop_mask_path, f"{job_id}_repair_mask_crop.png")
         uploaded_inputs.extend([source_upload, mask_upload])
         denoise, grow_mask_by = inpaint_profile(job.get("nsfw_visibility_level"))
-        workflow = build_inpaint_workflow(
-            positive=inpaint_positive_prompt(job["prompt_positive"]),
-            negative=inpaint_negative_prompt(job["prompt_negative"]),
-            seed=job["seed"],
-            steps=job["steps"],
-            cfg=job["cfg"],
-            checkpoint=job["checkpoint"],
-            sampler=settings.default_sampler,
-            scheduler=settings.default_scheduler,
-            base_image=source_upload,
-            mask_image=mask_upload,
-            denoise=denoise,
-            lora_name=job["lora_name"],
-            lora_strength=job["lora_strength"],
-            second_lora_name=job["second_lora_name"],
-            second_lora_strength=job["second_lora_strength"],
-            grow_mask_by=grow_mask_by,
-            filename_prefix=f"local_ai_drawing/{job_id}",
-        )
-        return await queue_and_download(
+        brushnet_model = select_brushnet_model(settings)
+        if should_use_brushnet_inpaint(settings, brushnet_model):
+            workflow = build_brushnet_inpaint_workflow(
+                positive=inpaint_positive_prompt(job["prompt_positive"]),
+                negative=inpaint_negative_prompt(job["prompt_negative"]),
+                seed=job["seed"],
+                steps=job["steps"],
+                cfg=job["cfg"],
+                checkpoint=job["checkpoint"],
+                sampler=settings.default_sampler,
+                scheduler=settings.default_scheduler,
+                base_image=source_upload,
+                mask_image=mask_upload,
+                denoise=denoise,
+                brushnet_model=brushnet_model,
+                brushnet_dtype=settings.brushnet_dtype,
+                brushnet_scale=settings.brushnet_scale,
+                lora_name=job["lora_name"],
+                lora_strength=job["lora_strength"],
+                second_lora_name=job["second_lora_name"],
+                second_lora_strength=job["second_lora_strength"],
+                filename_prefix=f"local_ai_drawing/{job_id}",
+            )
+        else:
+            workflow = build_inpaint_workflow(
+                positive=inpaint_positive_prompt(job["prompt_positive"]),
+                negative=inpaint_negative_prompt(job["prompt_negative"]),
+                seed=job["seed"],
+                steps=job["steps"],
+                cfg=job["cfg"],
+                checkpoint=job["checkpoint"],
+                sampler=settings.default_sampler,
+                scheduler=settings.default_scheduler,
+                base_image=source_upload,
+                mask_image=mask_upload,
+                denoise=denoise,
+                lora_name=job["lora_name"],
+                lora_strength=job["lora_strength"],
+                second_lora_name=job["second_lora_name"],
+                second_lora_strength=job["second_lora_strength"],
+                grow_mask_by=grow_mask_by,
+                filename_prefix=f"local_ai_drawing/{job_id}",
+            )
+        repaired_crop_path = await queue_and_download(
             client, store, job_id, workflow, settings.output_dir, local_image_stem(job)
         )
+        composite_inpaint_crop(
+            source_path=source_path,
+            mask_path=mask_path,
+            repaired_crop_path=repaired_crop_path,
+            crop_box=crop_box,
+            output_path=repaired_crop_path,
+        )
+        return repaired_crop_path
     finally:
         for filename in uploaded_inputs:
             client.cleanup_comfyui_input_file(filename)
@@ -708,6 +755,30 @@ def inpaint_profile(level: str | None) -> tuple[float, int]:
     if normalized == "STRONG":
         return 0.62, 22
     return 0.52, 16
+
+
+def should_use_brushnet_inpaint(settings: Settings, brushnet_model: str) -> bool:
+    engine = str(settings.inpaint_engine or "auto").strip().lower()
+    if engine in {"legacy", "default", "vae", "comfyui"}:
+        return False
+    if engine in {"brushnet", "auto"}:
+        return bool(brushnet_model)
+    return False
+
+
+def select_brushnet_model(settings: Settings) -> str:
+    configured = str(settings.brushnet_model or "").strip().replace("\\", "/")
+    if configured:
+        return configured
+    inpaint_dir = settings.comfyui_models_dir / "inpaint"
+    if not inpaint_dir.is_dir():
+        return ""
+    candidates = sorted(
+        path.relative_to(inpaint_dir).as_posix()
+        for path in inpaint_dir.rglob("*")
+        if path.is_file() and path.suffix.lower() in {".safetensors", ".ckpt", ".pt", ".pth"}
+    )
+    return candidates[0] if candidates else ""
 
 
 def inpaint_positive_prompt(prompt: str) -> str:
@@ -763,6 +834,99 @@ def create_manual_inpaint_mask(
 
     region_mask = finalize_manual_inpaint_mask(mask, width, height, max_brush)
     region_mask.save(path)
+
+
+def create_manual_inpaint_crop(
+    source_path: Path,
+    mask_path: Path,
+    crop_source_path: Path,
+    crop_mask_path: Path,
+) -> tuple[int, int, int, int]:
+    with Image.open(source_path) as source, Image.open(mask_path) as mask:
+        source_rgb = source.convert("RGB")
+        mask_l = mask.convert("L")
+        width, height = source_rgb.size
+        crop_box = inpaint_crop_box(mask_l, width, height)
+        source_rgb.crop(crop_box).save(crop_source_path, format="PNG")
+        mask_l.crop(crop_box).convert("RGB").save(crop_mask_path, format="PNG")
+        return crop_box
+
+
+def inpaint_crop_box(mask: Image.Image, width: int, height: int) -> tuple[int, int, int, int]:
+    bbox = mask.point(lambda value: 255 if value > 8 else 0).getbbox()
+    if bbox is None:
+        raise RuntimeError("Inpaint mask contains no painted area.")
+
+    left, top, right, bottom = bbox
+    painted_width = max(1, right - left)
+    painted_height = max(1, bottom - top)
+    min_side = min(width, height)
+    padding = max(48, int(max(painted_width, painted_height) * 0.85), int(min_side * 0.08))
+    left = max(0, left - padding)
+    top = max(0, top - padding)
+    right = min(width, right + padding)
+    bottom = min(height, bottom + padding)
+
+    min_crop = min(min_side, 320)
+    if right - left < min_crop:
+        extra = min_crop - (right - left)
+        left = max(0, left - extra // 2)
+        right = min(width, right + extra - extra // 2)
+    if bottom - top < min_crop:
+        extra = min_crop - (bottom - top)
+        top = max(0, top - extra // 2)
+        bottom = min(height, bottom + extra - extra // 2)
+
+    left = align_down(left, 8)
+    top = align_down(top, 8)
+    right = align_up(right, 8, width)
+    bottom = align_up(bottom, 8, height)
+    if right <= left or bottom <= top:
+        return 0, 0, width, height
+    return left, top, right, bottom
+
+
+def composite_inpaint_crop(
+    *,
+    source_path: Path,
+    mask_path: Path,
+    repaired_crop_path: Path,
+    crop_box: tuple[int, int, int, int],
+    output_path: Path,
+) -> None:
+    with Image.open(source_path) as source, Image.open(mask_path) as mask, Image.open(repaired_crop_path) as repaired:
+        base = source.convert("RGB")
+        mask_l = mask.convert("L")
+        left, top, right, bottom = crop_box
+        crop_size = (right - left, bottom - top)
+        repaired_rgb = repaired.convert("RGB")
+        if repaired_rgb.size != crop_size:
+            repaired_rgb = repaired_rgb.resize(crop_size, Image.Resampling.LANCZOS)
+        alpha = mask_l.crop(crop_box)
+        alpha = feather_inpaint_mask(alpha, base.size)
+        base.paste(repaired_rgb, (left, top), alpha)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        base.save(output_path, format="PNG")
+
+
+def feather_inpaint_mask(mask: Image.Image, full_size: tuple[int, int]) -> Image.Image:
+    min_side = min(full_size)
+    expansion = max(5, int(min_side * 0.008))
+    if expansion % 2 == 0:
+        expansion += 1
+    expanded = mask.filter(ImageFilter.MaxFilter(expansion))
+    return expanded.filter(ImageFilter.GaussianBlur(radius=max(3, expansion // 2))).convert("L")
+
+
+def align_down(value: int, multiple: int) -> int:
+    return max(0, value - (value % multiple))
+
+
+def align_up(value: int, multiple: int, limit: int) -> int:
+    if value >= limit:
+        return limit
+    aligned = value + (-value % multiple)
+    return min(limit, max(multiple, aligned))
 
 
 async def run_dual_mask_conditioning_generation(
