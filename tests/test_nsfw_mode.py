@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import unittest
 
-from app.prompting import filter_nsfw_incompatible_tags, remove_cjk_tags
+from app.prompting import (
+    apply_nsfw_visibility_negative,
+    apply_nsfw_visibility_positive,
+    filter_nsfw_incompatible_tags,
+    remove_cjk_tags,
+)
 
 
 class NsfwModeTest(unittest.TestCase):
@@ -44,6 +49,25 @@ class NsfwModeTest(unittest.TestCase):
             ),
             "yae miko, genshin impact, fox ears, purple eyes",
         )
+
+    def test_filters_censorship_occlusion_and_cropping_tags(self) -> None:
+        self.assertEqual(
+            filter_nsfw_incompatible_tags(
+                "yae miko, convenient censoring, hands covering body, "
+                "(mosaic censorship:1.2), cropped body, moonlight"
+            ),
+            "yae miko, moonlight",
+        )
+
+    def test_adds_visibility_conditions_without_adult_age_tag(self) -> None:
+        positive = apply_nsfw_visibility_positive("yae miko, moonlight")
+        negative = apply_nsfw_visibility_negative("low quality")
+
+        self.assertIn("unobstructed anatomy", positive)
+        self.assertIn("explicit anatomy visible", positive)
+        self.assertNotIn("adult", positive)
+        self.assertIn("convenient censoring", negative)
+        self.assertIn("foreground obstruction", negative)
 
 
 if __name__ == "__main__":

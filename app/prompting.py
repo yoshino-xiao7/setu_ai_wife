@@ -51,11 +51,53 @@ NSFW_INCOMPATIBLE_TAG_TOKENS = {
     "bodysuit",
     "leotard",
     "swimsuit",
+    "censor",
+    "censored",
+    "censoring",
+    "censorship",
+    "mosaic",
+    "cropped",
+    "obscured",
 }
 NSFW_INCOMPATIBLE_EXACT_TAGS = {
     "nontraditional miko",
     "traditional miko",
+    "strategically covered",
+    "hands covering body",
+    "hand covering body",
+    "hair covering body",
+    "hair over body",
+    "foreground obstruction",
+    "object in foreground",
+    "obscured anatomy",
+    "cropped body",
+    "out of frame",
+    "steam covering body",
+    "shadow covering body",
+    "convenient censoring",
+    "mosaic censorship",
+    "bar censor",
+    "black censor bar",
 }
+NSFW_VISIBILITY_POSITIVE_TAGS = (
+    "unobstructed anatomy",
+    "explicit anatomy visible",
+    "clear frontal view",
+    "full body visible",
+)
+NSFW_VISIBILITY_NEGATIVE_TAGS = (
+    "censored",
+    "mosaic censorship",
+    "bar censor",
+    "convenient censoring",
+    "strategically covered",
+    "obscured anatomy",
+    "hands covering body",
+    "hair covering body",
+    "foreground obstruction",
+    "cropped body",
+    "out of frame",
+)
 
 
 class PromptResult(BaseModel):
@@ -110,6 +152,28 @@ def normalize_tag_key(tag: str) -> str:
     return " ".join(tag.strip().lower().replace("_", " ").split())
 
 
+def merge_unique_tags(*parts: str) -> str:
+    tags: list[str] = []
+    seen: set[str] = set()
+    for part in parts:
+        for raw_tag in (part or "").split(","):
+            tag = raw_tag.strip()
+            key = normalize_tag_key(tag)
+            if not tag or key in seen:
+                continue
+            seen.add(key)
+            tags.append(tag)
+    return ", ".join(tags)
+
+
+def apply_nsfw_visibility_positive(prompt: str) -> str:
+    return merge_unique_tags(prompt, ", ".join(NSFW_VISIBILITY_POSITIVE_TAGS))
+
+
+def apply_nsfw_visibility_negative(prompt: str) -> str:
+    return merge_unique_tags(prompt, ", ".join(NSFW_VISIBILITY_NEGATIVE_TAGS))
+
+
 def filter_nsfw_incompatible_tags(prompt: str) -> str:
     if not prompt:
         return ""
@@ -118,9 +182,10 @@ def filter_nsfw_incompatible_tags(prompt: str) -> str:
         tag = raw_tag.strip()
         key = normalize_tag_key(tag)
         tokens = set(re.findall(r"[a-z]+", key))
+        plain_key = " ".join(re.findall(r"[a-z]+", key))
         if (
             not tag
-            or key in NSFW_INCOMPATIBLE_EXACT_TAGS
+            or plain_key in NSFW_INCOMPATIBLE_EXACT_TAGS
             or tokens.intersection(NSFW_INCOMPATIBLE_TAG_TOKENS)
         ):
             continue
@@ -143,15 +208,18 @@ async def translate_prompt(
         "Use comma-separated English tags. Do not prepend generic quality boosters such as "
         "masterpiece, best quality, high quality, anime illustration, detailed eyes, or clean "
         "lineart unless the user explicitly asks for them. Keep negative prompt practical. "
-        "When NSFW compatibility mode is enabled, omit garment and clothing tags while preserving "
-        "identity, anatomy, pose, expression, camera, lighting, and background tags. "
+        "When NSFW compatibility mode is enabled, omit garment, clothing, censorship, occlusion, "
+        "covering, foreground-blocking, and cropped-composition tags while preserving identity, "
+        "anatomy, pose, expression, camera, lighting, and background tags. Favor an unobstructed "
+        "frontal composition with the requested anatomy clearly visible. "
         "If local prompt knowledge is provided, follow it exactly."
     )
     knowledge_context = matched_knowledge_context(prompt_cn, settings.prompt_knowledge_path)
     style_tag_instruction = (
         f"Preset/style tags to sanitize: {style_tags or '(none)'}. Keep identity, face, hair, "
         "body, pose, camera, lighting, and background tags, but remove every garment, outfit, "
-        "uniform, sleeve, glove, stocking, footwear, armor, and miko-clothing tag."
+        "uniform, sleeve, glove, stocking, footwear, armor, miko-clothing, censorship, covering, "
+        "foreground-obstruction, and cropped-composition tag."
         if nsfw_mode
         else f"Extra style tags to keep in English if useful: {style_tags or '(none)'}"
     )
@@ -192,7 +260,7 @@ async def translate_prompt(
                 "style_notes. Do not explain.\n\n"
                 f"Original Chinese request: {prompt_cn}\n"
                 f"JSON to correct: {raw}\n\n"
-                'Example output: {"positive":"adult woman, silver hair, rainy night, neon lights",'
+                'Example output: {"positive":"woman, silver hair, rainy night, neon lights",'
                 '"negative":"low quality, blurry","style_notes":"English tags"}'
             )
             correction_payload = {
@@ -226,6 +294,7 @@ async def translate_prompt(
             positive = remove_cjk_tags(positive)
         if nsfw_mode:
             positive = filter_nsfw_incompatible_tags(positive)
+            positive = apply_nsfw_visibility_positive(positive)
         if not positive:
             raise PromptTranslationError("Ollama could not produce usable English positive tags.")
         negative = normalize_prompt_value(parsed.get("negative", negative_prompt or DEFAULT_NEGATIVE)) or DEFAULT_NEGATIVE
@@ -233,6 +302,8 @@ async def translate_prompt(
             negative = remove_cjk_tags(negative) or DEFAULT_NEGATIVE
         if DEFAULT_NEGATIVE not in negative:
             negative = f"{negative}, {DEFAULT_NEGATIVE}"
+        if nsfw_mode:
+            negative = apply_nsfw_visibility_negative(negative)
         return PromptResult(
             positive=positive,
             negative=negative,

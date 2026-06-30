@@ -16,7 +16,14 @@ from app.comfyui import ComfyUIClient, build_inpaint_workflow, build_mask_condit
 from app.config import Settings, get_settings
 from app.db import JobStore
 from app.presets import find_character, list_loras, load_characters, merge_tags
-from app.prompting import PromptResult, PromptTranslationError, filter_nsfw_incompatible_tags, translate_prompt
+from app.prompting import (
+    PromptResult,
+    PromptTranslationError,
+    apply_nsfw_visibility_negative,
+    apply_nsfw_visibility_positive,
+    filter_nsfw_incompatible_tags,
+    translate_prompt,
+)
 
 
 app = FastAPI(title="Local AI Drawing Service")
@@ -239,7 +246,16 @@ async def generate(
         regional_global_positive = filter_nsfw_incompatible_tags(regional_global_positive)
         regional_left_positive = filter_nsfw_incompatible_tags(regional_left_positive)
         regional_right_positive = filter_nsfw_incompatible_tags(regional_right_positive)
+        positive_prompt = apply_nsfw_visibility_positive(positive_prompt)
+        if regional_global_positive:
+            regional_global_positive = apply_nsfw_visibility_positive(regional_global_positive)
+        if regional_left_positive:
+            regional_left_positive = apply_nsfw_visibility_positive(regional_left_positive)
+        if regional_right_positive:
+            regional_right_positive = apply_nsfw_visibility_positive(regional_right_positive)
     negative_prompt = build_negative_prompt(prompt.negative, is_dual)
+    if payload.nsfw_mode:
+        negative_prompt = apply_nsfw_visibility_negative(negative_prompt)
     lora_name = payload.lora_name or (character.lora_name if character else "")
     lora_strength = payload.lora_strength or (character.lora_strength if character and character.lora_name else 0)
     second_lora_name = payload.second_lora_name or (second_character.lora_name if second_character else "")
