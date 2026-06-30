@@ -95,7 +95,7 @@ AI_WORKER_NAME=Local ComfyUI Worker
 AI_WORKER_VERSION=0.1.0
 AI_WORKER_POLL_SECONDS=5
 AI_WORKER_CAPABILITY_REPORT_SECONDS=60
-AI_WORKER_CLEANUP_OUTPUTS=true
+AI_WORKER_CLEANUP_OUTPUTS=false
 ```
 
 重点说明：
@@ -231,7 +231,7 @@ outputs/
 2. 本机 Worker 读取图片 bytes。
 3. Worker 调用云端 complete 接口。
 4. 云端后端写入 OSS。
-5. 如果 `AI_WORKER_CLEANUP_OUTPUTS=true`，上传成功后本机会删除对应临时图。
+5. 上传成功后归档图仍永久保存在 `OUTPUT_DIR/{用户ID}/{yyyy-MM-dd}/{UUID}.{扩展名}`；只有管理员下发审计删除指令后才会删除。
 
 也就是说，云端用户最终看图走 OSS，不依赖本机图片文件。
 

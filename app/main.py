@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 import httpx
@@ -65,6 +66,9 @@ class GenerateRequest(BaseModel):
     second_lora_strength: float = Field(0, ge=0, le=2)
     character_mask_json: str = Field("", max_length=120000)
     nsfw_mode: bool = False
+    cloud_job_id: int | None = None
+    user_id: int | None = None
+    storage_date: str | None = None
 
 
 class TranslateRequest(BaseModel):
@@ -252,9 +256,13 @@ async def generate(
                 NSFW_MAX_LORA_STRENGTH,
             )
     job_id = uuid.uuid4().hex
+    storage_date = normalized_storage_date(payload.storage_date)
     seed = payload.seed or random_seed()
     job = {
         "id": job_id,
+        "cloud_job_id": payload.cloud_job_id,
+        "user_id": payload.user_id,
+        "storage_date": storage_date,
         "prompt_cn": payload.prompt_cn,
         "prompt_positive": positive_prompt,
         "prompt_negative": negative_prompt,
@@ -277,6 +285,7 @@ async def generate(
         "second_lora_name": second_lora_name if is_dual else "",
         "second_lora_strength": second_lora_strength if is_dual else 0,
         "status": "queued",
+        "image_path": "",
     }
     store.create_job(job)
     background_tasks.add_task(run_generation, job_id, settings)
@@ -316,8 +325,10 @@ async def run_generation(job_id: str, settings: Settings) -> None:
             prompt_id = await client.queue_prompt(workflow, client_id=job_id)
             store.update_job(job_id, comfy_prompt_id=prompt_id)
             history = await client.wait_for_history(prompt_id)
-            image_path = await client.download_first_image(history, settings.output_dir, job_id)
-        store.update_job(job_id, status="completed", image_path=image_path.name)
+            image_path = await client.download_first_image(
+                history, settings.output_dir, local_image_stem(job))
+        relative_path = image_path.resolve().relative_to(settings.output_dir.resolve()).as_posix()
+        store.update_job(job_id, status="completed", image_path=relative_path)
     except Exception as exc:
         store.update_job(job_id, status="failed", error=str(exc))
 
@@ -335,10 +346,9 @@ def history(limit: int = 50, store: JobStore = Depends(get_store)) -> list[dict]
     return store.list_jobs(limit)
 
 
-@app.get("/api/images/{filename}")
-def image(filename: str, settings: Settings = Depends(get_settings)) -> FileResponse:
-    safe_name = Path(filename).name
-    path = settings.output_dir / safe_name
+@app.get("/api/images/{image_path:path}")
+def image(image_path: str, settings: Settings = Depends(get_settings)) -> FileResponse:
+    path = resolve_output_path(settings.output_dir, image_path)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Image not found.")
     return FileResponse(path)
@@ -354,6 +364,32 @@ def is_dual_generation(payload: GenerateRequest) -> bool:
         or bool(payload.second_character_id)
         or bool(payload.second_lora_name)
     )
+
+
+def normalized_storage_date(value: str | None) -> str:
+    if value:
+        try:
+            return datetime.strptime(value[:10], "%Y-%m-%d").strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+    return datetime.now().strftime("%Y-%m-%d")
+
+
+def local_image_stem(job: dict) -> str:
+    user_id = job.get("user_id")
+    date = normalized_storage_date(str(job.get("storage_date") or job.get("created_at") or ""))
+    return f"{user_id if user_id else 'local'}/{date}/{job['id']}"
+
+
+def resolve_output_path(output_dir: Path, relative_path: str) -> Path:
+    normalized = str(relative_path or "").replace("\\", "/")
+    if normalized.startswith("/") or (len(normalized) >= 2 and normalized[1] == ":"):
+        raise HTTPException(status_code=400, detail="Invalid image path.")
+    candidate = (output_dir / normalized).resolve()
+    root = output_dir.resolve()
+    if not normalized or not candidate.is_relative_to(root):
+        raise HTTPException(status_code=400, detail="Invalid image path.")
+    return candidate
 
 
 def has_complete_character_mask(mask_json: str) -> bool:
@@ -564,7 +600,8 @@ async def run_dual_mask_conditioning_generation(
             mask_strength=settings.dual_mask_conditioning_strength,
             filename_prefix=f"local_ai_drawing/{job_id}",
         )
-        return await queue_and_download(client, store, job_id, workflow, settings.output_dir, job_id)
+        return await queue_and_download(
+            client, store, job_id, workflow, settings.output_dir, local_image_stem(job))
     finally:
         for filename in uploaded_inputs:
             client.cleanup_comfyui_input_file(filename)
@@ -592,7 +629,9 @@ async def run_dual_inpaint_generation(
         scheduler=settings.default_scheduler,
         filename_prefix=f"local_ai_drawing/{job_id}_base",
     )
-    base_path = await queue_and_download(client, store, job_id, base_workflow, settings.output_dir, f"{job_id}_base")
+    image_stem = local_image_stem(job)
+    base_path = await queue_and_download(
+        client, store, job_id, base_workflow, settings.output_dir, f"{image_stem}_base")
 
     mask_dir = settings.database_path.parent / "masks"
     mask_dir.mkdir(parents=True, exist_ok=True)
@@ -629,7 +668,8 @@ async def run_dual_inpaint_generation(
             lora_strength=job["lora_strength"],
             filename_prefix=f"local_ai_drawing/{job_id}_left",
         )
-        left_path = await queue_and_download(client, store, job_id, left_workflow, settings.output_dir, f"{job_id}_left")
+        left_path = await queue_and_download(
+            client, store, job_id, left_workflow, settings.output_dir, f"{image_stem}_left")
         temp_paths.append(left_path)
 
         left_upload = await client.upload_image(left_path, f"{job_id}_left.png")
@@ -651,7 +691,8 @@ async def run_dual_inpaint_generation(
             lora_strength=job["second_lora_strength"],
             filename_prefix=f"local_ai_drawing/{job_id}",
         )
-        return await queue_and_download(client, store, job_id, right_workflow, settings.output_dir, job_id)
+        return await queue_and_download(
+            client, store, job_id, right_workflow, settings.output_dir, image_stem)
     finally:
         for filename in uploaded_inputs:
             client.cleanup_comfyui_input_file(filename)

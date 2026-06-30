@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+import tempfile
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -77,6 +79,38 @@ class CloudWorkerCompletionTest(unittest.IsolatedAsyncioTestCase):
                         b"image",
                         "82.png",
                     )
+
+    async def test_local_delete_only_removes_file_inside_output_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            worker = CloudWorker(
+                Settings(
+                    CLOUD_API_URL="https://cloud.example.test",
+                    AI_WORKER_TOKEN="token",
+                    AI_WORKER_ID="worker-1",
+                    OUTPUT_DIR=temporary,
+                )
+            )
+            image = Path(temporary) / "7" / "2026-06-30" / "local.png"
+            image.parent.mkdir(parents=True)
+            image.write_bytes(b"image")
+            requested_paths: list[str] = []
+
+            def handler(request: httpx.Request) -> httpx.Response:
+                requested_paths.append(request.url.path)
+                return httpx.Response(200, request=request, json={"status": "SUCCEEDED"})
+
+            async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+                await worker._process_local_image_delete(
+                    client,
+                    {"id": 9, "localRelativePath": "7/2026-06-30/local.png"},
+                )
+
+            self.assertFalse(image.exists())
+            self.assertEqual(requested_paths, ["/ai-worker/local-image-deletions/9/complete"])
+
+    def test_output_path_rejects_directory_traversal(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "escapes OUTPUT_DIR"):
+            self.worker._resolve_output_path("../outside.png")
 
 
 if __name__ == "__main__":

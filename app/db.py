@@ -9,6 +9,9 @@ from typing import Any, Iterator
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
     id TEXT PRIMARY KEY,
+    cloud_job_id INTEGER,
+    user_id INTEGER,
+    storage_date TEXT NOT NULL DEFAULT '',
     prompt_cn TEXT NOT NULL,
     prompt_positive TEXT NOT NULL,
     prompt_negative TEXT NOT NULL,
@@ -61,6 +64,9 @@ class JobStore:
             conn.executescript(SCHEMA)
             columns = {row["name"] for row in conn.execute("PRAGMA table_info(jobs)").fetchall()}
             additions = {
+                "cloud_job_id": "INTEGER",
+                "user_id": "INTEGER",
+                "storage_date": "TEXT NOT NULL DEFAULT ''",
                 "generation_mode": "TEXT NOT NULL DEFAULT 'SINGLE'",
                 "second_lora_name": "TEXT NOT NULL DEFAULT ''",
                 "second_lora_strength": "REAL NOT NULL DEFAULT 0",
@@ -106,5 +112,12 @@ class JobStore:
             rows = conn.execute(
                 "SELECT * FROM jobs ORDER BY created_at DESC LIMIT ?",
                 (max(1, min(limit, 200)),),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_completed_jobs(self) -> list[dict[str, Any]]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM jobs WHERE status = 'completed' AND image_path != '' ORDER BY created_at ASC"
             ).fetchall()
         return [dict(row) for row in rows]

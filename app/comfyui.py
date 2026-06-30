@@ -363,6 +363,7 @@ class ComfyUIClient:
                     response.raise_for_status()
                 suffix = Path(image["filename"]).suffix or ".png"
                 target = output_dir / f"{job_id}{suffix}"
+                target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(response.content)
                 self.cleanup_comfyui_image(image)
                 return target

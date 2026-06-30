@@ -9,7 +9,7 @@
 3. 轮询云端任务。
 4. 调用本机 `http://127.0.0.1:7861/api/generate` 出图。
 5. 读取本机临时图片并回传云端。
-6. 云端写入 OSS，worker 可按配置清理本机临时图。
+6. 云端写入 OSS，本机归档图永久保留，除非管理员通过云端下发删除指令。
 
 云服务器不需要访问本机 IP，本机也不需要做内网穿透。
 
@@ -26,7 +26,7 @@ AI_WORKER_NAME=Local ComfyUI Worker
 AI_WORKER_VERSION=0.1.0
 AI_WORKER_POLL_SECONDS=5
 AI_WORKER_CAPABILITY_REPORT_SECONDS=60
-AI_WORKER_CLEANUP_OUTPUTS=true
+AI_WORKER_CLEANUP_OUTPUTS=false
 ```
 
 `AI_WORKER_TOKEN` 必须与云端后端的 `AI_WORKER_TOKEN` 一致。
@@ -88,7 +88,9 @@ v1 采用 `CLOUD_COMPLETE_BASE64`：
 5. 用户通过云端签名 URL 查看自己的图片。
 6. 审核通过后，云端复制到 `ai/public/general/{jobId}.png` 或 `ai/public/r18/{jobId}.png`。
 
-如果 `AI_WORKER_CLEANUP_OUTPUTS=true`，worker 在云端 complete 成功后会删除本机 `outputs` 下对应临时图片；本地服务复制图片后也会清理 ComfyUI `output/local_ai_drawing` 下的原始输出。
+归档图片统一保存在 `OUTPUT_DIR/{用户ID}/{yyyy-MM-dd}/{本机任务UUID}.{扩展名}`。worker 不会在云端 complete 成功后删除归档图；ComfyUI 自身的中间输出仍会在复制完成后清理。云端管理员删除本机图片时，指令会排队等待对应 worker 在线执行，并回报成功或失败。
+
+worker 启动后会把旧版 `outputs` 扁平目录中的可识别图片与云端历史对账，迁移到规范目录并回填绝对、相对路径。无法匹配或存在目标冲突的文件保持原位。
 
 本机控制台提供 `GET /api/health`，用于检查 ComfyUI、Ollama、云端连接、模型目录和默认 checkpoint。
 

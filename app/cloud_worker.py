@@ -5,6 +5,7 @@ import base64
 import json
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -94,12 +95,17 @@ class CloudWorker:
             "User-Agent": USER_AGENT,
         }
         self._last_capability_report = 0.0
+        self._local_images_reconciled = False
 
     async def run_forever(self) -> None:
         async with httpx.AsyncClient(timeout=60, headers=self.headers) as client:
             while True:
                 try:
                     await self._report_periodic(client)
+                    delete_command = await self._claim_local_image_delete(client)
+                    if delete_command.get("hasCommand"):
+                        await self._process_local_image_delete(client, delete_command["command"])
+                        continue
                     claimed_prompt = await self._claim_prompt_translation(client)
                     if claimed_prompt.get("hasJob"):
                         await self._process_prompt_translation(client, claimed_prompt["job"])
@@ -119,6 +125,9 @@ class CloudWorker:
             return
         await self._heartbeat(client)
         await self._report_capabilities(client)
+        if not self._local_images_reconciled:
+            await self._reconcile_local_images(client)
+            self._local_images_reconciled = True
         self._last_capability_report = now
 
     async def _heartbeat(self, client: httpx.AsyncClient) -> None:
@@ -149,6 +158,14 @@ class CloudWorker:
     async def _claim_prompt_translation(self, client: httpx.AsyncClient) -> dict[str, Any]:
         response = await client.post(
             f"{self.cloud_url}/ai-worker/prompt-translations/claim",
+            json={"workerId": self.settings.ai_worker_id},
+        )
+        response.raise_for_status()
+        return response.json()
+
+    async def _claim_local_image_delete(self, client: httpx.AsyncClient) -> dict[str, Any]:
+        response = await client.post(
+            f"{self.cloud_url}/ai-worker/local-image-deletions/claim",
             json={"workerId": self.settings.ai_worker_id},
         )
         response.raise_for_status()
@@ -218,8 +235,6 @@ class CloudWorker:
             stage = "COMPLETING_CLOUD_JOB"
             detail = f"Sending {filename} to cloud complete endpoint."
             await self._complete_cloud_job(client, job_id, local_job_id, comfy_prompt_id, local_result, image_bytes, filename)
-            stage = "CLEANING_LOCAL_OUTPUT"
-            self._cleanup_local_image(filename)
         except CloudCompletionDeliveryError as exc:
             print(
                 f"[cloud-worker] completion delivery pending for job {job_id}; "
@@ -249,6 +264,9 @@ class CloudWorker:
             "second_lora_name": job.get("secondLoraName") or "",
             "second_lora_strength": job.get("secondLoraStrength") or 0,
             "nsfw_mode": job.get("nsfwMode") is True,
+            "cloud_job_id": job.get("id"),
+            "user_id": job.get("userId"),
+            "storage_date": str(job.get("createdAt") or "")[:10] or None,
         }
         async with httpx.AsyncClient(timeout=30, headers={"User-Agent": USER_AGENT}) as local:
             response = await local.post(f"{self.local_url}/api/generate", json=payload)
@@ -273,7 +291,7 @@ class CloudWorker:
         if not filename:
             raise RuntimeError("Local generation completed without image_path.")
         async with httpx.AsyncClient(timeout=60, headers={"User-Agent": USER_AGENT}) as local:
-            response = await local.get(f"{self.local_url}/api/images/{filename}")
+            response = await local.get(f"{self.local_url}/api/images/{quote(filename, safe='/')}")
             self._raise_for_status(response, "download local image")
             return response.content, filename
 
@@ -317,6 +335,8 @@ class CloudWorker:
             "imageBase64": base64.b64encode(image_bytes).decode("ascii"),
             "contentType": "image/png",
             "filename": filename,
+            "localRelativePath": filename.replace("\\", "/"),
+            "localAbsolutePath": str(self._resolve_output_path(filename)),
             "promptPositive": local_result.get("prompt_positive"),
             "promptNegative": local_result.get("prompt_negative"),
             "styleNotes": local_result.get("style_notes"),
@@ -392,17 +412,107 @@ class CloudWorker:
         )
         response.raise_for_status()
 
-    def _cleanup_local_image(self, filename: str) -> None:
-        if not self.settings.ai_worker_cleanup_outputs:
+    async def _reconcile_local_images(self, client: httpx.AsyncClient) -> None:
+        from app.db import JobStore
+
+        jobs = JobStore(self.settings.database_path).list_completed_jobs()
+        if not jobs:
             return
-        safe_name = Path(filename).name
-        path = self.settings.output_dir / safe_name
-        if path.exists() and path.suffix.lower() in IMAGE_SUFFIXES:
-            try:
+        items = [
+            {
+                "localJobId": job["id"],
+                "currentRelativePath": job.get("image_path") or "",
+                "currentAbsolutePath": str(self._resolve_output_path(job.get("image_path") or "")),
+            }
+            for job in jobs
+            if job.get("image_path")
+        ]
+        for start in range(0, len(items), 100):
+            response = await client.post(
+                f"{self.cloud_url}/ai-worker/local-images/reconcile",
+                json={"workerId": self.settings.ai_worker_id, "items": items[start:start + 100]},
+            )
+            response.raise_for_status()
+            for result in response.json():
+                if result.get("status") != "MATCHED":
+                    print(
+                        f"[cloud-worker] local image reconcile skipped "
+                        f"{result.get('localJobId')}: {result.get('message')}"
+                    )
+                    continue
+                await self._move_and_report_local_image(client, result)
+
+    async def _move_and_report_local_image(
+        self,
+        client: httpx.AsyncClient,
+        result: dict[str, Any],
+    ) -> None:
+        from app.db import JobStore
+
+        store = JobStore(self.settings.database_path)
+        local_job = store.get_job(str(result["localJobId"]))
+        if not local_job or not local_job.get("image_path"):
+            return
+        source = self._resolve_output_path(local_job["image_path"])
+        target_relative = str(result["targetRelativePath"]).replace("\\", "/")
+        target = self._resolve_output_path(target_relative)
+        if source != target:
+            if not source.exists():
+                print(f"[cloud-worker] reconcile source missing: {source}")
+                return
+            if target.exists():
+                print(f"[cloud-worker] reconcile target already exists, keeping source: {target}")
+                return
+            target.parent.mkdir(parents=True, exist_ok=True)
+            source.replace(target)
+        store.update_job(str(result["localJobId"]), image_path=target_relative)
+        response = await client.post(
+            f"{self.cloud_url}/ai-worker/jobs/{result['jobId']}/local-image",
+            json={
+                "workerId": self.settings.ai_worker_id,
+                "localJobId": result["localJobId"],
+                "localRelativePath": target_relative,
+                "localAbsolutePath": str(target),
+            },
+        )
+        response.raise_for_status()
+
+    async def _process_local_image_delete(
+        self,
+        client: httpx.AsyncClient,
+        command: dict[str, Any],
+    ) -> None:
+        command_id = command["id"]
+        try:
+            path = self._resolve_output_path(command.get("localRelativePath") or "")
+            if path.exists():
+                if path.suffix.lower() not in IMAGE_SUFFIXES:
+                    raise RuntimeError("Local image extension is not allowed")
                 path.unlink()
-                print(f"[cloud-worker] cleaned local image: {safe_name}")
-            except OSError as exc:
-                print(f"[cloud-worker] cleanup skipped for {safe_name}: {exc}")
+            response = await client.post(
+                f"{self.cloud_url}/ai-worker/local-image-deletions/{command_id}/complete",
+                json={"workerId": self.settings.ai_worker_id},
+            )
+            response.raise_for_status()
+        except Exception as exc:
+            response = await client.post(
+                f"{self.cloud_url}/ai-worker/local-image-deletions/{command_id}/fail",
+                json={
+                    "workerId": self.settings.ai_worker_id,
+                    "errorMessage": str(exc)[:1000],
+                },
+            )
+            response.raise_for_status()
+
+    def _resolve_output_path(self, relative_path: str) -> Path:
+        normalized = str(relative_path or "").replace("\\", "/")
+        if normalized.startswith("/") or (len(normalized) >= 2 and normalized[1] == ":"):
+            raise RuntimeError("Local image path escapes OUTPUT_DIR")
+        root = self.settings.output_dir.resolve()
+        candidate = (root / normalized).resolve()
+        if not normalized or not candidate.is_relative_to(root):
+            raise RuntimeError("Local image path escapes OUTPUT_DIR")
+        return candidate
 
     @staticmethod
     def _raise_for_status(response: httpx.Response, action: str) -> None:

@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     ai_worker_version: str = Field("0.1.0", alias="AI_WORKER_VERSION")
     ai_worker_poll_seconds: float = Field(5, alias="AI_WORKER_POLL_SECONDS")
     ai_worker_capability_report_seconds: float = Field(60, alias="AI_WORKER_CAPABILITY_REPORT_SECONDS")
-    ai_worker_cleanup_outputs: bool = Field(True, alias="AI_WORKER_CLEANUP_OUTPUTS")
+    ai_worker_cleanup_outputs: bool = Field(False, alias="AI_WORKER_CLEANUP_OUTPUTS")
     dual_character_strategy: str = Field("auto", alias="DUAL_CHARACTER_STRATEGY")
     dual_lora_strength_cap: float = Field(0.65, alias="DUAL_LORA_STRENGTH_CAP")
     dual_mask_conditioning_strength: float = Field(0.95, alias="DUAL_MASK_CONDITIONING_STRENGTH")
