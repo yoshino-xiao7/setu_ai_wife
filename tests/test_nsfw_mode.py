@@ -4,7 +4,9 @@ import unittest
 
 from app.prompting import (
     apply_nsfw_visibility_negative,
+    apply_nsfw_visibility_negative_profile,
     apply_nsfw_visibility_positive,
+    apply_nsfw_visibility_profile,
     filter_nsfw_incompatible_tags,
     remove_cjk_tags,
 )
@@ -68,6 +70,27 @@ class NsfwModeTest(unittest.TestCase):
         self.assertNotIn("adult", positive)
         self.assertIn("convenient censoring", negative)
         self.assertIn("foreground obstruction", negative)
+
+    def test_visibility_profiles_preserve_close_up_and_only_expand_full_body_when_requested(self) -> None:
+        close_up = apply_nsfw_visibility_profile("yae miko, close-up portrait", "STRONG")
+        full_body = apply_nsfw_visibility_profile("yae miko, full body", "STRONG")
+
+        self.assertNotIn("head-to-toe framing", close_up)
+        self.assertIn("head-to-toe framing", full_body)
+        self.assertIn("(unobstructed anatomy:1.25)", close_up)
+        self.assertIn(
+            "(censored:1.3)",
+            apply_nsfw_visibility_negative_profile("low quality", "STRONG"),
+        )
+
+    def test_changing_visibility_level_replaces_old_profile_tags(self) -> None:
+        light = apply_nsfw_visibility_profile(
+            "yae miko, unobstructed anatomy, explicit anatomy visible, clear frontal view",
+            "LIGHT",
+        )
+
+        self.assertIn("clear view", light)
+        self.assertNotIn("explicit anatomy visible", light)
 
 
 if __name__ == "__main__":

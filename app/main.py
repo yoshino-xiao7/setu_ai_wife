@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import base64
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -19,8 +20,8 @@ from app.presets import find_character, list_loras, load_characters, merge_tags
 from app.prompting import (
     PromptResult,
     PromptTranslationError,
-    apply_nsfw_visibility_negative,
-    apply_nsfw_visibility_positive,
+    apply_nsfw_visibility_negative_profile,
+    apply_nsfw_visibility_profile,
     filter_nsfw_incompatible_tags,
     translate_prompt,
 )
@@ -47,10 +48,6 @@ DUAL_CHARACTER_NEGATIVE_TAGS = (
     "extra arms, extra hands, extra legs, extra feet, too many limbs, "
     "broken interaction, disconnected hands, tangled limbs"
 )
-NSFW_DEFAULT_LORA_STRENGTH = 0.6
-NSFW_MAX_LORA_STRENGTH = 0.65
-
-
 class GenerateRequest(BaseModel):
     prompt_cn: str = Field(..., min_length=1, max_length=1000)
     prompt_positive: str = ""
@@ -73,6 +70,12 @@ class GenerateRequest(BaseModel):
     second_lora_strength: float = Field(0, ge=0, le=2)
     character_mask_json: str = Field("", max_length=120000)
     nsfw_mode: bool = False
+    nsfw_visibility_level: str = "STANDARD"
+    job_type: str = "TEXT2IMG"
+    parent_job_id: int | None = None
+    inpaint_instruction: str = ""
+    inpaint_mask_json: str = Field("", max_length=120000)
+    source_image_base64: str = ""
     cloud_job_id: int | None = None
     user_id: int | None = None
     storage_date: str | None = None
@@ -83,6 +86,7 @@ class TranslateRequest(BaseModel):
     style_tags: str = ""
     negative_prompt: str = ""
     nsfw_mode: bool = False
+    nsfw_visibility_level: str = "STANDARD"
 
 
 def get_store(settings: Settings = Depends(get_settings)) -> JobStore:
@@ -98,6 +102,7 @@ async def translate_api(payload: TranslateRequest, settings: Settings = Depends(
             style_tags=payload.style_tags,
             negative_prompt=payload.negative_prompt,
             nsfw_mode=payload.nsfw_mode,
+            nsfw_visibility_level=payload.nsfw_visibility_level,
         )
     except PromptTranslationError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -220,6 +225,24 @@ async def generate(
                 style_tags=payload.style_tags,
                 negative_prompt=payload.prompt_negative,
                 nsfw_mode=payload.nsfw_mode,
+                nsfw_visibility_level=payload.nsfw_visibility_level,
+            )
+        except PromptTranslationError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+    if str(payload.job_type or "").strip().upper() == "INPAINT" and payload.inpaint_instruction.strip():
+        try:
+            repair_prompt = await translate_prompt(
+                payload.inpaint_instruction.strip(),
+                settings,
+                negative_prompt=payload.prompt_negative,
+                nsfw_mode=payload.nsfw_mode,
+                nsfw_visibility_level=payload.nsfw_visibility_level,
+            )
+            prompt = prompt.model_copy(
+                update={
+                    "positive": merge_tags(prompt.positive, repair_prompt.positive),
+                    "style_notes": merge_tags(prompt.style_notes, repair_prompt.style_notes),
+                }
             )
         except PromptTranslationError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -246,16 +269,24 @@ async def generate(
         regional_global_positive = filter_nsfw_incompatible_tags(regional_global_positive)
         regional_left_positive = filter_nsfw_incompatible_tags(regional_left_positive)
         regional_right_positive = filter_nsfw_incompatible_tags(regional_right_positive)
-        positive_prompt = apply_nsfw_visibility_positive(positive_prompt)
+        positive_prompt = apply_nsfw_visibility_profile(positive_prompt, payload.nsfw_visibility_level)
         if regional_global_positive:
-            regional_global_positive = apply_nsfw_visibility_positive(regional_global_positive)
+            regional_global_positive = apply_nsfw_visibility_profile(
+                regional_global_positive, payload.nsfw_visibility_level
+            )
         if regional_left_positive:
-            regional_left_positive = apply_nsfw_visibility_positive(regional_left_positive)
+            regional_left_positive = apply_nsfw_visibility_profile(
+                regional_left_positive, payload.nsfw_visibility_level
+            )
         if regional_right_positive:
-            regional_right_positive = apply_nsfw_visibility_positive(regional_right_positive)
+            regional_right_positive = apply_nsfw_visibility_profile(
+                regional_right_positive, payload.nsfw_visibility_level
+            )
     negative_prompt = build_negative_prompt(prompt.negative, is_dual)
     if payload.nsfw_mode:
-        negative_prompt = apply_nsfw_visibility_negative(negative_prompt)
+        negative_prompt = apply_nsfw_visibility_negative_profile(
+            negative_prompt, payload.nsfw_visibility_level
+        )
     lora_name = payload.lora_name or (character.lora_name if character else "")
     lora_strength = payload.lora_strength or (character.lora_strength if character and character.lora_name else 0)
     second_lora_name = payload.second_lora_name or (second_character.lora_name if second_character else "")
@@ -264,14 +295,18 @@ async def generate(
         lora_strength = min(lora_strength, settings.dual_lora_strength_cap)
         second_lora_strength = min(second_lora_strength, settings.dual_lora_strength_cap)
     if payload.nsfw_mode:
+        default_strength, max_strength = nsfw_lora_range(payload.nsfw_visibility_level)
         if lora_name:
-            lora_strength = min(lora_strength or NSFW_DEFAULT_LORA_STRENGTH, NSFW_MAX_LORA_STRENGTH)
+            lora_strength = min(lora_strength or default_strength, max_strength)
         if second_lora_name:
             second_lora_strength = min(
-                second_lora_strength or NSFW_DEFAULT_LORA_STRENGTH,
-                NSFW_MAX_LORA_STRENGTH,
+                second_lora_strength or default_strength,
+                max_strength,
             )
     job_id = uuid.uuid4().hex
+    source_image_path = ""
+    if str(payload.job_type or "").strip().upper() == "INPAINT":
+        source_image_path = save_inpaint_source(payload.source_image_base64, job_id, settings)
     storage_date = normalized_storage_date(payload.storage_date)
     seed = payload.seed or random_seed()
     job = {
@@ -296,6 +331,12 @@ async def generate(
         "regional_global_positive": regional_global_positive,
         "regional_left_positive": regional_left_positive,
         "regional_right_positive": regional_right_positive,
+        "nsfw_visibility_level": normalize_visibility_level(payload.nsfw_visibility_level),
+        "job_type": str(payload.job_type or "TEXT2IMG").strip().upper(),
+        "parent_job_id": payload.parent_job_id,
+        "inpaint_instruction": payload.inpaint_instruction.strip(),
+        "inpaint_mask_json": payload.inpaint_mask_json.strip(),
+        "source_image_path": source_image_path,
         "lora_name": lora_name,
         "lora_strength": lora_strength,
         "second_lora_name": second_lora_name if is_dual else "",
@@ -316,7 +357,9 @@ async def run_generation(job_id: str, settings: Settings) -> None:
     store.update_job(job_id, status="running")
     client = ComfyUIClient(settings)
     try:
-        if should_use_dual_inpaint(settings, job):
+        if str(job.get("job_type") or "").upper() == "INPAINT":
+            image_path = await run_manual_inpaint_generation(job, settings, store, client)
+        elif should_use_dual_inpaint(settings, job):
             image_path = await run_dual_inpaint_generation(job, settings, store, client)
         elif should_use_dual_mask_conditioning(settings, job):
             image_path = await run_dual_mask_conditioning_generation(job, settings, store, client)
@@ -389,6 +432,43 @@ def normalized_storage_date(value: str | None) -> str:
         except ValueError:
             pass
     return datetime.now().strftime("%Y-%m-%d")
+
+
+def normalize_visibility_level(value: str | None) -> str:
+    normalized = str(value or "").strip().upper()
+    return normalized if normalized in {"LIGHT", "STANDARD", "STRONG"} else "STANDARD"
+
+
+def nsfw_lora_range(level: str | None) -> tuple[float, float]:
+    normalized = normalize_visibility_level(level)
+    if normalized == "LIGHT":
+        return 0.65, 0.65
+    if normalized == "STRONG":
+        return 0.55, 0.60
+    return 0.60, 0.65
+
+
+def save_inpaint_source(encoded: str, job_id: str, settings: Settings) -> str:
+    if not encoded.strip():
+        raise HTTPException(status_code=400, detail="Inpaint source image is missing.")
+    try:
+        image_bytes = base64.b64decode(encoded, validate=True)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid inpaint source image.") from exc
+    if len(image_bytes) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Inpaint source image is too large.")
+
+    source_dir = settings.database_path.parent / "inpaint_sources"
+    source_dir.mkdir(parents=True, exist_ok=True)
+    source_path = source_dir / f"{job_id}.png"
+    try:
+        from io import BytesIO
+
+        with Image.open(BytesIO(image_bytes)) as image:
+            image.convert("RGB").save(source_path, format="PNG")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Invalid inpaint source image.") from exc
+    return str(source_path)
 
 
 def local_image_stem(job: dict) -> str:
@@ -566,6 +646,105 @@ def should_use_dual_mask_conditioning(settings: Settings, job: dict) -> bool:
         and bool(job.get("regional_left_positive"))
         and bool(job.get("regional_right_positive"))
     )
+
+
+async def run_manual_inpaint_generation(
+    job: dict,
+    settings: Settings,
+    store: JobStore,
+    client: ComfyUIClient,
+) -> Path:
+    job_id = job["id"]
+    source_path = Path(str(job.get("source_image_path") or ""))
+    if not source_path.is_file():
+        raise RuntimeError("Inpaint source image is missing.")
+
+    with Image.open(source_path) as source:
+        width, height = source.size
+    mask_dir = settings.database_path.parent / "masks"
+    mask_dir.mkdir(parents=True, exist_ok=True)
+    mask_path = mask_dir / f"{job_id}_repair_mask.png"
+
+    uploaded_inputs: list[str] = []
+    temp_paths = [source_path, mask_path]
+    try:
+        create_manual_inpaint_mask(mask_path, width, height, job.get("inpaint_mask_json") or "")
+        source_upload = await client.upload_image(source_path, f"{job_id}_source.png")
+        mask_upload = await client.upload_image(mask_path, f"{job_id}_repair_mask.png")
+        uploaded_inputs.extend([source_upload, mask_upload])
+        denoise, grow_mask_by = inpaint_profile(job.get("nsfw_visibility_level"))
+        workflow = build_inpaint_workflow(
+            positive=job["prompt_positive"],
+            negative=job["prompt_negative"],
+            seed=job["seed"],
+            steps=job["steps"],
+            cfg=job["cfg"],
+            checkpoint=job["checkpoint"],
+            sampler=settings.default_sampler,
+            scheduler=settings.default_scheduler,
+            base_image=source_upload,
+            mask_image=mask_upload,
+            denoise=denoise,
+            lora_name=job["lora_name"],
+            lora_strength=job["lora_strength"],
+            second_lora_name=job["second_lora_name"],
+            second_lora_strength=job["second_lora_strength"],
+            grow_mask_by=grow_mask_by,
+            filename_prefix=f"local_ai_drawing/{job_id}",
+        )
+        return await queue_and_download(
+            client, store, job_id, workflow, settings.output_dir, local_image_stem(job)
+        )
+    finally:
+        for filename in uploaded_inputs:
+            client.cleanup_comfyui_input_file(filename)
+        cleanup_temp_paths(temp_paths)
+
+
+def inpaint_profile(level: str | None) -> tuple[float, int]:
+    normalized = normalize_visibility_level(level)
+    if normalized == "LIGHT":
+        return 0.45, 8
+    if normalized == "STRONG":
+        return 0.68, 20
+    return 0.58, 12
+
+
+def create_manual_inpaint_mask(
+    path: Path,
+    width: int,
+    height: int,
+    mask_json: str,
+) -> None:
+    try:
+        payload = json.loads(mask_json)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Inpaint mask is invalid.") from exc
+    strokes = payload.get("strokes") if isinstance(payload, dict) else None
+    if not isinstance(strokes, list) or not strokes:
+        raise RuntimeError("Inpaint mask contains no painted area.")
+
+    mask = Image.new("L", (width, height), 0)
+    draw = ImageDraw.Draw(mask)
+    painted = False
+    for stroke in strokes:
+        if not isinstance(stroke, dict):
+            continue
+        points = normalized_points(stroke.get("points") or [], width, height)
+        if not points:
+            continue
+        brush = mask_brush_width(
+            stroke.get("brush", stroke.get("brushSize", 0.05)),
+            width,
+            height,
+        )
+        draw_painted_character_region(draw, points, brush)
+        painted = True
+    if not painted:
+        raise RuntimeError("Inpaint mask contains no painted area.")
+
+    softened = mask.filter(ImageFilter.GaussianBlur(radius=max(2, int(min(width, height) * 0.004))))
+    softened.convert("RGB").save(path)
 
 
 async def run_dual_mask_conditioning_generation(

@@ -33,6 +33,12 @@ CREATE TABLE IF NOT EXISTS jobs (
     regional_global_positive TEXT NOT NULL DEFAULT '',
     regional_left_positive TEXT NOT NULL DEFAULT '',
     regional_right_positive TEXT NOT NULL DEFAULT '',
+    nsfw_visibility_level TEXT NOT NULL DEFAULT 'STANDARD',
+    job_type TEXT NOT NULL DEFAULT 'TEXT2IMG',
+    parent_job_id INTEGER,
+    inpaint_instruction TEXT NOT NULL DEFAULT '',
+    inpaint_mask_json TEXT NOT NULL DEFAULT '',
+    source_image_path TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL,
     comfy_prompt_id TEXT NOT NULL DEFAULT '',
     image_path TEXT NOT NULL DEFAULT '',
@@ -76,6 +82,12 @@ class JobStore:
                 "regional_global_positive": "TEXT NOT NULL DEFAULT ''",
                 "regional_left_positive": "TEXT NOT NULL DEFAULT ''",
                 "regional_right_positive": "TEXT NOT NULL DEFAULT ''",
+                "nsfw_visibility_level": "TEXT NOT NULL DEFAULT 'STANDARD'",
+                "job_type": "TEXT NOT NULL DEFAULT 'TEXT2IMG'",
+                "parent_job_id": "INTEGER",
+                "inpaint_instruction": "TEXT NOT NULL DEFAULT ''",
+                "inpaint_mask_json": "TEXT NOT NULL DEFAULT ''",
+                "source_image_path": "TEXT NOT NULL DEFAULT ''",
             }
             for name, definition in additions.items():
                 if name not in columns:

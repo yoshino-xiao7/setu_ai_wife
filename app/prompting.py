@@ -165,11 +165,68 @@ def merge_unique_tags(*parts: str) -> str:
 
 
 def apply_nsfw_visibility_positive(prompt: str) -> str:
-    return merge_unique_tags(prompt, ", ".join(NSFW_VISIBILITY_POSITIVE_TAGS))
+    return apply_nsfw_visibility_profile(prompt, "STANDARD")
 
 
 def apply_nsfw_visibility_negative(prompt: str) -> str:
-    return merge_unique_tags(prompt, ", ".join(NSFW_VISIBILITY_NEGATIVE_TAGS))
+    return apply_nsfw_visibility_negative_profile(prompt, "STANDARD")
+
+
+def normalize_visibility_level(value: str) -> str:
+    level = (value or "STANDARD").strip().upper()
+    return level if level in {"LIGHT", "STANDARD", "STRONG"} else "STANDARD"
+
+
+def apply_nsfw_visibility_profile(prompt: str, level: str) -> str:
+    level = normalize_visibility_level(level)
+    tags = {
+        "LIGHT": "unobstructed anatomy, clear view",
+        "STANDARD": "unobstructed anatomy, explicit anatomy visible, clear frontal view",
+        "STRONG": "(unobstructed anatomy:1.25), (explicit anatomy visible:1.2), (clear frontal view:1.15)",
+    }[level]
+    prompt = remove_visibility_control_tags(prompt, negative=False)
+    lower = (prompt or "").lower()
+    close_or_upper = any(tag in lower for tag in (
+        "close-up", "portrait", "face focus", "upper body", "bust", "cowboy shot", "waist up"
+    ))
+    full_body = any(tag in lower for tag in ("full body", "head to toe", "wide shot"))
+    if full_body and not close_or_upper:
+        tags = merge_unique_tags(tags, "full body visible, head-to-toe framing")
+    return merge_unique_tags(prompt, tags)
+
+
+def apply_nsfw_visibility_negative_profile(prompt: str, level: str) -> str:
+    level = normalize_visibility_level(level)
+    tags = {
+        "LIGHT": "censored, mosaic censorship, strategically covered",
+        "STANDARD": ", ".join(NSFW_VISIBILITY_NEGATIVE_TAGS),
+        "STRONG": (
+            "(censored:1.3), (mosaic censorship:1.3), (convenient censoring:1.25), "
+            "(strategically covered:1.25), (obscured anatomy:1.25), hands covering body, "
+            "hair covering body, foreground obstruction, cropped body, out of frame"
+        ),
+    }[level]
+    return merge_unique_tags(remove_visibility_control_tags(prompt, negative=True), tags)
+
+
+def remove_visibility_control_tags(prompt: str, *, negative: bool) -> str:
+    markers = (
+        (
+            "censored", "mosaic censorship", "convenient censoring", "strategically covered",
+            "obscured anatomy", "hands covering body", "hair covering body",
+            "foreground obstruction", "cropped body", "out of frame",
+        )
+        if negative
+        else (
+            "unobstructed anatomy", "explicit anatomy visible", "clear frontal view",
+            "clear view", "full body visible", "head-to-toe framing",
+        )
+    )
+    return ", ".join(
+        tag.strip()
+        for tag in (prompt or "").split(",")
+        if tag.strip() and not any(marker in normalize_tag_key(tag) for marker in markers)
+    )
 
 
 def filter_nsfw_incompatible_tags(prompt: str) -> str:
@@ -197,6 +254,7 @@ async def translate_prompt(
     style_tags: str = "",
     negative_prompt: str = "",
     nsfw_mode: bool = False,
+    nsfw_visibility_level: str = "STANDARD",
 ) -> PromptResult:
     system_prompt = (
         "You are a Stable Diffusion anime prompt translator. Convert the Chinese drawing request "
@@ -292,7 +350,7 @@ async def translate_prompt(
             positive = remove_cjk_tags(positive)
         if nsfw_mode:
             positive = filter_nsfw_incompatible_tags(positive)
-            positive = apply_nsfw_visibility_positive(positive)
+            positive = apply_nsfw_visibility_profile(positive, nsfw_visibility_level)
         if not positive:
             raise PromptTranslationError("Ollama could not produce usable English positive tags.")
         negative = normalize_prompt_value(parsed.get("negative", negative_prompt or DEFAULT_NEGATIVE)) or DEFAULT_NEGATIVE
@@ -301,7 +359,7 @@ async def translate_prompt(
         if DEFAULT_NEGATIVE not in negative:
             negative = f"{negative}, {DEFAULT_NEGATIVE}"
         if nsfw_mode:
-            negative = apply_nsfw_visibility_negative(negative)
+            negative = apply_nsfw_visibility_negative_profile(negative, nsfw_visibility_level)
         return PromptResult(
             positive=positive,
             negative=negative,

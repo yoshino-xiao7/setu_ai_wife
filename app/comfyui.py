@@ -252,6 +252,9 @@ def build_inpaint_workflow(
     denoise: float,
     lora_name: str = "",
     lora_strength: float = 0,
+    second_lora_name: str = "",
+    second_lora_strength: float = 0,
+    grow_mask_by: int = 12,
     filename_prefix: str = "local_ai_drawing_inpaint",
 ) -> dict[str, Any]:
     workflow: dict[str, Any] = {
@@ -275,7 +278,12 @@ def build_inpaint_workflow(
         "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint}},
         "5": {
             "class_type": "VAEEncodeForInpaint",
-            "inputs": {"pixels": ["1", 0], "vae": ["4", 2], "mask": ["2", 0], "grow_mask_by": 12},
+            "inputs": {
+                "pixels": ["1", 0],
+                "vae": ["4", 2],
+                "mask": ["2", 0],
+                "grow_mask_by": max(0, grow_mask_by),
+            },
         },
         "6": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["4", 1]}},
         "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["4", 1]}},
@@ -296,6 +304,22 @@ def build_inpaint_workflow(
         workflow["3"]["inputs"]["model"] = ["10", 0]
         workflow["6"]["inputs"]["clip"] = ["10", 1]
         workflow["7"]["inputs"]["clip"] = ["10", 1]
+    if second_lora_name and second_lora_strength > 0:
+        previous_model = workflow["3"]["inputs"]["model"]
+        previous_clip = workflow["6"]["inputs"]["clip"]
+        workflow["11"] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "lora_name": second_lora_name,
+                "strength_model": second_lora_strength,
+                "strength_clip": second_lora_strength,
+                "model": previous_model,
+                "clip": previous_clip,
+            },
+        }
+        workflow["3"]["inputs"]["model"] = ["11", 0]
+        workflow["6"]["inputs"]["clip"] = ["11", 1]
+        workflow["7"]["inputs"]["clip"] = ["11", 1]
     return workflow
 
 

@@ -114,7 +114,7 @@ class CloudWorker:
                     if not claimed.get("hasJob"):
                         await asyncio.sleep(self.settings.ai_worker_poll_seconds)
                         continue
-                    await self._process_job(client, claimed["job"])
+                    await self._process_job(client, claimed["job"], claimed.get("inpaintSourceUrl") or "")
                 except Exception as exc:
                     print(f"[cloud-worker] loop error: {exc}")
                     await asyncio.sleep(self.settings.ai_worker_poll_seconds)
@@ -180,6 +180,7 @@ class CloudWorker:
                 style_tags=job.get("styleTags") or "",
                 negative_prompt=job.get("negativePrompt") or "",
                 nsfw_mode=job.get("nsfwMode") is True,
+                nsfw_visibility_level=job.get("nsfwVisibilityLevel") or "STANDARD",
             )
             response = await client.post(
                 f"{self.cloud_url}/ai-worker/prompt-translations/{job_id}/complete",
@@ -196,7 +197,12 @@ class CloudWorker:
         except Exception as exc:
             await self._fail_prompt_translation(client, job_id, f"Prompt translation worker failed: {exc}")
 
-    async def _process_job(self, client: httpx.AsyncClient, job: dict[str, Any]) -> None:
+    async def _process_job(
+        self,
+        client: httpx.AsyncClient,
+        job: dict[str, Any],
+        inpaint_source_url: str = "",
+    ) -> None:
         job_id = job["id"]
         local_job_id = ""
         comfy_prompt_id = ""
@@ -205,7 +211,7 @@ class CloudWorker:
         try:
             stage = "STARTING_LOCAL_GENERATION"
             detail = "Posting generation request to local FastAPI."
-            local_job = await self._start_local_generation(job)
+            local_job = await self._start_local_generation(job, inpaint_source_url)
             local_job_id = local_job["job_id"]
             stage = "LOCAL_GENERATION_RUNNING"
             detail = "Local FastAPI accepted generation request."
@@ -243,7 +249,7 @@ class CloudWorker:
         except Exception as exc:
             await self._fail_cloud_job(client, job_id, str(exc), local_job_id, comfy_prompt_id, stage, detail)
 
-    async def _start_local_generation(self, job: dict[str, Any]) -> dict[str, Any]:
+    async def _start_local_generation(self, job: dict[str, Any], inpaint_source_url: str = "") -> dict[str, Any]:
         payload = {
             "prompt_cn": job.get("promptCn") or "",
             "prompt_positive": job.get("promptPositive") or "",
@@ -264,10 +270,22 @@ class CloudWorker:
             "second_lora_name": job.get("secondLoraName") or "",
             "second_lora_strength": job.get("secondLoraStrength") or 0,
             "nsfw_mode": job.get("nsfwMode") is True,
+            "nsfw_visibility_level": job.get("nsfwVisibilityLevel") or "STANDARD",
+            "job_type": job.get("jobType") or "TEXT2IMG",
+            "parent_job_id": job.get("parentJobId"),
+            "inpaint_instruction": job.get("inpaintInstruction") or "",
+            "inpaint_mask_json": job.get("inpaintMaskJson") or "",
             "cloud_job_id": job.get("id"),
             "user_id": job.get("userId"),
             "storage_date": str(job.get("createdAt") or "")[:10] or None,
         }
+        if payload["job_type"] == "INPAINT":
+            if not inpaint_source_url:
+                raise RuntimeError("Inpaint source image URL is missing.")
+            async with httpx.AsyncClient(timeout=60, headers={"User-Agent": USER_AGENT}) as source_client:
+                source_response = await source_client.get(inpaint_source_url)
+                source_response.raise_for_status()
+            payload["source_image_base64"] = base64.b64encode(source_response.content).decode("ascii")
         async with httpx.AsyncClient(timeout=30, headers={"User-Agent": USER_AGENT}) as local:
             response = await local.post(f"{self.local_url}/api/generate", json=payload)
             self._raise_for_status(response, "start local generation")
