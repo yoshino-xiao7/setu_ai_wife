@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import base64
+import os
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -767,14 +768,14 @@ def should_use_brushnet_inpaint(settings: Settings, brushnet_model: str) -> bool
 
 
 def select_brushnet_model(settings: Settings) -> str:
-    configured = str(settings.brushnet_model or "").strip().replace("\\", "/")
+    configured = str(settings.brushnet_model or "").strip()
     if configured:
-        return configured
+        return configured.replace("\\", os.sep).replace("/", os.sep)
     inpaint_dir = settings.comfyui_models_dir / "inpaint"
     if not inpaint_dir.is_dir():
         return ""
     candidates = sorted(
-        path.relative_to(inpaint_dir).as_posix()
+        str(path.relative_to(inpaint_dir))
         for path in inpaint_dir.rglob("*")
         if path.is_file() and path.suffix.lower() in {".safetensors", ".ckpt", ".pt", ".pth"}
     )

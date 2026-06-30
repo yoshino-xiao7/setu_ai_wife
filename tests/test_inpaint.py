@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -177,10 +178,17 @@ class InpaintTest(unittest.TestCase):
 
             selected = select_brushnet_model(settings)
 
-            self.assertEqual(selected, "brushnet/random_mask.safetensors")
+            self.assertEqual(selected, os.path.join("brushnet", "random_mask.safetensors"))
             self.assertTrue(should_use_brushnet_inpaint(settings, selected))
             legacy = Settings(COMFYUI_MODELS_DIR=models_dir, INPAINT_ENGINE="legacy")
             self.assertFalse(should_use_brushnet_inpaint(legacy, selected))
+
+    def test_configured_brushnet_model_uses_runtime_path_separator(self) -> None:
+        settings = Settings(BRUSHNET_MODEL="brushnet/random_mask.safetensors")
+
+        selected = select_brushnet_model(settings)
+
+        self.assertEqual(selected, os.path.join("brushnet", "random_mask.safetensors"))
 
 
 if __name__ == "__main__":
