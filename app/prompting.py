@@ -92,7 +92,9 @@ NSFW_ANATOMY_VISIBILITY_PROTECTED_PHRASES = {
     "anatomical detail",
 }
 NSFW_VISIBILITY_POSITIVE_TAGS = (
-    "clear frontal view",
+    "front-facing pose",
+    "centered composition",
+    "uncluttered foreground",
     "full body visible",
 )
 NSFW_VISIBILITY_NEGATIVE_TAGS = (
@@ -192,9 +194,9 @@ def normalize_visibility_level(value: str) -> str:
 def apply_nsfw_visibility_profile(prompt: str, level: str) -> str:
     level = normalize_visibility_level(level)
     tags = {
-        "LIGHT": "unobstructed anatomy, clear view",
-        "STANDARD": "unobstructed anatomy, explicit anatomy visible, clear frontal view",
-        "STRONG": "(unobstructed anatomy:1.25), (explicit anatomy visible:1.2), (clear frontal view:1.15)",
+        "LIGHT": "front-facing pose, centered composition",
+        "STANDARD": "front-facing pose, centered composition, uncluttered foreground",
+        "STRONG": "(front-facing pose:1.2), (centered composition:1.15), (uncluttered foreground:1.15)",
     }[level]
     prompt = remove_visibility_control_tags(prompt, negative=False)
     lower = (prompt or "").lower()
@@ -232,6 +234,7 @@ def remove_visibility_control_tags(prompt: str, *, negative: bool) -> str:
         else (
             "unobstructed anatomy", "explicit anatomy visible", "clear frontal view",
             "clear view", "full body visible", "head-to-toe framing",
+            "front-facing pose", "centered composition", "uncluttered foreground",
         )
     )
     return ", ".join(
@@ -281,9 +284,9 @@ async def translate_prompt(
         "lineart unless the user explicitly asks for them. Keep negative prompt practical. "
         "When NSFW compatibility mode is enabled, omit garment, clothing, censorship, occlusion, "
         "covering, foreground-blocking, and cropped-composition tags while preserving identity, "
-        "anatomy, pose, expression, camera, lighting, and background tags. Preserve requested "
+        "body, pose, expression, camera, lighting, and background tags. Preserve requested "
         "cross-section, cutaway, x-ray, internal-anatomy, and anatomical-visibility descriptors. "
-        "Favor an unobstructed frontal composition with the requested anatomy clearly visible. "
+        "Favor a front-facing, centered composition without foreground blocking or censoring. "
         "If local prompt knowledge is provided, follow it exactly."
     )
     knowledge_context = matched_knowledge_context(prompt_cn, settings.prompt_knowledge_path)

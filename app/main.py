@@ -674,8 +674,8 @@ async def run_manual_inpaint_generation(
         uploaded_inputs.extend([source_upload, mask_upload])
         denoise, grow_mask_by = inpaint_profile(job.get("nsfw_visibility_level"))
         workflow = build_inpaint_workflow(
-            positive=job["prompt_positive"],
-            negative=job["prompt_negative"],
+            positive=inpaint_positive_prompt(job["prompt_positive"]),
+            negative=inpaint_negative_prompt(job["prompt_negative"]),
             seed=job["seed"],
             steps=job["steps"],
             cfg=job["cfg"],
@@ -704,10 +704,26 @@ async def run_manual_inpaint_generation(
 def inpaint_profile(level: str | None) -> tuple[float, int]:
     normalized = normalize_visibility_level(level)
     if normalized == "LIGHT":
-        return 0.45, 8
+        return 0.38, 12
     if normalized == "STRONG":
-        return 0.68, 20
-    return 0.58, 12
+        return 0.58, 28
+    return 0.48, 18
+
+
+def inpaint_positive_prompt(prompt: str) -> str:
+    return merge_prompt_tags(
+        prompt,
+        "match original image style, seamless edit, consistent lineart, consistent coloring, "
+        "consistent lighting, preserve surrounding details",
+    )
+
+
+def inpaint_negative_prompt(prompt: str) -> str:
+    return merge_prompt_tags(
+        prompt,
+        "visible brush stroke, painted line, red mark, sketch line, line artifact, repair seam, "
+        "mismatched style, mismatched coloring, blurry patch",
+    )
 
 
 def create_manual_inpaint_mask(
@@ -739,7 +755,7 @@ def create_manual_inpaint_mask(
             width,
             height,
         )
-        draw_painted_character_region(draw, points, brush)
+        draw_manual_repair_region(draw, points, brush, width, height)
         max_brush = max(max_brush, brush)
         painted = True
     if not painted:
@@ -999,14 +1015,56 @@ def draw_painted_character_region(
         draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=255)
 
 
+def draw_manual_repair_region(
+    draw: ImageDraw.ImageDraw,
+    points: list[tuple[int, int]],
+    brush: int,
+    width: int,
+    height: int,
+) -> None:
+    padding = max(brush * 2, int(min(width, height) * 0.035))
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    left = max(0, min(xs) - padding)
+    top = max(0, min(ys) - padding)
+    right = min(width - 1, max(xs) + padding)
+    bottom = min(height - 1, max(ys) + padding)
+    if right <= left or bottom <= top:
+        x = xs[0]
+        y = ys[0]
+        radius = max(padding, brush)
+        draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=255)
+        return
+
+    radius = max(brush, int(min(right - left, bottom - top) * 0.25))
+    try:
+        draw.rounded_rectangle((left, top, right, bottom), radius=radius, fill=255)
+    except AttributeError:
+        draw.rectangle((left, top, right, bottom), fill=255)
+
+
 def finalize_manual_inpaint_mask(mask: Image.Image, width: int, height: int, max_brush: int) -> Image.Image:
     min_side = min(width, height)
-    expansion = max(9, int(min_side * 0.025), int(max_brush * 0.65))
+    expansion = max(11, int(min_side * 0.018), int(max_brush * 0.35))
     if expansion % 2 == 0:
         expansion += 1
     expanded = mask.filter(ImageFilter.MaxFilter(expansion))
     softened = expanded.filter(ImageFilter.GaussianBlur(radius=max(3, expansion // 3)))
     return softened.convert("RGB")
+
+
+def merge_prompt_tags(*parts: str) -> str:
+    tags: list[str] = []
+    seen: set[str] = set()
+    for part in parts:
+        for raw_tag in (part or "").split(","):
+            tag = raw_tag.strip()
+            key = " ".join(tag.lower().replace("_", " ").split())
+            if not tag or key in seen:
+                continue
+            seen.add(key)
+            tags.append(tag)
+    return ", ".join(tags)
 
 
 def finalize_conditioning_mask(mask: Image.Image, width: int, height: int) -> Image.Image:

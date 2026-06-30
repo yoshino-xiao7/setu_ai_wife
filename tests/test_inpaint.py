@@ -8,7 +8,12 @@ from pathlib import Path
 from PIL import Image
 
 from app.comfyui import build_inpaint_workflow
-from app.main import create_manual_inpaint_mask, inpaint_profile
+from app.main import (
+    create_manual_inpaint_mask,
+    inpaint_negative_prompt,
+    inpaint_positive_prompt,
+    inpaint_profile,
+)
 
 
 class InpaintTest(unittest.TestCase):
@@ -51,9 +56,35 @@ class InpaintTest(unittest.TestCase):
                 self.assertGreater(pixels.getpixel((100, 100)), 0)
                 self.assertGreater(pixels.getpixel((100, 112)), 0)
 
+    def test_manual_mask_uses_block_region_instead_of_thin_line_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mask.png"
+            create_manual_inpaint_mask(
+                path,
+                200,
+                200,
+                json.dumps({
+                    "strokes": [{
+                        "brush": 0.02,
+                        "points": [{"x": 0.25, "y": 0.5}, {"x": 0.75, "y": 0.5}],
+                    }],
+                }),
+            )
+
+            with Image.open(path) as mask:
+                pixels = mask.convert("L")
+                self.assertGreater(pixels.getpixel((100, 82)), 0)
+                self.assertGreater(pixels.getpixel((100, 118)), 0)
+
     def test_strong_profile_uses_more_denoise_and_mask_growth(self) -> None:
-        self.assertEqual(inpaint_profile("LIGHT"), (0.45, 8))
-        self.assertEqual(inpaint_profile("STRONG"), (0.68, 20))
+        self.assertEqual(inpaint_profile("LIGHT"), (0.38, 12))
+        self.assertEqual(inpaint_profile("STRONG"), (0.58, 28))
+
+    def test_inpaint_prompts_preserve_original_style_and_reject_brush_artifacts(self) -> None:
+        self.assertIn("match original image style", inpaint_positive_prompt("yae miko"))
+        self.assertIn("consistent lineart", inpaint_positive_prompt("yae miko"))
+        self.assertIn("visible brush stroke", inpaint_negative_prompt("low quality"))
+        self.assertIn("mismatched style", inpaint_negative_prompt("low quality"))
 
     def test_inpaint_workflow_chains_two_loras(self) -> None:
         workflow = build_inpaint_workflow(
