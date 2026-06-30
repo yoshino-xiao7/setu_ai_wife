@@ -69,14 +69,14 @@ class NsfwModeTest(unittest.TestCase):
             "yae miko, cutaway view, x-ray view, internal anatomy",
         )
 
-    def test_adds_composition_conditions_without_adult_age_or_anatomy_tags(self) -> None:
+    def test_does_not_add_positive_visibility_or_anatomy_tags_by_default(self) -> None:
         positive = apply_nsfw_visibility_positive("yae miko, moonlight")
         negative = apply_nsfw_visibility_negative("low quality")
 
-        self.assertIn("front-facing pose", positive)
-        self.assertIn("centered composition", positive)
+        self.assertEqual(positive, "yae miko, moonlight")
         self.assertNotIn("anatomy", positive)
         self.assertNotIn("clear view", positive)
+        self.assertNotIn("front-facing pose", positive)
         self.assertNotIn("adult", positive)
         self.assertIn("convenient censoring", negative)
         self.assertIn("foreground obstruction", negative)
@@ -87,7 +87,7 @@ class NsfwModeTest(unittest.TestCase):
 
         self.assertNotIn("head-to-toe framing", close_up)
         self.assertIn("head-to-toe framing", full_body)
-        self.assertIn("(front-facing pose:1.2)", close_up)
+        self.assertNotIn("front-facing pose", close_up)
         self.assertIn(
             "(censored:1.3)",
             apply_nsfw_visibility_negative_profile("low quality", "STRONG"),
@@ -99,8 +99,7 @@ class NsfwModeTest(unittest.TestCase):
             "LIGHT",
         )
 
-        self.assertIn("front-facing pose", light)
-        self.assertIn("centered composition", light)
+        self.assertEqual(light, "yae miko")
         self.assertNotIn("unobstructed anatomy", light)
         self.assertNotIn("explicit anatomy visible", light)
         self.assertNotIn("clear frontal view", light)

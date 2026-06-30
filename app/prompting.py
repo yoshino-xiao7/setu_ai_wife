@@ -92,9 +92,6 @@ NSFW_ANATOMY_VISIBILITY_PROTECTED_PHRASES = {
     "anatomical detail",
 }
 NSFW_VISIBILITY_POSITIVE_TAGS = (
-    "front-facing pose",
-    "centered composition",
-    "uncluttered foreground",
     "full body visible",
 )
 NSFW_VISIBILITY_NEGATIVE_TAGS = (
@@ -193,20 +190,16 @@ def normalize_visibility_level(value: str) -> str:
 
 def apply_nsfw_visibility_profile(prompt: str, level: str) -> str:
     level = normalize_visibility_level(level)
-    tags = {
-        "LIGHT": "front-facing pose, centered composition",
-        "STANDARD": "front-facing pose, centered composition, uncluttered foreground",
-        "STRONG": "(front-facing pose:1.2), (centered composition:1.15), (uncluttered foreground:1.15)",
-    }[level]
     prompt = remove_visibility_control_tags(prompt, negative=False)
     lower = (prompt or "").lower()
-    close_or_upper = any(tag in lower for tag in (
-        "close-up", "portrait", "face focus", "upper body", "bust", "cowboy shot", "waist up"
-    ))
-    full_body = any(tag in lower for tag in ("full body", "head to toe", "wide shot"))
-    if full_body and not close_or_upper:
-        tags = merge_unique_tags(tags, "full body visible, head-to-toe framing")
-    return merge_unique_tags(prompt, tags)
+    if (
+        any(tag in lower for tag in ("full body", "head to toe", "wide shot"))
+        and not any(tag in lower for tag in (
+            "close-up", "portrait", "face focus", "upper body", "bust", "cowboy shot", "waist up"
+        ))
+    ):
+        return merge_unique_tags(prompt, "full body visible, head-to-toe framing")
+    return prompt
 
 
 def apply_nsfw_visibility_negative_profile(prompt: str, level: str) -> str:
@@ -286,7 +279,7 @@ async def translate_prompt(
         "covering, foreground-blocking, and cropped-composition tags while preserving identity, "
         "body, pose, expression, camera, lighting, and background tags. Preserve requested "
         "cross-section, cutaway, x-ray, internal-anatomy, and anatomical-visibility descriptors. "
-        "Favor a front-facing, centered composition without foreground blocking or censoring. "
+        "Do not add extra composition-control tags unless the user requests them. "
         "If local prompt knowledge is provided, follow it exactly."
     )
     knowledge_context = matched_knowledge_context(prompt_cn, settings.prompt_knowledge_path)

@@ -704,10 +704,10 @@ async def run_manual_inpaint_generation(
 def inpaint_profile(level: str | None) -> tuple[float, int]:
     normalized = normalize_visibility_level(level)
     if normalized == "LIGHT":
-        return 0.38, 12
+        return 0.42, 12
     if normalized == "STRONG":
-        return 0.58, 28
-    return 0.48, 18
+        return 0.62, 22
+    return 0.52, 16
 
 
 def inpaint_positive_prompt(prompt: str) -> str:
@@ -755,7 +755,7 @@ def create_manual_inpaint_mask(
             width,
             height,
         )
-        draw_manual_repair_region(draw, points, brush, width, height)
+        draw_painted_character_region(draw, points, brush)
         max_brush = max(max_brush, brush)
         painted = True
     if not painted:
@@ -1015,37 +1015,9 @@ def draw_painted_character_region(
         draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=255)
 
 
-def draw_manual_repair_region(
-    draw: ImageDraw.ImageDraw,
-    points: list[tuple[int, int]],
-    brush: int,
-    width: int,
-    height: int,
-) -> None:
-    padding = max(brush * 2, int(min(width, height) * 0.035))
-    xs = [point[0] for point in points]
-    ys = [point[1] for point in points]
-    left = max(0, min(xs) - padding)
-    top = max(0, min(ys) - padding)
-    right = min(width - 1, max(xs) + padding)
-    bottom = min(height - 1, max(ys) + padding)
-    if right <= left or bottom <= top:
-        x = xs[0]
-        y = ys[0]
-        radius = max(padding, brush)
-        draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=255)
-        return
-
-    radius = max(brush, int(min(right - left, bottom - top) * 0.25))
-    try:
-        draw.rounded_rectangle((left, top, right, bottom), radius=radius, fill=255)
-    except AttributeError:
-        draw.rectangle((left, top, right, bottom), fill=255)
-
-
 def finalize_manual_inpaint_mask(mask: Image.Image, width: int, height: int, max_brush: int) -> Image.Image:
     min_side = min(width, height)
-    expansion = max(11, int(min_side * 0.018), int(max_brush * 0.35))
+    expansion = max(9, int(min_side * 0.02), int(max_brush * 0.55))
     if expansion % 2 == 0:
         expansion += 1
     expanded = mask.filter(ImageFilter.MaxFilter(expansion))
