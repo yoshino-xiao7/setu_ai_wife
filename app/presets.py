@@ -45,6 +45,22 @@ class CheckpointMetadata(BaseModel):
     notes: str = ""
 
 
+class PromptPreset(BaseModel):
+    id: str
+    name: str
+    category: str = "未分类提示词"
+    category_type: str = "提示词预设"
+    trigger_words: str = ""
+    style_tags: str = ""
+    default_positive: str = ""
+    preview_image: str = ""
+    recommended_checkpoint: str = ""
+    recommended_lora: str = ""
+    recommended_lora_strength: float = 0.0
+    nsfw_only: bool = False
+    notes: str = ""
+
+
 def load_characters(path: Path) -> list[CharacterPreset]:
     if not path.exists():
         return []
@@ -52,6 +68,15 @@ def load_characters(path: Path) -> list[CharacterPreset]:
     if isinstance(data, dict):
         data = data.get("characters", [])
     return [CharacterPreset(**item) for item in data]
+
+
+def load_prompt_presets(path: Path) -> list[PromptPreset]:
+    if not path.exists():
+        return []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(data, dict):
+        data = data.get("prompt_presets", [])
+    return [PromptPreset(**item) for item in data]
 
 
 def load_lora_metadata(path: Path) -> dict[str, LoraMetadata]:

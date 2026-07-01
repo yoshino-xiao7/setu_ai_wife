@@ -9,7 +9,7 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/af0b3526-1fc3-4ed7-868a-377ee0b68015/anim=false,width=450,optimized=true/01.jpeg",
-      "notes": "适合竖屏人像和半身插画。"
+      "notes": "鸣潮角色卡提希娅 LoRA。适合竖屏人像和半身插画；双角色模式建议从 0.6-0.65 起步，减少角色特征串味。"
     },
     {
       "name": "yae_miko_offset_9_6.safetensors",
@@ -20,7 +20,7 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/a5e824f9-c5b0-48de-1120-289a1166a100/anim=false,width=450,optimized=true/341491.jpeg",
-      "notes": "原神角色八重神子 LoRA。建议通过角色预设使用，会自动注入官方常用角色 tags。"
+      "notes": "原神角色八重神子 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；如果和 Animagine XL 4.0 搭配，先从 0.65-0.75 测试。"
     },
     {
       "name": "RaidenShogun-HandsFix.safetensors",
@@ -31,7 +31,7 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/abbfe4d7-d72f-4783-860e-cd970efc0a7a/anim=false,width=450,optimized=true/00025-2713605955.jpeg",
-      "notes": "原神角色雷电将军 LoRA。建议通过角色预设使用，会自动注入雷电将军常用角色 tags。"
+      "notes": "原神角色雷电将军 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；多人或双 LoRA 场景建议降低到 0.6-0.65。"
     },
     {
       "name": "Genshin_Lynette_AP_v1.safetensors",
@@ -42,7 +42,7 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/eacdff64-5caa-4e96-bd5a-092b0ca79a1d/anim=false,width=450,optimized=true/01631-2804914936-masterpiece,%20best%20quality,%201girl,%20purple%20eyes,%20official,%20dynamic%20angle,%20simple%20background,%20(green%20background),%20white%20background,.jpeg",
-      "notes": "原神角色琳妮特 LoRA。建议通过角色预设使用，会自动注入琳妮特常用角色 tags。"
+      "notes": "原神角色琳妮特 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；普通单角色构图推荐 0.75-0.85。"
     },
     {
       "name": "sandrone_genshin_impact_ilxl_goofy.safetensors",
@@ -53,18 +53,18 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/0e8f19d2-3f57-4eea-b788-df4e73280513/anim=false,width=450,optimized=true/00009-3338321267.jpeg",
-      "notes": "原神角色桑多涅 LoRA。建议通过角色预设使用，会自动注入桑多涅常用角色 tags。"
+      "notes": "原神角色桑多涅 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；与 Illustrious/WAI 系模型适配优先。"
     },
     {
       "name": "columbina_2a_naiVpred-000039.safetensors",
-      "display_name": "哥伦比亚",
+      "display_name": "哥伦比娅",
       "category": "原神",
       "category_type": "游戏角色",
       "trigger_words": "columbina (genshin impact), genshin impact",
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/f1b6845b-5775-4e00-9266-e799754a79b1/anim=false,width=450,optimized=true/00024-1044239695.jpeg",
-      "notes": "原神角色哥伦比亚 LoRA。建议通过角色预设使用，会自动注入哥伦比亚常用角色 tags。"
+      "notes": "原神角色哥伦比娅 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；如果人物特征过强或污染背景，降低到 0.65-0.75。"
     },
     {
       "name": "c_citlali (genshin impact)_nbe11_xl.safetensors",
@@ -75,7 +75,62 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/34afcc2e-c655-4b85-ace5-04d152154880/anim=false,width=450,optimized=true/00107-756123321.jpeg",
-      "notes": "原神角色茜特菈莉 LoRA。建议通过角色预设使用，会自动注入茜特菈莉常用角色 tags。"
+      "notes": "原神角色茜特菈莉 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；动漫模型下推荐 0.75-0.85 起步。"
+    },
+    {
+      "name": "extremely detailed.safetensors",
+      "display_name": "极致细节滑杆",
+      "category": "通用增强",
+      "category_type": "质量/细节",
+      "trigger_words": "extremely detailed",
+      "recommended_strength": 0.6,
+      "recommended_checkpoint": "RealVisXL_V5.0_fp16.safetensors",
+      "preview_image": "https://huggingface.co/ntc-ai/SDXL-LoRA-slider.extremely-detailed/resolve/main/images/extremely%20detailed_17_3.0.png",
+      "notes": "SDXL 通用细节滑杆 LoRA，MIT license。写实和二次元都可测试；建议 0.35-0.75 起步，过高容易锐化过度或产生脏细节。"
+    },
+    {
+      "name": "dynamic anatomy.safetensors",
+      "display_name": "动态人体结构滑杆",
+      "category": "通用增强",
+      "category_type": "人体/姿态",
+      "trigger_words": "dynamic anatomy",
+      "recommended_strength": 0.55,
+      "recommended_checkpoint": "RealVisXL_V5.0_fp16.safetensors",
+      "preview_image": "https://huggingface.co/ntc-ai/SDXL-LoRA-slider.dynamic-anatomy/resolve/main/images/dynamic%20anatomy_17_3.0.png",
+      "notes": "SDXL 人体和姿态倾向滑杆 LoRA，MIT license。适合全身、动态姿势、人体轮廓辅助；建议 0.35-0.7，和角色 LoRA 同用时先降到 0.35-0.5。"
+    },
+    {
+      "name": "sdxl-pdxl-tuning-face-detailer-lora.safetensors",
+      "display_name": "脸部细节增强",
+      "category": "通用增强",
+      "category_type": "脸部/细节",
+      "trigger_words": "",
+      "recommended_strength": 0.45,
+      "recommended_checkpoint": "RealVisXL_V5.0_fp16.safetensors",
+      "preview_image": "https://huggingface.co/Muapi/sdxl-pdxl-tuning-face-detailer-lora/resolve/main/preview.jpg",
+      "notes": "SDXL/PonyXL 脸部细节调校 LoRA，OpenRAIL++。适合头像、半身、人像修脸；建议 0.25-0.55，过高可能让脸部质感变硬。"
+    },
+    {
+      "name": "n-sfw-filter-slider-tool-lora-xl-animagine.safetensors",
+      "display_name": "N-SFW 可见度滑杆",
+      "category": "通用增强",
+      "category_type": "可见度/过滤",
+      "trigger_words": "",
+      "recommended_strength": 0.45,
+      "recommended_checkpoint": "animagine-xl-4.0-opt.safetensors",
+      "preview_image": "https://huggingface.co/Muapi/n-sfw-filter-slider-tool-lora-xl-animagine/resolve/main/preview.jpg",
+      "notes": "面向 SDXL/Animagine 的可见度滑杆 LoRA，OpenRAIL++。仅用于成人、授权或虚构内容；建议 0.25-0.6，避免和角色 LoRA 同时拉得过高。"
+    },
+    {
+      "name": "ani4.0-opt-pvc_00009e_065205s.safetensors",
+      "display_name": "Animagine PVC 手办风格",
+      "category": "二次元风格",
+      "category_type": "风格",
+      "trigger_words": "pvc, nendoroid, figma",
+      "recommended_strength": 0.75,
+      "recommended_checkpoint": "animagine-xl-4.0-opt.safetensors",
+      "preview_image": "https://huggingface.co/p1atdev/animagine-xl-4.0-opt-pvc-style-lora/resolve/main/images/image.jpg",
+      "notes": "Animagine XL 4.0 opt 专用 PVC/手办质感风格 LoRA，Apache-2.0。适合二次元角色、玩具质感、手办展示；建议 0.6-0.9。"
     }
   ]
 }

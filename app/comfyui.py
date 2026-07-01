@@ -13,6 +13,10 @@ from app.config import Settings
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 
 
+class ComfyUIExecutionError(RuntimeError):
+    pass
+
+
 def build_workflow(
     *,
     positive: str,
@@ -474,6 +478,9 @@ class ComfyUIClient:
         raise TimeoutError("ComfyUI generation timed out.")
 
     async def download_first_image(self, history: dict[str, Any], output_dir: Path, job_id: str) -> Path:
+        status = history.get("status", {})
+        if status.get("status_str") == "error":
+            raise ComfyUIExecutionError(comfyui_history_error_message(history))
         outputs = history.get("outputs", {})
         for node_output in outputs.values():
             for image in node_output.get("images", []):
@@ -541,3 +548,14 @@ class ComfyUIClient:
 
 def random_seed() -> int:
     return random.randint(1, 2**32 - 1)
+
+
+def comfyui_history_error_message(history: dict[str, Any]) -> str:
+    messages = history.get("status", {}).get("messages", [])
+    for event_name, payload in reversed(messages):
+        if event_name == "execution_error" and isinstance(payload, dict):
+            node_type = payload.get("node_type") or "unknown"
+            node_id = payload.get("node_id") or "?"
+            message = str(payload.get("exception_message") or payload.get("exception_type") or "unknown error").strip()
+            return f"ComfyUI execution failed at node {node_id} ({node_type}): {message}"
+    return "ComfyUI execution failed."

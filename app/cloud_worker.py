@@ -10,7 +10,7 @@ from urllib.parse import quote
 import httpx
 
 from app.config import Settings, get_settings
-from app.presets import list_checkpoints, list_loras, load_characters
+from app.presets import list_checkpoints, list_loras, load_characters, load_prompt_presets
 from app.prompting import PromptTranslationError, translate_prompt
 
 
@@ -69,6 +69,15 @@ def scan_capabilities(settings: Settings) -> dict[str, Any]:
                 "metadataJson": json.dumps(character.model_dump(), ensure_ascii=False),
             }
         )
+    prompt_presets = []
+    for preset in load_prompt_presets(settings.prompt_presets_path):
+        prompt_presets.append(
+            {
+                "name": preset.id,
+                "displayName": preset.name,
+                "metadataJson": json.dumps(preset.model_dump(), ensure_ascii=False),
+            }
+        )
 
     return {
         "workerId": settings.ai_worker_id,
@@ -78,6 +87,7 @@ def scan_capabilities(settings: Settings) -> dict[str, Any]:
         "loras": list_loras(settings),
         "vaes": _list_model_files(settings.comfyui_models_dir, "vae"),
         "characters": characters,
+        "promptPresets": prompt_presets,
     }
 
 
@@ -280,12 +290,7 @@ class CloudWorker:
             "storage_date": str(job.get("createdAt") or "")[:10] or None,
         }
         if payload["job_type"] == "INPAINT":
-            if not inpaint_source_url:
-                raise RuntimeError("Inpaint source image URL is missing.")
-            async with httpx.AsyncClient(timeout=60, headers={"User-Agent": USER_AGENT}) as source_client:
-                source_response = await source_client.get(inpaint_source_url)
-                source_response.raise_for_status()
-            payload["source_image_base64"] = base64.b64encode(source_response.content).decode("ascii")
+            raise RuntimeError("局部修复已下线，请使用一次性生成重新出图。")
         async with httpx.AsyncClient(timeout=30, headers={"User-Agent": USER_AGENT}) as local:
             response = await local.post(f"{self.local_url}/api/generate", json=payload)
             self._raise_for_status(response, "start local generation")

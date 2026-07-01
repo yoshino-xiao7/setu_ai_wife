@@ -1,0 +1,88 @@
+{
+  "prompt_presets": [
+    {
+      "id": "nsfw_adult_baseline",
+      "name": "成人基线",
+      "category": "NSFW",
+      "category_type": "基础",
+      "trigger_words": "rating_explicit, adult woman, mature female, fictional character, solo",
+      "style_tags": "masterpiece, best quality, high score, great score, latest",
+      "default_positive": "",
+      "recommended_checkpoint": "animagine-xl-4.0-opt.safetensors",
+      "recommended_lora": "n-sfw-filter-slider-tool-lora-xl-animagine.safetensors",
+      "recommended_lora_strength": 0.45,
+      "nsfw_only": true,
+      "notes": "NSFW 基础安全边界和质量标签。用于明确成人、虚构、单人基线。"
+    },
+    {
+      "id": "nsfw_uncensored_visibility",
+      "name": "无遮挡倾向",
+      "category": "NSFW",
+      "category_type": "可见度",
+      "trigger_words": "uncensored, nude, visible anatomy, clear body, no censoring, no mosaic censoring",
+      "style_tags": "detailed body, detailed skin, clean lineart",
+      "default_positive": "",
+      "recommended_checkpoint": "animagine-xl-4.0-opt.safetensors",
+      "recommended_lora": "n-sfw-filter-slider-tool-lora-xl-animagine.safetensors",
+      "recommended_lora_strength": 0.45,
+      "nsfw_only": true,
+      "notes": "提高无遮挡和未审查倾向。建议和 NSFW 兼容模式一起使用，LoRA 强度先从 0.35-0.55 测。"
+    },
+    {
+      "id": "nsfw_soft_bedroom",
+      "name": "柔光卧室",
+      "category": "NSFW",
+      "category_type": "场景",
+      "trigger_words": "bedroom, soft warm lighting, intimate atmosphere, relaxed pose, looking at viewer",
+      "style_tags": "soft sheets, depth of field, detailed eyes, detailed skin",
+      "default_positive": "",
+      "recommended_checkpoint": "animagine-xl-4.0-opt.safetensors",
+      "recommended_lora": "",
+      "recommended_lora_strength": 0.0,
+      "nsfw_only": true,
+      "notes": "卧室柔光场景，适合半身、坐姿、躺姿构图。"
+    },
+    {
+      "id": "nsfw_wet_shower",
+      "name": "湿身淋浴",
+      "category": "NSFW",
+      "category_type": "场景",
+      "trigger_words": "shower, bathroom, wet skin, wet hair, water droplets, steam, glossy skin",
+      "style_tags": "soft lighting, detailed body, detailed skin",
+      "default_positive": "",
+      "recommended_checkpoint": "animagine-xl-4.0-opt.safetensors",
+      "recommended_lora": "",
+      "recommended_lora_strength": 0.0,
+      "nsfw_only": true,
+      "notes": "湿身和浴室场景。水汽、皮肤高光较多时建议 CFG 不要过高。"
+    },
+    {
+      "id": "nsfw_lingerie_partial",
+      "name": "内衣半脱",
+      "category": "NSFW",
+      "category_type": "服饰",
+      "trigger_words": "lace lingerie, partially undressed, garter belt, thighhighs, seductive pose",
+      "style_tags": "detailed fabric, detailed eyes, clean lineart",
+      "default_positive": "",
+      "recommended_checkpoint": "animagine-xl-4.0-opt.safetensors",
+      "recommended_lora": "",
+      "recommended_lora_strength": 0.0,
+      "nsfw_only": true,
+      "notes": "比直接裸像更稳定的过渡型 NSFW 预设，适合测试构图和角色 LoRA。"
+    },
+    {
+      "id": "nsfw_gravure_composition",
+      "name": "写真构图",
+      "category": "NSFW",
+      "category_type": "构图",
+      "trigger_words": "pin-up composition, cinematic composition, looking at viewer",
+      "style_tags": "depth of field, detailed eyes, high detail, clean lineart",
+      "default_positive": "",
+      "recommended_checkpoint": "RealVisXL_V5.0_fp16.safetensors",
+      "recommended_lora": "extremely detailed.safetensors",
+      "recommended_lora_strength": 0.55,
+      "nsfw_only": true,
+      "notes": "偏写真/海报构图，可用于 RealVisXL 或动漫模型。"
+    }
+  ]
+}

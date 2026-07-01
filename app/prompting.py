@@ -307,6 +307,7 @@ async def translate_prompt(
         "options": {
             "temperature": 0,
             "num_predict": 512,
+            "num_gpu": max(0, settings.ollama_prompt_num_gpu),
         },
     }
     try:
@@ -339,6 +340,7 @@ async def translate_prompt(
                 "options": {
                     "temperature": 0,
                     "num_predict": 512,
+                    "num_gpu": max(0, settings.ollama_prompt_num_gpu),
                 },
             }
             try:

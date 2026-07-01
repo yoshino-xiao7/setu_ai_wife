@@ -7,6 +7,38 @@
       "category_type": "基础模型",
       "preview_image": "",
       "notes": "当前默认使用的 SDXL 动漫风格 checkpoint。文件名保留给 ComfyUI 调用，云端前端展示此友好名称。"
+    },
+    {
+      "name": "animagine-xl-4.0-opt.safetensors",
+      "display_name": "Animagine XL 4.0 优化版",
+      "category": "二次元动漫",
+      "category_type": "基础模型",
+      "preview_image": "",
+      "notes": "Animagine XL 4.0 的优化版 safetensors 文件，适合动漫、插画、角色向出图。Hugging Face 仓库标注 License: openrail++；下载后请确认文件名与 ComfyUI checkpoints 目录中的实际文件名一致。"
+    },
+    {
+      "name": "animagine-xl-4.0.safetensors",
+      "display_name": "Animagine XL 4.0",
+      "category": "二次元动漫",
+      "category_type": "基础模型",
+      "preview_image": "",
+      "notes": "Animagine XL 4.0 标准 safetensors 文件，适合动漫、插画、角色向出图。Hugging Face 仓库标注 License: openrail++；如果同时存在优化版，建议优先测试优化版。"
+    },
+    {
+      "name": "RealVisXL_V5.0_fp16.safetensors",
+      "display_name": "RealVisXL V5.0 FP16",
+      "category": "写实摄影",
+      "category_type": "基础模型",
+      "preview_image": "",
+      "notes": "RealVisXL V5.0 的 FP16 safetensors 文件，适合写实、摄影感、人像和产品图。Hugging Face 仓库标注 License: openrail++；通常优先使用 FP16 以节省显存。"
+    },
+    {
+      "name": "RealVisXL_V5.0_fp32.safetensors",
+      "display_name": "RealVisXL V5.0 FP32",
+      "category": "写实摄影",
+      "category_type": "基础模型",
+      "preview_image": "",
+      "notes": "RealVisXL V5.0 的 FP32 safetensors 文件，适合写实、摄影感、人像和产品图。文件较大、显存占用更高；只有在确实需要 FP32 时再启用。"
     }
   ]
 }

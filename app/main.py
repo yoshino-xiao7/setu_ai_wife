@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from app.comfyui import (
     ComfyUIClient,
+    ComfyUIExecutionError,
     build_brushnet_inpaint_workflow,
     build_inpaint_workflow,
     build_mask_conditioning_workflow,
@@ -24,7 +25,7 @@ from app.comfyui import (
 )
 from app.config import Settings, get_settings
 from app.db import JobStore
-from app.presets import find_character, list_loras, load_characters, merge_tags
+from app.presets import find_character, list_loras, load_characters, load_prompt_presets, merge_tags
 from app.prompting import (
     PromptResult,
     PromptTranslationError,
@@ -135,6 +136,7 @@ async def health(settings: Settings = Depends(get_settings)) -> dict:
         "loras": len(list_loras(settings)),
         "vaes": len(list((settings.comfyui_models_dir / "vae").glob("*"))) if (settings.comfyui_models_dir / "vae").exists() else 0,
         "characters": len(load_characters(settings.characters_path)),
+        "promptPresets": len(load_prompt_presets(settings.prompt_presets_path)),
     }
     checks = {
         "localService": {"ok": True, "message": "FastAPI is running."},
@@ -197,6 +199,8 @@ async def generate(
     settings: Settings = Depends(get_settings),
     store: JobStore = Depends(get_store),
 ) -> dict[str, str]:
+    if str(payload.job_type or "").strip().upper() == "INPAINT":
+        raise HTTPException(status_code=400, detail="局部修复已下线，请使用一次性生成重新出图。")
     character = find_character(settings, payload.character_id)
     second_character = find_character(settings, payload.second_character_id)
     is_dual = is_dual_generation(payload)
@@ -690,6 +694,26 @@ async def run_manual_inpaint_generation(
         uploaded_inputs.extend([source_upload, mask_upload])
         denoise, grow_mask_by = inpaint_profile(job.get("nsfw_visibility_level"))
         brushnet_model = select_brushnet_model(settings)
+        legacy_workflow = build_inpaint_workflow(
+            positive=inpaint_positive_prompt(job["prompt_positive"]),
+            negative=inpaint_negative_prompt(job["prompt_negative"]),
+            seed=job["seed"],
+            steps=job["steps"],
+            cfg=job["cfg"],
+            checkpoint=job["checkpoint"],
+            sampler=settings.default_sampler,
+            scheduler=settings.default_scheduler,
+            base_image=source_upload,
+            mask_image=mask_upload,
+            denoise=denoise,
+            lora_name=job["lora_name"],
+            lora_strength=job["lora_strength"],
+            second_lora_name=job["second_lora_name"],
+            second_lora_strength=job["second_lora_strength"],
+            grow_mask_by=grow_mask_by,
+            filename_prefix=f"local_ai_drawing/{job_id}",
+        )
+        used_brushnet = False
         if should_use_brushnet_inpaint(settings, brushnet_model):
             workflow = build_brushnet_inpaint_workflow(
                 positive=inpaint_positive_prompt(job["prompt_positive"]),
@@ -712,29 +736,20 @@ async def run_manual_inpaint_generation(
                 second_lora_strength=job["second_lora_strength"],
                 filename_prefix=f"local_ai_drawing/{job_id}",
             )
+            used_brushnet = True
         else:
-            workflow = build_inpaint_workflow(
-                positive=inpaint_positive_prompt(job["prompt_positive"]),
-                negative=inpaint_negative_prompt(job["prompt_negative"]),
-                seed=job["seed"],
-                steps=job["steps"],
-                cfg=job["cfg"],
-                checkpoint=job["checkpoint"],
-                sampler=settings.default_sampler,
-                scheduler=settings.default_scheduler,
-                base_image=source_upload,
-                mask_image=mask_upload,
-                denoise=denoise,
-                lora_name=job["lora_name"],
-                lora_strength=job["lora_strength"],
-                second_lora_name=job["second_lora_name"],
-                second_lora_strength=job["second_lora_strength"],
-                grow_mask_by=grow_mask_by,
-                filename_prefix=f"local_ai_drawing/{job_id}",
+            workflow = legacy_workflow
+        try:
+            repaired_crop_path = await queue_and_download(
+                client, store, job_id, workflow, settings.output_dir, local_image_stem(job)
             )
-        repaired_crop_path = await queue_and_download(
-            client, store, job_id, workflow, settings.output_dir, local_image_stem(job)
-        )
+        except ComfyUIExecutionError as exc:
+            if not used_brushnet:
+                raise
+            print(f"[inpaint] BrushNet failed for job {job_id}; retrying legacy inpaint: {exc}")
+            repaired_crop_path = await queue_and_download(
+                client, store, job_id, legacy_workflow, settings.output_dir, local_image_stem(job)
+            )
         composite_inpaint_crop(
             source_path=source_path,
             mask_path=mask_path,
