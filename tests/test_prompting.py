@@ -124,6 +124,42 @@ class PromptingTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result.positive, "adult woman, silver hair, rainy night")
 
+    async def test_style_tags_are_not_sent_to_ollama_context(self) -> None:
+        payloads: list[dict] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            payload = json.loads(request.content.decode("utf-8"))
+            payloads.append(payload)
+            return httpx.Response(
+                200,
+                request=request,
+                json={
+                    "response": json.dumps(
+                        {
+                            "positive": "adult woman, rainy night",
+                            "negative": "low quality",
+                            "style_notes": "translated",
+                        }
+                    )
+                },
+            )
+
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        settings = Settings(
+            OLLAMA_URL="http://ollama.test",
+            OLLAMA_MODEL="qwen3:4b",
+        )
+
+        with patch("app.prompting.httpx.AsyncClient", return_value=client):
+            await translate_prompt(
+                "adult woman in rainy night",
+                settings,
+                style_tags="masterpiece, best quality, very long preset tag list",
+            )
+
+        self.assertEqual(len(payloads), 1)
+        self.assertNotIn("very long preset tag list", payloads[0]["prompt"])
+
 
 if __name__ == "__main__":
     unittest.main()

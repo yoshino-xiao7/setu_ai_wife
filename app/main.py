@@ -206,23 +206,6 @@ async def generate(
     is_dual = is_dual_generation(payload)
     has_custom_mask = has_complete_character_mask(payload.character_mask_json)
     layout_hint = build_character_layout_hint(payload.character_mask_json) if is_dual and has_custom_mask else ""
-    prompt_source = merge_tags(
-        character.trigger_words if character else "",
-        character.default_positive if character else "",
-        second_character.trigger_words if second_character else "",
-        second_character.default_positive if second_character else "",
-        payload.trigger_words,
-        payload.style_tags,
-        character.style_tags if character else "",
-        second_character.style_tags if second_character else "",
-        dual_character_guard(has_custom_mask) if is_dual else "",
-        layout_hint,
-        payload.prompt_cn,
-    )
-    if is_dual:
-        prompt_source = filter_dual_character_tags(prompt_source)
-    if payload.nsfw_mode:
-        prompt_source = filter_nsfw_incompatible_tags(prompt_source)
     if payload.prompt_positive.strip():
         prompt = PromptResult(
             positive=payload.prompt_positive.strip(),
@@ -232,9 +215,8 @@ async def generate(
     else:
         try:
             prompt = await translate_prompt(
-                prompt_source,
+                payload.prompt_cn,
                 settings,
-                style_tags=payload.style_tags,
                 negative_prompt=payload.prompt_negative,
                 nsfw_mode=payload.nsfw_mode,
                 nsfw_visibility_level=payload.nsfw_visibility_level,
@@ -277,10 +259,6 @@ async def generate(
         has_custom_mask,
     )
     if payload.nsfw_mode:
-        positive_prompt = filter_nsfw_incompatible_tags(positive_prompt)
-        regional_global_positive = filter_nsfw_incompatible_tags(regional_global_positive)
-        regional_left_positive = filter_nsfw_incompatible_tags(regional_left_positive)
-        regional_right_positive = filter_nsfw_incompatible_tags(regional_right_positive)
         positive_prompt = apply_nsfw_visibility_profile(positive_prompt, payload.nsfw_visibility_level)
         if regional_global_positive:
             regional_global_positive = apply_nsfw_visibility_profile(
@@ -1370,10 +1348,11 @@ def cleanup_temp_paths(paths: list[Path]) -> None:
             print(f"[dual-inpaint] cleanup skipped for {path.name}: {exc}")
 
 
-def character_tags(character) -> str:
+def character_tags(character, *, nsfw_mode: bool = False) -> str:
     if not character:
         return ""
-    return merge_tags(character.trigger_words, character.default_positive, character.style_tags)
+    tags = merge_tags(character.trigger_words, character.default_positive, character.style_tags)
+    return filter_nsfw_incompatible_tags(tags) if nsfw_mode else tags
 
 
 def dual_character_guard(custom_mask: bool = False) -> str:
@@ -1433,14 +1412,17 @@ def build_positive_prompt(
 ) -> str:
     if not is_dual:
         return merge_tags(
-            character_tags(character),
+            character_tags(character, nsfw_mode=payload.nsfw_mode),
             payload.trigger_words,
             payload.style_tags,
             translated_positive,
         )
 
-    first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
-    second_tags = filter_dual_character_tags(character_tags(second_character))
+    first_tags = filter_dual_character_tags(merge_tags(
+        character_tags(character, nsfw_mode=payload.nsfw_mode),
+        payload.trigger_words,
+    ))
+    second_tags = filter_dual_character_tags(character_tags(second_character, nsfw_mode=payload.nsfw_mode))
     scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
     first_label = "character A" if custom_mask else "character A on the left side"
     second_label = "character B" if custom_mask else "character B on the right side"
@@ -1479,8 +1461,11 @@ def build_regional_global_positive(
 ) -> str:
     if not is_dual:
         return ""
-    first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
-    second_tags = filter_dual_character_tags(character_tags(second_character))
+    first_tags = filter_dual_character_tags(merge_tags(
+        character_tags(character, nsfw_mode=payload.nsfw_mode),
+        payload.trigger_words,
+    ))
+    second_tags = filter_dual_character_tags(character_tags(second_character, nsfw_mode=payload.nsfw_mode))
     scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
     composition_tags = (
         "natural close interaction between exactly two characters, preserve the requested contact and relative positions, no extra people"
@@ -1505,8 +1490,11 @@ def build_regional_positive_prompts(
 ) -> tuple[str, str]:
     if not is_dual:
         return "", ""
-    first_tags = filter_dual_character_tags(merge_tags(character_tags(character), payload.trigger_words))
-    second_tags = filter_dual_character_tags(character_tags(second_character))
+    first_tags = filter_dual_character_tags(merge_tags(
+        character_tags(character, nsfw_mode=payload.nsfw_mode),
+        payload.trigger_words,
+    ))
+    second_tags = filter_dual_character_tags(character_tags(second_character, nsfw_mode=payload.nsfw_mode))
     first_region = (
         "character A only, one person only in this region, no character B, no second person, one complete body, distinct face, distinct outfit"
         if custom_mask

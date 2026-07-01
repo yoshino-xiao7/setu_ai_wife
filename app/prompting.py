@@ -324,17 +324,8 @@ async def translate_prompt(
         "If local prompt knowledge is provided, follow it exactly."
     )
     knowledge_context = matched_knowledge_context(prompt_cn, settings.prompt_knowledge_path)
-    style_tag_instruction = (
-        f"Preset/style tags to sanitize: {style_tags or '(none)'}. Keep identity, face, hair, "
-        "body, pose, camera, lighting, and background tags. Remove full garments/outfits, but "
-        "preserve NSFW remnants such as micro bikini, pasties, pulled-aside clothing, see-through wet, "
-        "stockings only, garter. Remove censorship, covering, foreground-obstruction, and cropped tags."
-        if nsfw_mode
-        else f"Extra style tags to keep in English if useful: {style_tags or '(none)'}"
-    )
     user_prompt = (
         f"Chinese request: {prompt_cn}\n"
-        f"{style_tag_instruction}\n"
         f"Existing negative prompt to translate/merge if useful: {negative_prompt or '(none)'}\n"
         f"NSFW compatibility mode: {'enabled' if nsfw_mode else 'disabled'}\n"
         f"{knowledge_context or 'Local prompt knowledge matched: (none)'}\n"

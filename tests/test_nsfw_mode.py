@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import unittest
+from types import SimpleNamespace
 
+from app.main import build_positive_prompt
 from app.prompting import (
     apply_nsfw_visibility_negative,
     apply_nsfw_visibility_negative_profile,
@@ -106,6 +108,34 @@ class NsfwModeTest(unittest.TestCase):
         self.assertNotIn("unobstructed anatomy", light)
         self.assertNotIn("explicit anatomy visible", light)
         self.assertNotIn("clear frontal view", light)
+
+    def test_nsfw_generation_filters_character_preset_only(self) -> None:
+        payload = SimpleNamespace(
+            nsfw_mode=True,
+            trigger_words="user dress tag",
+            style_tags="preset dress tag, cinematic lighting",
+        )
+        character = SimpleNamespace(
+            trigger_words="yae miko",
+            default_positive="purple kimono, detached sleeves, purple eyes",
+            style_tags="anime style",
+        )
+
+        positive = build_positive_prompt(
+            payload,
+            "translated dress tag, rainy night",
+            character,
+            None,
+            False,
+        )
+
+        self.assertIn("yae miko", positive)
+        self.assertIn("purple eyes", positive)
+        self.assertNotIn("purple kimono", positive)
+        self.assertNotIn("detached sleeves", positive)
+        self.assertIn("user dress tag", positive)
+        self.assertIn("preset dress tag", positive)
+        self.assertIn("translated dress tag", positive)
 
 
 if __name__ == "__main__":
