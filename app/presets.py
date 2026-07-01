@@ -53,6 +53,7 @@ class PromptPreset(BaseModel):
     trigger_words: str = ""
     style_tags: str = ""
     default_positive: str = ""
+    default_negative: str = ""
     preview_image: str = ""
     recommended_checkpoint: str = ""
     recommended_lora: str = ""
