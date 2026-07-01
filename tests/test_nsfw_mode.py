@@ -137,6 +137,32 @@ class NsfwModeTest(unittest.TestCase):
         self.assertIn("preset dress tag", positive)
         self.assertIn("translated dress tag", positive)
 
+    def test_nsfw_generation_filters_character_preset_when_positive_is_provided(self) -> None:
+        payload = SimpleNamespace(
+            nsfw_mode=True,
+            trigger_words="",
+            style_tags="",
+        )
+        character = SimpleNamespace(
+            trigger_words="yae miko",
+            default_positive="purple kimono, detached sleeves, purple eyes",
+            style_tags="",
+        )
+
+        positive = build_positive_prompt(
+            payload,
+            "provided positive prompt, red dress requested by user",
+            character,
+            None,
+            False,
+        )
+
+        self.assertIn("yae miko", positive)
+        self.assertIn("purple eyes", positive)
+        self.assertNotIn("purple kimono", positive)
+        self.assertNotIn("detached sleeves", positive)
+        self.assertIn("red dress requested by user", positive)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     comfyui_url: str = Field("http://127.0.0.1:8188", alias="COMFYUI_URL")
     ollama_url: str = Field("http://127.0.0.1:11434", alias="OLLAMA_URL")
     ollama_model: str = Field("qwen3:4b", alias="OLLAMA_MODEL")
-    ollama_prompt_num_gpu: int = Field(0, alias="OLLAMA_PROMPT_NUM_GPU")
+    ollama_prompt_num_gpu: int = Field(1, alias="OLLAMA_PROMPT_NUM_GPU")
     output_dir: Path = Field(Path("outputs"), alias="OUTPUT_DIR")
     database_path: Path = Field(Path("data/jobs.sqlite3"), alias="DATABASE_PATH")
     characters_path: Path = Field(Path("config/characters.json"), alias="CHARACTERS_PATH")

@@ -55,7 +55,7 @@ class PromptingTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result.positive, "adult woman, silver hair, rainy night")
         self.assertEqual(result.style_notes, "corrected")
-        self.assertEqual([payload["options"]["num_gpu"] for payload in payloads], [0, 0])
+        self.assertEqual([payload["options"]["num_gpu"] for payload in payloads], [1, 1])
 
     async def test_malformed_correction_keeps_usable_english_tags(self) -> None:
         responses = iter(
@@ -92,7 +92,7 @@ class PromptingTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result.positive, "adult woman, rainy night")
         self.assertEqual(result.style_notes, "initial")
-        self.assertEqual([payload["options"]["num_gpu"] for payload in payloads], [0, 0])
+        self.assertEqual([payload["options"]["num_gpu"] for payload in payloads], [1, 1])
 
     async def test_prompt_translation_can_be_configured_to_use_gpu(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
