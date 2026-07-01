@@ -10,7 +10,7 @@
     },
     {
       "name": "animagine-xl-4.0-opt.safetensors",
-      "display_name": "Animagine XL 4.0 优化版",
+      "display_name": "二次元动漫 Animagine 4.0 优化",
       "category": "二次元动漫",
       "category_type": "基础模型",
       "preview_image": "",
@@ -18,7 +18,7 @@
     },
     {
       "name": "animagine-xl-4.0.safetensors",
-      "display_name": "Animagine XL 4.0",
+      "display_name": "二次元动漫 Animagine 4.0",
       "category": "二次元动漫",
       "category_type": "基础模型",
       "preview_image": "",
@@ -26,7 +26,7 @@
     },
     {
       "name": "RealVisXL_V5.0_fp16.safetensors",
-      "display_name": "RealVisXL V5.0 FP16",
+      "display_name": "写实 RealVisXL V5.0 FP16",
       "category": "写实摄影",
       "category_type": "基础模型",
       "preview_image": "",
@@ -34,11 +34,19 @@
     },
     {
       "name": "RealVisXL_V5.0_fp32.safetensors",
-      "display_name": "RealVisXL V5.0 FP32",
+      "display_name": "写实 RealVisXL V5.0 FP32",
       "category": "写实摄影",
       "category_type": "基础模型",
       "preview_image": "",
       "notes": "写实模型 FP32 版，质量略高于 FP16 但显存吃紧。NSFW 提示词风格同上，建议用摄影语言而非动漫 tag。NSFW 强度通常不如 WAI 在动漫领域强。"
+    },
+    {
+      "name": "hassakuXLPony_v13BetterEyesVersion.safetensors",
+      "display_name": "二次元动漫 Hassaku Pony v13 眼睛优化",
+      "category": "二次元动漫 / NSFW",
+      "category_type": "基础模型",
+      "preview_image": "",
+      "notes": "Hassaku XL Pony 版本（v13 Better Eyes）。基于 Pony 的 Hassaku Hentai 模型，动漫风格优秀，眼睛细节更好。NSFW 控制强，适合各种重口和角色。使用 Pony 提示词格式（score_9, score_8_up 等 + source_anime）。CLIP skip 2。推荐用于需要 Pony 灵活性但更偏日式动漫画风的场景。"
     }
   ]
 }
