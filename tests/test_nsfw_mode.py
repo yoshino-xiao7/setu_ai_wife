@@ -87,7 +87,10 @@ class NsfwModeTest(unittest.TestCase):
 
         self.assertNotIn("head-to-toe framing", close_up)
         self.assertIn("head-to-toe framing", full_body)
-        self.assertNotIn("front-facing pose", close_up)
+        self.assertIn("(uncensored adult nude body:1.2)", close_up)
+        self.assertIn("explicit nude anatomy visible", close_up)
+        self.assertIn("front-facing pose", close_up)
+        self.assertIn("clothing coverage", apply_nsfw_visibility_negative_profile("low quality", "STRONG"))
         self.assertIn(
             "(censored:1.3)",
             apply_nsfw_visibility_negative_profile("low quality", "STRONG"),

@@ -191,6 +191,13 @@ def normalize_visibility_level(value: str) -> str:
 def apply_nsfw_visibility_profile(prompt: str, level: str) -> str:
     level = normalize_visibility_level(level)
     prompt = remove_visibility_control_tags(prompt, negative=False)
+    if level == "STRONG":
+        prompt = merge_unique_tags(
+            prompt,
+            "(uncensored adult nude body:1.2), explicit nude anatomy visible, "
+            "unobstructed anatomy, clear frontal view, front-facing pose, "
+            "centered composition, uncluttered foreground",
+        )
     lower = (prompt or "").lower()
     if (
         any(tag in lower for tag in ("full body", "head to toe", "wide shot"))
@@ -210,7 +217,8 @@ def apply_nsfw_visibility_negative_profile(prompt: str, level: str) -> str:
         "STRONG": (
             "(censored:1.3), (mosaic censorship:1.3), (convenient censoring:1.25), "
             "(strategically covered:1.25), (obscured anatomy:1.25), hands covering body, "
-            "hair covering body, foreground obstruction, cropped body, out of frame"
+            "hair covering body, foreground obstruction, cropped body, out of frame, "
+            "clothing coverage, fabric coverage, underwear"
         ),
     }[level]
     return merge_unique_tags(remove_visibility_control_tags(prompt, negative=True), tags)
