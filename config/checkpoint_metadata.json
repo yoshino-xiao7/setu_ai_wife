@@ -6,7 +6,7 @@
       "category": "二次元动漫",
       "category_type": "基础模型",
       "preview_image": "",
-      "notes": "当前默认使用的 SDXL 动漫风格 checkpoint。文件名保留给 ComfyUI 调用，云端前端展示此友好名称。"
+      "notes": "当前默认 NSFW 效果最好的模型。动漫风格强，对 explicit anatomy、uncensored、ahegao、fluids 等支持优秀。与当前 prompt_presets 和 nsfw_mode 过滤配合最佳。大多数预设默认推荐此模型。推荐用于强 NSFW 角色图。"
     },
     {
       "name": "animagine-xl-4.0-opt.safetensors",
@@ -14,7 +14,7 @@
       "category": "二次元动漫",
       "category_type": "基础模型",
       "preview_image": "",
-      "notes": "Animagine XL 4.0 的优化版 safetensors 文件，适合动漫、插画、角色向出图。Hugging Face 仓库标注 License: openrail++；下载后请确认文件名与 ComfyUI checkpoints 目录中的实际文件名一致。"
+      "notes": "Animagine XL 4.0 优化版。动漫/插画风格好，但 NSFW explicit 强度通常弱于 WAI。建议搭配更强的 anatomy 描述（wet pussy, detailed anatomy, explicit 等）。在 nsfw_mode 下可能需要手动补充正面标签，或降低 CFG。适合偏干净动漫风的图。"
     },
     {
       "name": "animagine-xl-4.0.safetensors",
@@ -22,7 +22,7 @@
       "category": "二次元动漫",
       "category_type": "基础模型",
       "preview_image": "",
-      "notes": "Animagine XL 4.0 标准 safetensors 文件，适合动漫、插画、角色向出图。Hugging Face 仓库标注 License: openrail++；如果同时存在优化版，建议优先测试优化版。"
+      "notes": "Animagine XL 4.0 标准版。效果与优化版接近，NSFW 表现一般。使用时可尝试在 positive 里加强 explicit 元素，或切换回 WAI 获得更好裸露效果。"
     },
     {
       "name": "RealVisXL_V5.0_fp16.safetensors",
@@ -30,7 +30,7 @@
       "category": "写实摄影",
       "category_type": "基础模型",
       "preview_image": "",
-      "notes": "RealVisXL V5.0 的 FP16 safetensors 文件，适合写实、摄影感、人像和产品图。Hugging Face 仓库标注 License: openrail++；通常优先使用 FP16 以节省显存。"
+      "notes": "写实/摄影模型。NSFW 效果与动漫模型差异大。不要用太多 danbooru 风格 tag（1girl, ahegao 等）。推荐用更自然/摄影的描述：beautiful woman, detailed skin texture, realistic anatomy, glossy skin, explicit nude, aroused expression。适合写真、真实感 NSFW。和 gravure 构图预设搭配较好。"
     },
     {
       "name": "RealVisXL_V5.0_fp32.safetensors",
@@ -38,7 +38,7 @@
       "category": "写实摄影",
       "category_type": "基础模型",
       "preview_image": "",
-      "notes": "RealVisXL V5.0 的 FP32 safetensors 文件，适合写实、摄影感、人像和产品图。文件较大、显存占用更高；只有在确实需要 FP32 时再启用。"
+      "notes": "写实模型 FP32 版，质量略高于 FP16 但显存吃紧。NSFW 提示词风格同上，建议用摄影语言而非动漫 tag。NSFW 强度通常不如 WAI 在动漫领域强。"
     }
   ]
 }

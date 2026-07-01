@@ -20,7 +20,7 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/a5e824f9-c5b0-48de-1120-289a1166a100/anim=false,width=450,optimized=true/341491.jpeg",
-      "notes": "原神角色八重神子 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；如果和 Animagine XL 4.0 搭配，先从 0.65-0.75 测试。"
+      "notes": "原神角色八重神子 LoRA。建议通过角色预设使用，会自动注入常用角色 tags。WAI 模型上 NSFW 效果最佳；和 Animagine XL 4.0 搭配时强度建议 0.65-0.75。"
     },
     {
       "name": "RaidenShogun-HandsFix.safetensors",

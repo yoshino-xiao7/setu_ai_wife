@@ -91,6 +91,28 @@ NSFW_ANATOMY_VISIBILITY_PROTECTED_PHRASES = {
     "anatomical view",
     "anatomical detail",
 }
+
+# These are intentionally kept even in nsfw_mode because they represent
+# popular "NSFW remnant clothing" aesthetics (partially clothed / aside / minimal coverage).
+NSFW_ALLOWED_REMNANT_PHRASES = {
+    "micro bikini",
+    "sling bikini",
+    "pasties",
+    "nipple pasties",
+    "panties aside",
+    "bra pulled",
+    "bra down",
+    "see through",
+    "wet shirt",
+    "wet clothes",
+    "stockings only",
+    "thighhighs only",
+    "garter belt",
+    "garter only",
+    "partially undressed",
+    "clothes aside",
+    "shirt open",
+}
 NSFW_VISIBILITY_POSITIVE_TAGS = (
     "full body visible",
 )
@@ -254,9 +276,17 @@ def filter_nsfw_incompatible_tags(prompt: str) -> str:
         key = normalize_tag_key(tag)
         tokens = set(re.findall(r"[a-z]+", key))
         plain_key = " ".join(re.findall(r"[a-z]+", key))
+
+        # Always preserve explicit anatomy visibility requests
         if any(phrase in key for phrase in NSFW_ANATOMY_VISIBILITY_PROTECTED_PHRASES):
             tags.append(tag)
             continue
+
+        # Preserve intentional NSFW "remnant clothing" (micro, pasties, pulled aside, see-through wet, etc.)
+        if any(phrase in key for phrase in NSFW_ALLOWED_REMNANT_PHRASES):
+            tags.append(tag)
+            continue
+
         if (
             not tag
             or plain_key in NSFW_INCOMPATIBLE_EXACT_TAGS
@@ -283,19 +313,22 @@ async def translate_prompt(
         "Use comma-separated English tags. Do not prepend generic quality boosters such as "
         "masterpiece, best quality, high quality, anime illustration, detailed eyes, or clean "
         "lineart unless the user explicitly asks for them. Keep negative prompt practical. "
-        "When NSFW compatibility mode is enabled, omit garment, clothing, censorship, occlusion, "
-        "covering, foreground-blocking, and cropped-composition tags while preserving identity, "
-        "body, pose, expression, camera, lighting, and background tags. Preserve requested "
-        "cross-section, cutaway, x-ray, internal-anatomy, and anatomical-visibility descriptors. "
+        "When NSFW compatibility mode is enabled, omit full garment, outfit, uniform, dress, "
+        "censorship, occlusion, covering, foreground-blocking, and cropped-composition tags. "
+        "However, deliberately keep intentional NSFW remnant clothing such as micro bikini, "
+        "pasties, panties aside, bra pulled down, see-through wet clothing, stockings only, "
+        "partially undressed, garter. Preserve identity, body, pose, expression, camera, lighting, "
+        "and background tags. Preserve requested cross-section, cutaway, x-ray, internal-anatomy, "
+        "and anatomical-visibility descriptors. "
         "Do not add extra composition-control tags unless the user requests them. "
         "If local prompt knowledge is provided, follow it exactly."
     )
     knowledge_context = matched_knowledge_context(prompt_cn, settings.prompt_knowledge_path)
     style_tag_instruction = (
         f"Preset/style tags to sanitize: {style_tags or '(none)'}. Keep identity, face, hair, "
-        "body, pose, camera, lighting, and background tags, but remove every garment, outfit, "
-        "uniform, sleeve, glove, stocking, footwear, armor, miko-clothing, censorship, covering, "
-        "foreground-obstruction, and cropped-composition tag."
+        "body, pose, camera, lighting, and background tags. Remove full garments/outfits, but "
+        "preserve NSFW remnants such as micro bikini, pasties, pulled-aside clothing, see-through wet, "
+        "stockings only, garter. Remove censorship, covering, foreground-obstruction, and cropped tags."
         if nsfw_mode
         else f"Extra style tags to keep in English if useful: {style_tags or '(none)'}"
     )
