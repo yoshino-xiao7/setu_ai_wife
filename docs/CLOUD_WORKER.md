@@ -1,21 +1,21 @@
 # Cloud Worker Mode
 
-## 角色分工
+`setu_ai_wife` is the Windows-local AI drawing runtime. In cloud worker mode it does not expose the public business API. It polls the cloud backend, runs local ComfyUI/Ollama work, and reports results back.
 
-`setu_ai_wife` 在 cloud worker 模式下不再作为公网业务入口，只做本机 AI 绘图 worker：
+## Responsibilities
 
-1. 扫描本机 ComfyUI 模型目录和角色预设。
-2. 向云端后端上报 checkpoint、LoRA、VAE、角色预设。
-3. 轮询云端任务。
-4. 调用本机 `http://127.0.0.1:7861/api/generate` 出图。
-5. 读取本机临时图片并回传云端。
-6. 云端写入 OSS，本机归档图永久保留，除非管理员通过云端下发删除指令。
+1. Scan local ComfyUI models and local metadata files.
+2. Report checkpoints, LoRAs, VAEs, characters, prompt presets, and worker state to the cloud backend.
+3. Claim generation jobs, prompt translation jobs, and local-image deletion commands.
+4. Call the local FastAPI service at `LOCAL_AI_URL` for image generation.
+5. Read generated local image bytes and complete the cloud job.
+6. Keep local archive images unless a cloud admin issues a local-image deletion command.
 
-云服务器不需要访问本机 IP，本机也不需要做内网穿透。
+The cloud server does not need direct access to the worker machine.
 
-## 环境变量
+## Environment
 
-复制 `.env.example` 到 `.env` 后补充：
+Copy `.env.example` to `.env` and fill at least:
 
 ```dotenv
 LOCAL_AI_URL=http://127.0.0.1:7861
@@ -29,82 +29,81 @@ AI_WORKER_CAPABILITY_REPORT_SECONDS=60
 AI_WORKER_CLEANUP_OUTPUTS=false
 ```
 
-`AI_WORKER_TOKEN` 必须与云端后端的 `AI_WORKER_TOKEN` 一致。
+`AI_WORKER_TOKEN` must match the cloud backend `AI_WORKER_TOKEN`.
 
-## LoRA 和模型发现
+## Model and Metadata Discovery
 
-worker 会扫描：
+The worker scans:
 
 - `COMFYUI_MODELS_DIR/checkpoints`
 - `COMFYUI_MODELS_DIR/loras`
 - `COMFYUI_MODELS_DIR/vae`
-- `CHARACTERS_PATH` 指向的角色预设 JSON
-- `LORA_METADATA_PATH` 指向的 LoRA 展示元数据 JSON
+- `CHARACTERS_PATH`
+- `LORA_METADATA_PATH`
+- `CHECKPOINT_METADATA_PATH`
+- `PROMPT_PRESETS_PATH`
+- `PROMPT_KNOWLEDGE_PATH`
 
-默认 `COMFYUI_MODELS_DIR` 为：
+Restart the worker or wait for the next capability report after adding models or metadata.
 
-```text
-tools/ComfyUI_windows_portable/ComfyUI/models
-```
+## Startup
 
-新增 LoRA 后，重启 worker 或等待下一次能力上报。前端 `/dashboard/ai-draw` 读取的是云端 `/ai/capabilities`，所以只要 worker 上报成功，云端页面就能看到本机 LoRA。
-
-## 启动顺序
-
-一键启动云端生图所需的全部本机组件：
+Start all local components:
 
 ```powershell
-cd C:\Users\rdpuser\Documents\setu_cd\setu_ai_wife
-powershell -ExecutionPolicy Bypass -File scripts/start_cloud_all.ps1
+cd setu_ai_wife
+powershell -ExecutionPolicy Bypass -File scripts\start_cloud_all.ps1
 ```
 
-这个脚本会依次启动 ComfyUI、本机 FastAPI 服务和 cloud worker，并把日志写到 `logs/`。启动成功后会自动打开 `http://127.0.0.1:7861` 本机 Worker 控制台。
+Manual startup order:
 
-也可以按下面步骤手动启动。
-
-1. 启动 ComfyUI，确认 `http://127.0.0.1:8188` 可访问。
-2. 启动本机 FastAPI 服务：
+1. Start ComfyUI and confirm `http://127.0.0.1:8188` works.
+2. Start the local FastAPI service:
 
 ```powershell
-cd C:\Users\rdpuser\Documents\setu_cd\setu_ai_wife
-powershell -ExecutionPolicy Bypass -File scripts/start_service.ps1
+cd setu_ai_wife
+powershell -ExecutionPolicy Bypass -File scripts\start_service.ps1
 ```
 
-3. 启动 cloud worker：
+3. Start the cloud worker:
 
 ```powershell
-cd C:\Users\rdpuser\Documents\setu_cd\setu_ai_wife
-powershell -ExecutionPolicy Bypass -File scripts/start_cloud_worker.ps1
+cd setu_ai_wife
+powershell -ExecutionPolicy Bypass -File scripts\start_cloud_worker.ps1
 ```
 
-## 图片流转
+## Image Flow
 
-v1 采用 `CLOUD_COMPLETE_BASE64`：
+1. The cloud backend creates a queued job.
+2. The worker claims it and marks it running.
+3. Local ComfyUI writes the generated image under `OUTPUT_DIR`.
+4. The worker marks the job uploading and posts the image bytes to `/ai-worker/jobs/{id}/complete`.
+5. The cloud backend writes the image to private OSS, records hashes and size, and keeps a private retention deadline.
+6. The worker reports the local archive path back to the cloud.
+7. If the user submits review and an admin approves it, the backend publishes a public copy.
 
-1. 本机 ComfyUI 生成临时图片到 `OUTPUT_DIR`。
-2. worker 读取图片 bytes。
-3. worker 调用云端 `POST /ai-worker/jobs/{id}/complete`。
-4. 云端通过 `StorageService.putObject` 写入 OSS 私有路径 `ai/private/{userId}/{jobId}.png`。
-5. 用户通过云端签名 URL 查看自己的图片。
-6. 审核通过后，云端复制到 `ai/public/general/{jobId}.png` 或 `ai/public/r18/{jobId}.png`。
+Startup also reconciles old local completed images against cloud history when possible.
 
-归档图片统一保存在 `OUTPUT_DIR/{用户ID}/{yyyy-MM-dd}/{本机任务UUID}.{扩展名}`。worker 不会在云端 complete 成功后删除归档图；ComfyUI 自身的中间输出仍会在复制完成后清理。云端管理员删除本机图片时，指令会排队等待对应 worker 在线执行，并回报成功或失败。
+## Prompt Translation Flow
 
-worker 启动后会把旧版 `outputs` 扁平目录中的可识别图片与云端历史对账，迁移到规范目录并回填绝对、相对路径。无法匹配或存在目标冲突的文件保持原位。
+The worker also claims `/ai-worker/prompt-translations/claim`, translates prompts through the local prompt pipeline, and completes or fails each translation job.
 
-本机控制台提供 `GET /api/health`，用于检查 ComfyUI、Ollama、云端连接、模型目录和默认 checkpoint。
+## Local Deletion Flow
 
-## 故障排查
+Admins can request local archive deletion from the cloud console. The worker claims commands from `/ai-worker/local-image-deletions/claim`, deletes the local archive path, and reports success or failure.
 
-- `/ai/capabilities` 没有 LoRA：确认 `COMFYUI_MODELS_DIR` 指向真实 ComfyUI `models` 目录，且 worker 已启动并能访问云端。
-- 任务一直 `QUEUED`：确认 worker token 一致，并查看 worker 控制台是否有 claim 错误。
-- 任务 `FAILED` 且已扣积分：worker 调用 `/ai-worker/jobs/{id}/fail` 后云端会自动退款；如果没有退款，检查该任务是否已经绑定到正确 worker。
-- 云端看不到图片：确认 OSS pending bucket 配置正确，`StorageService.putObject` 可用，且图片大小不超过 `AI_MAX_COMPLETE_IMAGE_BYTES`。
-- 本机生成失败：先在 `http://127.0.0.1:7861` 本地页面直接生成一张，确认 ComfyUI 和模型工作正常。
+## Troubleshooting
 
-## 本地检查
+- No LoRA in `/ai/capabilities`: check `COMFYUI_MODELS_DIR`, metadata JSON files, worker startup, and cloud connectivity.
+- Jobs stay `QUEUED`: check `AI_WORKER_TOKEN`, `CLOUD_API_URL`, and the worker control page for claim errors.
+- Job is `FAILED`: inspect `workerStage`, `workerDetail`, and local logs.
+- Cloud preview is unavailable: check OSS configuration and `AI_MAX_COMPLETE_IMAGE_BYTES`.
+- Local generation fails: test generation directly from `http://127.0.0.1:7861` first.
+
+## Verification
 
 ```powershell
-cd C:\Users\rdpuser\Documents\setu_cd\setu_ai_wife
+cd setu_ai_wife
+powershell -ExecutionPolicy Bypass -File scripts\check_env.ps1
 .\.venv\Scripts\python.exe -m compileall app
 ```

@@ -1,0 +1,32 @@
+# 双角色生成
+
+## 当前策略
+
+双角色生成支持两个角色或 LoRA 选择、独立权重、可选手绘角色区域，以及描述左右或指定区域的提示词引导。
+
+`DUAL_CHARACTER_STRATEGY` 控制行为：
+
+- `auto`：默认单次采样双角色生成；手绘区域作为布局提示。
+- `mask-conditioning`：在一次采样中使用 A/B mask 作为区域提示词条件。
+- `inpaint`：旧实验模式，先生成基础构图，再重绘 mask 区域。
+
+## 为什么隔离不完美
+
+两个 LoRA 在同一次扩散过程中可能让身份、服装或风格互相污染。区域提示词和 mask 可以缓解，但不能完全隔离角色身份。
+
+## 互动场景怎么写
+
+先把场景写成一个完整互动，再用角色 A/B 说明身份、服装和位置。避免全局提示词与区域提示词中的位置描述互相矛盾。
+
+## 可调参数
+
+- `DUAL_LORA_STRENGTH_CAP`
+- `DUAL_MASK_CONDITIONING_STRENGTH`
+- `DUAL_INPAINT_DENOISE`
+- `DUAL_INPAINT_MASK_OVERLAP_RATIO`
+
+如果脸或服装互相污染，优先降低 LoRA 权重。
+
+## 后续方向
+
+更稳定的隔离可能需要专门的区域条件、mask 感知工作流，或分步生成、合成和修复。

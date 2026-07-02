@@ -1,86 +1,37 @@
-# MODELS
+# Models
 
-## Directory layout
+## Directory Layout
 
-For ComfyUI Portable, use these model directories:
+The default model root is:
 
-- `ComfyUI\models\checkpoints`
-- `ComfyUI\models\loras`
-- `ComfyUI\models\vae`
+```text
+tools/ComfyUI_windows_portable/ComfyUI/models
+```
 
-The service sends model filenames to ComfyUI. Filenames must match exactly.
+Expected subdirectories:
 
-## Recommended naming
+- `checkpoints`
+- `loras`
+- `vae`
 
-Use readable names and avoid spaces where possible:
+## Metadata
 
-- `anime_sdxl_base.safetensors`
-- `character_name_v1.safetensors`
-- `sdxl_vae.safetensors`
+Optional display metadata lives in:
+
+- `config/checkpoint_metadata.json`
+- `config/lora_metadata.json`
+- `config/characters.json`
+- `config/prompt_presets.json`
+- `config/prompt_knowledge.json`
+
+## Naming
+
+Use stable file names because cloud jobs store selected checkpoint and LoRA names. Prefer readable model names and avoid renaming files after users have active jobs.
 
 ## Licensing
 
-Before downloading or using a model, confirm:
+Only install and serve models that the deployment is allowed to use. Keep license notes outside generated runtime directories if needed.
 
-- Whether commercial use is allowed.
-- Whether redistribution is allowed.
-- Whether the model has content restrictions.
-- Whether character LoRA files are fan-made and limited to personal use.
+## Default Checkpoint
 
-## First checkpoint
-
-Edit `.env`:
-
-```env
-DEFAULT_CHECKPOINT=your-checkpoint-filename.safetensors
-```
-
-Restart the service after changing `.env`.
-
-## Checkpoint display names
-
-ComfyUI still needs the real checkpoint filename, but the cloud frontend should show a friendly model name. Maintain checkpoint metadata here:
-
-```text
-config\checkpoint_metadata.json
-```
-
-Current default model:
-
-```json
-{
-  "name": "waiIllustriousSDXL_v170.safetensors",
-  "display_name": "二次元动漫 WAI",
-  "category": "二次元动漫",
-  "category_type": "基础模型",
-  "preview_image": "",
-  "notes": "当前默认使用的 SDXL 动漫风格 checkpoint。"
-}
-```
-
-After editing this file, restart the cloud worker or wait for the next capability report, then click refresh on the cloud AI draw page.
-
-## Character LoRA presets
-
-Put LoRA files here:
-
-```text
-tools\ComfyUI_windows_portable\ComfyUI\models\loras
-```
-
-Then edit `config\characters.json`:
-
-```json
-{
-  "id": "my_character",
-  "name": "角色显示名",
-  "lora_name": "my_character.safetensors",
-  "lora_strength": 0.8,
-  "trigger_words": "official trigger words from the LoRA page",
-  "default_positive": "1girl, solo",
-  "style_tags": "anime style, detailed eyes, high quality",
-  "notes": "optional"
-}
-```
-
-The local UI loads these presets from `/api/characters`. When a preset is selected, the backend injects its trigger words and style tags into the positive prompt, and applies its LoRA unless the UI manually chooses another LoRA.
+Set `DEFAULT_CHECKPOINT` in `.env` to a checkpoint that exists under `COMFYUI_MODELS_DIR/checkpoints`.
