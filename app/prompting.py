@@ -12,7 +12,9 @@ from app.prompt_knowledge import matched_knowledge_context
 
 DEFAULT_NEGATIVE = (
     "low quality, worst quality, bad anatomy, bad hands, extra fingers, "
-    "missing fingers, deformed, blurry, text, watermark, logo, cropped"
+    "missing fingers, deformed, blurry, text, watermark, logo, cropped, "
+    "looking at viewer, eye contact, facing camera, direct gaze, staring at viewer, "
+    "front view, head facing forward, facing the viewer, looking straight at camera"
 )
 NSFW_INCOMPATIBLE_TAG_TOKENS = {
     "clothes",
@@ -320,6 +322,10 @@ async def translate_prompt(
         "partially undressed, garter. Preserve identity, body, pose, expression, camera, lighting, "
         "and background tags. Preserve requested cross-section, cutaway, x-ray, internal-anatomy, "
         "and anatomical-visibility descriptors. "
+        "If the scene describes looking out a window, reading, cooking, or any everyday moment, "
+        "strongly prefer natural poses where the character is NOT facing the camera — use looking away, "
+        "gazing out, side view, back view, looking down, profile, turned head. Add 'not looking at viewer' "
+        "to negative when appropriate. "
         "Do not add extra composition-control tags unless the user requests them. "
         "If local prompt knowledge is provided, follow it exactly."
     )
