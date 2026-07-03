@@ -251,6 +251,7 @@ class CloudWorker:
             stage = "COMPLETING_CLOUD_JOB"
             detail = f"Sending {filename} to cloud complete endpoint."
             await self._complete_cloud_job(client, job_id, local_job_id, comfy_prompt_id, local_result, image_bytes, filename)
+            await self._send_qq_subscription(job, local_result, filename)
         except CloudCompletionDeliveryError as exc:
             print(
                 f"[cloud-worker] completion delivery pending for job {job_id}; "
@@ -396,6 +397,39 @@ class CloudWorker:
                 attempt,
                 f"HTTP {response.status_code}",
             )
+
+    async def _send_qq_subscription(
+        self,
+        job: dict[str, Any],
+        local_result: dict[str, Any],
+        filename: str,
+    ) -> None:
+        qq_number = str(job.get("qqNumber") or "").strip()
+        if not qq_number or not self.settings.qq_bot_send_image_url:
+            return
+        image_path = self._resolve_output_path(filename)
+        if not image_path.exists():
+            print(f"[cloud-worker] QQ delivery skipped; local image missing: {image_path}")
+            return
+        headers = {"User-Agent": USER_AGENT}
+        if self.settings.qq_bot_token:
+            headers["Authorization"] = f"Bearer {self.settings.qq_bot_token}"
+        payload = {
+            "qq": qq_number,
+            "userId": job.get("userId"),
+            "jobId": job.get("id"),
+            "imagePath": str(image_path),
+            "localRelativePath": filename.replace("\\", "/"),
+            "message": "AI drawing completed.",
+            "promptCn": job.get("promptCn") or "",
+            "seed": local_result.get("seed"),
+        }
+        try:
+            async with httpx.AsyncClient(timeout=30, headers=headers) as bot:
+                response = await bot.post(self.settings.qq_bot_send_image_url, json=payload)
+                self._raise_for_status(response, "send QQ subscription image")
+        except Exception as exc:
+            print(f"[cloud-worker] QQ delivery failed for job {job.get('id')} to {qq_number}: {exc}")
 
     async def _wait_before_complete_retry(self, job_id: int, attempt: int, reason: str) -> None:
         delay = COMPLETE_RETRY_BASE_SECONDS * (2 ** (attempt - 1))
