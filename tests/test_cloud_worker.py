@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import unittest
 import tempfile
 from pathlib import Path
@@ -107,6 +108,39 @@ class CloudWorkerCompletionTest(unittest.IsolatedAsyncioTestCase):
 
             self.assertFalse(image.exists())
             self.assertEqual(requested_paths, ["/ai-worker/local-image-deletions/9/complete"])
+
+    async def test_queue_notice_posts_message_to_qq_bot(self) -> None:
+        worker = CloudWorker(
+            Settings(
+                CLOUD_API_URL="https://cloud.example.test",
+                AI_WORKER_TOKEN="token",
+                AI_WORKER_ID="worker-1",
+                QQ_BOT_SEND_MESSAGE_URL="https://bot.example.test/send-message",
+                QQ_BOT_TOKEN="bot-token",
+            )
+        )
+        requests: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(200, request=request, json={"ok": True})
+
+        bot_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        with patch("app.cloud_worker.httpx.AsyncClient", return_value=bot_client) as async_client_factory:
+            await worker._send_qq_queue_notice(
+                {"id": 82, "userId": 7, "qqNumber": "123456", "promptCn": "画一张图"},
+                "local-82",
+            )
+
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(requests[0].url.path, "/send-message")
+        self.assertEqual(async_client_factory.call_args.kwargs["headers"]["Authorization"], "Bearer bot-token")
+        payload = json.loads(requests[0].content.decode("utf-8"))
+        self.assertEqual(payload["type"], "message")
+        self.assertEqual(payload["qq"], "123456")
+        self.assertEqual(payload["jobId"], 82)
+        self.assertEqual(payload["localJobId"], "local-82")
+        self.assertIn("已进入本机队列", payload["message"])
 
     def test_output_path_rejects_directory_traversal(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "escapes OUTPUT_DIR"):

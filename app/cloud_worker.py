@@ -235,6 +235,7 @@ class CloudWorker:
                 },
             )
             self._raise_for_status(running_response, "mark cloud job running")
+            await self._send_qq_queue_notice(job, local_job_id)
             try:
                 local_result = await self._wait_local_job(local_job_id)
             except LocalGenerationError as exc:
@@ -411,10 +412,8 @@ class CloudWorker:
         if not image_path.exists():
             print(f"[cloud-worker] QQ delivery skipped; local image missing: {image_path}")
             return
-        headers = {"User-Agent": USER_AGENT}
-        if self.settings.qq_bot_token:
-            headers["Authorization"] = f"Bearer {self.settings.qq_bot_token}"
         payload = {
+            "type": "image",
             "qq": qq_number,
             "userId": job.get("userId"),
             "jobId": job.get("id"),
@@ -425,11 +424,38 @@ class CloudWorker:
             "seed": local_result.get("seed"),
         }
         try:
-            async with httpx.AsyncClient(timeout=30, headers=headers) as bot:
+            async with httpx.AsyncClient(timeout=30, headers=self._qq_bot_headers()) as bot:
                 response = await bot.post(self.settings.qq_bot_send_image_url, json=payload)
                 self._raise_for_status(response, "send QQ subscription image")
         except Exception as exc:
             print(f"[cloud-worker] QQ delivery failed for job {job.get('id')} to {qq_number}: {exc}")
+
+    async def _send_qq_queue_notice(self, job: dict[str, Any], local_job_id: str) -> None:
+        qq_number = str(job.get("qqNumber") or "").strip()
+        bot_url = self.settings.qq_bot_send_message_url or self.settings.qq_bot_send_image_url
+        if not qq_number or not bot_url:
+            return
+        payload = {
+            "type": "message",
+            "qq": qq_number,
+            "userId": job.get("userId"),
+            "jobId": job.get("id"),
+            "localJobId": local_job_id,
+            "message": "AI 绘图已进入本机队列，正在排队生成。",
+            "promptCn": job.get("promptCn") or "",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=30, headers=self._qq_bot_headers()) as bot:
+                response = await bot.post(bot_url, json=payload)
+                self._raise_for_status(response, "send QQ queue notice")
+        except Exception as exc:
+            print(f"[cloud-worker] QQ queue notice failed for job {job.get('id')} to {qq_number}: {exc}")
+
+    def _qq_bot_headers(self) -> dict[str, str]:
+        headers = {"User-Agent": USER_AGENT}
+        if self.settings.qq_bot_token:
+            headers["Authorization"] = f"Bearer {self.settings.qq_bot_token}"
+        return headers
 
     async def _wait_before_complete_retry(self, job_id: int, attempt: int, reason: str) -> None:
         delay = COMPLETE_RETRY_BASE_SECONDS * (2 ** (attempt - 1))

@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     ai_worker_poll_seconds: float = Field(5, alias="AI_WORKER_POLL_SECONDS")
     ai_worker_capability_report_seconds: float = Field(60, alias="AI_WORKER_CAPABILITY_REPORT_SECONDS")
     ai_worker_cleanup_outputs: bool = Field(False, alias="AI_WORKER_CLEANUP_OUTPUTS")
+    qq_bot_send_message_url: str = Field("", alias="QQ_BOT_SEND_MESSAGE_URL")
     qq_bot_send_image_url: str = Field("", alias="QQ_BOT_SEND_IMAGE_URL")
     qq_bot_token: str = Field("", alias="QQ_BOT_TOKEN")
     dual_character_strategy: str = Field("auto", alias="DUAL_CHARACTER_STRATEGY")
