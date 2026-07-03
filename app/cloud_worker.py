@@ -419,7 +419,7 @@ class CloudWorker:
             "jobId": job.get("id"),
             "imagePath": str(image_path),
             "localRelativePath": filename.replace("\\", "/"),
-            "message": "AI drawing completed.",
+            "message": "AI 绘图已完成。",
             "promptCn": job.get("promptCn") or "",
             "seed": local_result.get("seed"),
         }
