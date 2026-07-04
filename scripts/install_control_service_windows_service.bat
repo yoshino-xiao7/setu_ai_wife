@@ -38,21 +38,25 @@ if not exist "%ROOT%\.env" (
   exit /b 1
 )
 
+sc query "%SERVICE_NAME%" >nul 2>&1
+if not errorlevel 1 (
+  echo [INFO] Existing service found. Reinstalling...
+  sc stop "%SERVICE_NAME%" >nul 2>&1
+  timeout /t 5 /nobreak >nul
+  sc delete "%SERVICE_NAME%" >nul
+  timeout /t 5 /nobreak >nul
+)
+
+if exist "%SERVICE_EXE%" (
+  del /f /q "%SERVICE_EXE%" >nul 2>&1
+)
+
 if not exist "%SERVICE_DIR%" mkdir "%SERVICE_DIR%"
 echo [INFO] Compiling Windows service wrapper...
 "%CSC%" /nologo /target:exe /out:"%SERVICE_EXE%" /reference:System.ServiceProcess.dll "%SERVICE_SRC%"
 if errorlevel 1 (
   echo [ERROR] Failed to compile Windows service wrapper.
   exit /b 1
-)
-
-sc query "%SERVICE_NAME%" >nul 2>&1
-if not errorlevel 1 (
-  echo [INFO] Existing service found. Reinstalling...
-  sc stop "%SERVICE_NAME%" >nul 2>&1
-  timeout /t 3 /nobreak >nul
-  sc delete "%SERVICE_NAME%" >nul
-  timeout /t 3 /nobreak >nul
 )
 
 sc create "%SERVICE_NAME%" binPath= "\"%SERVICE_EXE%\" \"%ROOT%\"" DisplayName= "Xueliang AI Control Service" start= auto obj= LocalSystem type= own
