@@ -109,7 +109,6 @@ class CloudWorker:
 
     async def run_forever(self) -> None:
         async with httpx.AsyncClient(timeout=60, headers=self.headers) as client:
-            await self._send_qq_startup_notice()
             while True:
                 try:
                     await self._report_periodic(client)
