@@ -43,4 +43,7 @@ class XueliangAiControlService(win32serviceutil.ServiceFramework):
 
 
 if __name__ == "__main__":
-    win32serviceutil.HandleCommandLine(XueliangAiControlService)
+    win32serviceutil.HandleCommandLine(
+        XueliangAiControlService,
+        serviceClassString="app.windows_control_service.XueliangAiControlService",
+    )
