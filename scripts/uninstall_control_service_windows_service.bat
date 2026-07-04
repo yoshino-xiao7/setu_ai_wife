@@ -5,6 +5,7 @@ set "SERVICE_NAME=XueliangAiControlService"
 set "ROOT=%~dp0.."
 for %%I in ("%ROOT%") do set "ROOT=%%~fI"
 set "PYTHON=%ROOT%\.venv\Scripts\python.exe"
+set "PROJECT_PTH=%ROOT%\.venv\Lib\site-packages\xueliang_ai_worker.pth"
 
 net session >nul 2>&1
 if errorlevel 1 (
@@ -31,5 +32,6 @@ if errorlevel 1 (
   exit /b 1
 )
 
+if exist "%PROJECT_PTH%" del "%PROJECT_PTH%" >nul 2>&1
 echo [OK] Removed Windows service: %SERVICE_NAME%
 exit /b 0

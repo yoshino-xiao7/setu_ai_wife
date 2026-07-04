@@ -5,6 +5,8 @@ set "SERVICE_NAME=XueliangAiControlService"
 set "ROOT=%~dp0.."
 for %%I in ("%ROOT%") do set "ROOT=%%~fI"
 set "PYTHON=%ROOT%\.venv\Scripts\python.exe"
+set "SITE_PACKAGES=%ROOT%\.venv\Lib\site-packages"
+set "PROJECT_PTH=%SITE_PACKAGES%\xueliang_ai_worker.pth"
 
 net session >nul 2>&1
 if errorlevel 1 (
@@ -18,6 +20,13 @@ if not exist "%PYTHON%" (
   echo [ERROR] Missing Python virtual environment: %PYTHON%
   exit /b 1
 )
+
+if not exist "%SITE_PACKAGES%" (
+  echo [ERROR] Missing Python site-packages: %SITE_PACKAGES%
+  exit /b 1
+)
+
+> "%PROJECT_PTH%" echo %ROOT%
 
 if not exist "%ROOT%\.env" (
   echo [ERROR] Missing .env. Configure cloud/control environment before installing the service.
@@ -48,6 +57,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\%SERVICE_NAME%\PythonPath" /ve /t REG_SZ /d "%ROOT%" /f >nul
 sc failure "%SERVICE_NAME%" reset= 86400 actions= restart/60000/restart/60000/restart/60000 >nul
 sc failureflag "%SERVICE_NAME%" 1 >nul
 sc description "%SERVICE_NAME%" "Keeps Xueliang AI control endpoint 127.0.0.1:7878 alive and polling cloud control commands." >nul
