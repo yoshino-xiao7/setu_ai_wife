@@ -131,6 +131,17 @@
       "recommended_checkpoint": "animagine-xl-4.0-opt.safetensors",
       "preview_image": "https://huggingface.co/p1atdev/animagine-xl-4.0-opt-pvc-style-lora/resolve/main/images/image.jpg",
       "notes": "Animagine XL 4.0 opt 专用 PVC/手办质感风格 LoRA，Apache-2.0。适合二次元角色、玩具质感、手办展示；建议 0.6-0.9。"
+    },
+    {
+      "name": "NekomiyaManaIL-09.safetensors",
+      "display_name": "猫宫又奈",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "trigger_words": "nekomiya mana, zenless zone zero",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/6255e175-3865-43fe-90cb-81f8dbea7533/anim=false,width=450,optimized=true/00003-2914035455.jpeg",
+      "notes": "绝区零角色猫宫又奈 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；单角色推荐强度 0.75-0.85，双角色建议降到 0.6-0.65。"
     }
   ]
 }

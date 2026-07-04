@@ -97,6 +97,20 @@
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/citlali_(genshin_impact).jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "notes": "原神角色茜特菈莉。选择该预设会自动使用 c_citlali (genshin impact)_nbe11_xl.safetensors，并注入茜特菈莉的常用角色 tags。"
+    },
+    {
+      "id": "nekomiya_mana",
+      "name": "猫宫又奈",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "NekomiyaManaIL-09.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "nekomiya mana, zenless zone zero",
+      "default_positive": "1girl, cat girl, dark-skinned female, cat ears, animal ear fluff, cat tail, two tails, red eyes, black hair, long hair, red hairband, ponytail, small breasts, forehead tattoo, black thighhighs, detached sleeves, bare shoulders, forehead mark, neck bell",
+      "style_tags": "anime style, detailed eyes, high quality",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/nekomiya_mana.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "绝区零角色猫宫又奈。选择该预设会自动使用 NekomiyaManaIL-09.safetensors，并注入猫宫又奈的常用角色 tags。"
     }
   ]
 }
