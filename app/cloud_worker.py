@@ -474,6 +474,29 @@ class CloudWorker:
         except Exception as exc:
             print(f"[cloud-worker] QQ worker startup notice failed: {exc}")
 
+    async def _send_qq_shutdown_notice(self) -> None:
+        bot_url = (
+            self.settings.qq_bot_shutdown_notice_url
+            or self.settings.qq_bot_startup_notice_url
+            or self.settings.qq_bot_send_message_url
+            or self.settings.qq_bot_send_image_url
+        )
+        if not bot_url:
+            return
+        payload = {
+            "type": "worker_shutdown",
+            "workerId": self.settings.ai_worker_id,
+            "workerName": self.settings.ai_worker_name,
+            "workerVersion": self.settings.ai_worker_version,
+            "message": "AI 绘图 Worker 已停止。",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=30, headers=self._qq_bot_headers()) as bot:
+                response = await bot.post(bot_url, json=payload)
+                self._raise_for_status(response, "send QQ worker shutdown notice")
+        except Exception as exc:
+            print(f"[cloud-worker] QQ worker shutdown notice failed: {exc}")
+
     def _qq_bot_headers(self) -> dict[str, str]:
         headers = {"User-Agent": USER_AGENT}
         if self.settings.qq_bot_token:
@@ -632,7 +655,10 @@ class CloudWorker:
 
 async def main() -> None:
     worker = CloudWorker(get_settings())
-    await worker.run_forever()
+    try:
+        await worker.run_forever()
+    finally:
+        await worker._send_qq_shutdown_notice()
 
 
 if __name__ == "__main__":

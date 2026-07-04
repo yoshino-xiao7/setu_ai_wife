@@ -99,6 +99,54 @@ function Test-WorkerAlreadyRunning {
     return $null -ne $process
 }
 
+function Send-QqBotLifecycleNotice {
+    param([string]$EventType)
+
+    $envValues = Read-DotEnv $EnvPath
+    if ($EventType -eq "worker_shutdown") {
+        $botUrl = $envValues["QQ_BOT_SHUTDOWN_NOTICE_URL"]
+    }
+    else {
+        $botUrl = $envValues["QQ_BOT_STARTUP_NOTICE_URL"]
+    }
+    if ([string]::IsNullOrWhiteSpace($botUrl)) {
+        $botUrl = $envValues["QQ_BOT_SEND_MESSAGE_URL"]
+    }
+    if ([string]::IsNullOrWhiteSpace($botUrl)) {
+        $botUrl = $envValues["QQ_BOT_SEND_IMAGE_URL"]
+    }
+    if ([string]::IsNullOrWhiteSpace($botUrl)) {
+        return
+    }
+
+    $headers = @{ "User-Agent" = "Xueliang-AI-Worker/0.1" }
+    $botToken = $envValues["QQ_BOT_TOKEN"]
+    if (![string]::IsNullOrWhiteSpace($botToken)) {
+        $headers["Authorization"] = "Bearer $botToken"
+    }
+
+    $message = if ($EventType -eq "worker_shutdown") {
+        "AI drawing worker stopped."
+    }
+    else {
+        "AI drawing worker started and is waiting for jobs."
+    }
+    $payload = @{
+        type = $EventType
+        workerId = $envValues["AI_WORKER_ID"]
+        workerName = $envValues["AI_WORKER_NAME"]
+        workerVersion = $envValues["AI_WORKER_VERSION"]
+        message = $message
+    } | ConvertTo-Json -Compress
+
+    try {
+        Invoke-RestMethod -Uri $botUrl -Method Post -Headers $headers -Body $payload -ContentType "application/json" -TimeoutSec 5 | Out-Null
+    }
+    catch {
+        Write-Host "[WARN] Failed to send QQ bot lifecycle notice: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+
 function Stop-LocalAiProcesses {
     $patterns = @(
         "app\.cloud_worker",
@@ -167,6 +215,7 @@ Write-Host "Starting local AI drawing stack for cloud users..." -ForegroundColor
 
 if ($Restart) {
     Write-Host "Restart requested. Stopping local service and cloud worker processes..." -ForegroundColor Yellow
+    Send-QqBotLifecycleNotice "worker_shutdown"
     Stop-LocalAiProcesses
     Start-Sleep -Seconds 2
 }

@@ -175,6 +175,39 @@ class CloudWorkerCompletionTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["workerVersion"], "0.2.0")
         self.assertIn("Worker", payload["message"])
 
+    async def test_shutdown_notice_posts_worker_message_to_qq_bot(self) -> None:
+        worker = CloudWorker(
+            Settings(
+                CLOUD_API_URL="https://cloud.example.test",
+                AI_WORKER_TOKEN="token",
+                AI_WORKER_ID="worker-1",
+                AI_WORKER_NAME="Local Worker",
+                AI_WORKER_VERSION="0.2.0",
+                QQ_BOT_SHUTDOWN_NOTICE_URL="https://bot.example.test/send-message",
+                QQ_BOT_TOKEN="bot-token",
+            )
+        )
+        requests: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(200, request=request, json={"ok": True})
+
+        bot_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        with patch("app.cloud_worker.httpx.AsyncClient", return_value=bot_client) as async_client_factory:
+            await worker._send_qq_shutdown_notice()
+
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(requests[0].url.path, "/send-message")
+        self.assertEqual(async_client_factory.call_args.kwargs["headers"]["Authorization"], "Bearer bot-token")
+        payload = json.loads(requests[0].content.decode("utf-8"))
+        self.assertEqual(payload["type"], "worker_shutdown")
+        self.assertNotIn("qq", payload)
+        self.assertEqual(payload["workerId"], "worker-1")
+        self.assertEqual(payload["workerName"], "Local Worker")
+        self.assertEqual(payload["workerVersion"], "0.2.0")
+        self.assertIn("Worker", payload["message"])
+
     def test_output_path_rejects_directory_traversal(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "escapes OUTPUT_DIR"):
             self.worker._resolve_output_path("../outside.png")
