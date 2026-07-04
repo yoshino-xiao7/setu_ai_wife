@@ -126,10 +126,10 @@ function Send-QqBotLifecycleNotice {
     }
 
     $message = if ($EventType -eq "worker_shutdown") {
-        "AI drawing worker stopped."
+        '"AI \u7ed8\u56fe Worker \u5df2\u505c\u6b62\u3002"' | ConvertFrom-Json
     }
     else {
-        "AI drawing worker started and is waiting for jobs."
+        '"AI \u7ed8\u56fe Worker \u5df2\u542f\u52a8\uff0c\u6b63\u5728\u7b49\u5f85\u4efb\u52a1\u3002"' | ConvertFrom-Json
     }
     $payload = @{
         type = $EventType
