@@ -131,15 +131,50 @@ async def _listening_pids(*ports: int) -> set[int]:
     return pids
 
 
+def _pid_from_file(name: str) -> int | None:
+    path = _root_dir() / "logs" / name
+    try:
+        text = path.read_text(encoding="ascii").strip()
+    except OSError:
+        return None
+    if not text.isdigit():
+        return None
+    return int(text)
+
+
 async def _stop_local_ai_stack() -> list[int]:
     protected = await _listening_pids(get_settings().control_port)
     targets = await _listening_pids(7861, 8188)
+    for pid_file in ("cloud-worker.pid", "local-service.pid"):
+        pid = _pid_from_file(pid_file)
+        if pid is not None:
+            targets.add(pid)
     stopped: list[int] = []
     for pid in sorted(targets - protected):
         result = await _run_capture(["taskkill", "/PID", str(pid), "/F", "/T"])
         if result.returncode == 0:
             stopped.append(pid)
     return stopped
+
+
+async def _report_worker_status(settings: Settings, status: str) -> None:
+    if not settings.cloud_api_url or not settings.ai_worker_token:
+        return
+    payload = {
+        "workerId": settings.ai_worker_id,
+        "nodeName": settings.ai_worker_name,
+        "version": settings.ai_worker_version,
+        "status": status,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10, headers=_cloud_headers(settings)) as client:
+            response = await client.post(
+                f"{settings.cloud_api_url.rstrip('/')}/ai-worker/heartbeat",
+                json=payload,
+            )
+            response.raise_for_status()
+    except Exception as exc:
+        print(f"[ai-control] failed to report worker {status}: {exc}")
 
 
 async def _send_qq_lifecycle_notice(settings: Settings, event_type: str) -> None:
@@ -181,18 +216,21 @@ async def _execute_action(action: str, settings: Settings) -> dict[str, Any]:
     if normalized == "START":
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck"))
         status = await _wait_stack_status(settings)
+        await _report_worker_status(settings, "ONLINE")
         await _send_qq_lifecycle_notice(settings, "worker_startup")
         status.update({"accepted": True, "action": "START", "pid": pid, "message": "AI \u7ed8\u56fe\u542f\u52a8\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
         return status
     if normalized == "RESTART":
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck", "-Restart"))
         status = await _wait_stack_status(settings)
+        await _report_worker_status(settings, "ONLINE")
         await _send_qq_lifecycle_notice(settings, "worker_startup")
         status.update({"accepted": True, "action": "RESTART", "pid": pid, "message": "AI \u7ed8\u56fe\u91cd\u542f\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
         return status
     if normalized == "STOP":
         stopped = await _stop_local_ai_stack()
         status = await _stack_status(settings)
+        await _report_worker_status(settings, "OFFLINE")
         await _send_qq_lifecycle_notice(settings, "worker_shutdown")
         status.update({
             "accepted": True,
