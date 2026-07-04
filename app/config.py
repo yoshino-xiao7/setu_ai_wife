@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     control_host: str = Field("127.0.0.1", alias="AI_CONTROL_HOST")
     control_port: int = Field(7878, alias="AI_CONTROL_PORT")
     control_token: str = Field("", alias="AI_CONTROL_TOKEN")
+    control_poll_seconds: float = Field(5, alias="AI_CONTROL_POLL_SECONDS")
     cloud_api_url: str = Field("", alias="CLOUD_API_URL")
     ai_worker_token: str = Field("", alias="AI_WORKER_TOKEN")
     ai_worker_id: str = Field("local-comfyui-worker", alias="AI_WORKER_ID")
