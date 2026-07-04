@@ -151,7 +151,6 @@ class CloudWorkerCompletionTest(unittest.IsolatedAsyncioTestCase):
                 AI_WORKER_NAME="Local Worker",
                 AI_WORKER_VERSION="0.2.0",
                 QQ_BOT_STARTUP_NOTICE_URL="https://bot.example.test/send-message",
-                QQ_BOT_STARTUP_QQ="123456",
                 QQ_BOT_TOKEN="bot-token",
             )
         )
@@ -170,7 +169,7 @@ class CloudWorkerCompletionTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(async_client_factory.call_args.kwargs["headers"]["Authorization"], "Bearer bot-token")
         payload = json.loads(requests[0].content.decode("utf-8"))
         self.assertEqual(payload["type"], "worker_startup")
-        self.assertEqual(payload["qq"], "123456")
+        self.assertNotIn("qq", payload)
         self.assertEqual(payload["workerId"], "worker-1")
         self.assertEqual(payload["workerName"], "Local Worker")
         self.assertEqual(payload["workerVersion"], "0.2.0")

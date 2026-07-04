@@ -467,9 +467,6 @@ class CloudWorker:
             "workerVersion": self.settings.ai_worker_version,
             "message": "AI 绘图 Worker 已启动，正在等待任务。",
         }
-        startup_qq = self.settings.qq_bot_startup_qq.strip()
-        if startup_qq:
-            payload["qq"] = startup_qq
         try:
             async with httpx.AsyncClient(timeout=30, headers=self._qq_bot_headers()) as bot:
                 response = await bot.post(bot_url, json=payload)
