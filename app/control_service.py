@@ -112,6 +112,15 @@ async def _wait_stack_status(settings: Settings, timeout_seconds: int = 150) -> 
     return status
 
 
+async def _wait_stack_stopped(settings: Settings, timeout_seconds: int = 45) -> dict[str, Any]:
+    deadline = asyncio.get_running_loop().time() + timeout_seconds
+    status = await _stack_status(settings)
+    while status["running"] and asyncio.get_running_loop().time() < deadline:
+        await asyncio.sleep(3)
+        status = await _stack_status(settings)
+    return status
+
+
 async def _listening_pids(*ports: int) -> set[int]:
     completed = await _run_capture(["netstat", "-ano"])
     if completed.returncode != 0:
@@ -187,9 +196,9 @@ async def _send_qq_lifecycle_notice(settings: Settings, event_type: str) -> None
         return
 
     message = (
-        "AI 绘图 Worker 已停止。"
+        "\u0041\u0049 \u7ed8\u56fe\u670d\u52a1\u5df2\u505c\u6b62\u6210\u529f\u3002"
         if event_type == "worker_shutdown"
-        else "AI 绘图 Worker 已启动，正在等待任务。"
+        else "\u0041\u0049 \u7ed8\u56fe\u670d\u52a1\u5df2\u542f\u52a8\u6210\u529f\uff0c\u6b63\u5728\u7b49\u5f85\u4efb\u52a1\u3002"
     )
     payload = {
         "type": event_type,
@@ -216,6 +225,8 @@ async def _execute_action(action: str, settings: Settings) -> dict[str, Any]:
     if normalized == "START":
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck"))
         status = await _wait_stack_status(settings)
+        if not status["running"]:
+            raise RuntimeError("AI drawing stack did not start successfully.")
         await _report_worker_status(settings, "ONLINE")
         await _send_qq_lifecycle_notice(settings, "worker_startup")
         status.update({"accepted": True, "action": "START", "pid": pid, "message": "AI \u7ed8\u56fe\u542f\u52a8\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
@@ -223,13 +234,17 @@ async def _execute_action(action: str, settings: Settings) -> dict[str, Any]:
     if normalized == "RESTART":
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck", "-Restart"))
         status = await _wait_stack_status(settings)
+        if not status["running"]:
+            raise RuntimeError("AI drawing stack did not restart successfully.")
         await _report_worker_status(settings, "ONLINE")
         await _send_qq_lifecycle_notice(settings, "worker_startup")
         status.update({"accepted": True, "action": "RESTART", "pid": pid, "message": "AI \u7ed8\u56fe\u91cd\u542f\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
         return status
     if normalized == "STOP":
         stopped = await _stop_local_ai_stack()
-        status = await _stack_status(settings)
+        status = await _wait_stack_stopped(settings)
+        if status["running"]:
+            raise RuntimeError("AI drawing stack did not stop successfully.")
         await _report_worker_status(settings, "OFFLINE")
         await _send_qq_lifecycle_notice(settings, "worker_shutdown")
         status.update({
