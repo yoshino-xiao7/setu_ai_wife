@@ -75,19 +75,86 @@ function Stop-LocalAiProcesses {
     )
 
     $currentPid = $PID
-    $processes = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
-        Where-Object {
-            $commandLine = $_.CommandLine
-            $processId = $_.ProcessId
-            $processId -ne $currentPid -and
-                $commandLine -and
-                ($patterns | Where-Object { $commandLine -match $_ } | Select-Object -First 1)
+    $processes = @()
+    try {
+        $processes = Get-CimInstance Win32_Process -ErrorAction Stop |
+            Where-Object {
+                $commandLine = $_.CommandLine
+                $processId = $_.ProcessId
+                $processId -ne $currentPid -and
+                    $commandLine -and
+                    ($patterns | Where-Object { $commandLine -match $_ } | Select-Object -First 1)
+            }
+    }
+    catch {
+        Write-Host "[WARN] Cannot read process command lines: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+
+    if (-not $processes -or $processes.Count -eq 0) {
+        $controlPids = @(Get-ListeningPids -Port (Get-ControlPort))
+        if ($controlPids.Count -gt 0) {
+            Write-Host "[KEEP] AI control service pid(s): $($controlPids -join ',')" -ForegroundColor Cyan
         }
+        $localServicePids = @(Get-ListeningPids -Port "7861")
+        $comfyPids = @(Get-ListeningPids -Port "8188")
+        $targetPids = @($localServicePids + $comfyPids | Select-Object -Unique)
+        $comfyPython = (Join-Path $Root "tools\ComfyUI_windows_portable\python_embeded\python.exe").ToLowerInvariant()
+        $processes = Get-Process -ErrorAction SilentlyContinue |
+            Where-Object {
+                $path = ""
+                try {
+                    if ($_.Path) {
+                        $path = $_.Path.ToLowerInvariant()
+                    }
+                }
+                catch {
+                    $path = ""
+                }
+                $_.Id -ne $currentPid -and
+                    ($controlPids -notcontains [int]$_.Id) -and
+                    (($targetPids -contains [int]$_.Id) -or $path -eq $comfyPython)
+            } |
+            ForEach-Object {
+                [pscustomobject]@{
+                    ProcessId = $_.Id
+                    Name = $_.ProcessName
+                }
+            }
+    }
 
     foreach ($process in $processes) {
         Write-Host "[STOP] pid=$($process.ProcessId) $($process.Name)" -ForegroundColor Yellow
         Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
     }
+}
+
+function Get-ControlPort {
+    $envValues = Read-DotEnv $EnvPath
+    $port = $envValues["AI_CONTROL_PORT"]
+    if ([string]::IsNullOrWhiteSpace($port)) {
+        $port = "7878"
+    }
+    return $port
+}
+
+function Get-ListeningPids {
+    param([string]$Port)
+
+    $detected = @()
+    try {
+        $escapedPort = [regex]::Escape($Port)
+        netstat -ano |
+            Select-String -Pattern "127\.0\.0\.1:$escapedPort\s+.*LISTENING\s+(\d+)" |
+            ForEach-Object {
+                if ($_.Matches[0].Groups[1].Value) {
+                    $detected += [int]$_.Matches[0].Groups[1].Value
+                }
+            }
+    }
+    catch {
+        Write-Host "[WARN] Cannot detect AI control service pid: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+    return $detected
 }
 
 Send-QqBotShutdownNotice

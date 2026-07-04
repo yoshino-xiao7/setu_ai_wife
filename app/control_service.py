@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -102,27 +103,56 @@ async def _stack_status(settings: Settings) -> dict[str, Any]:
     }
 
 
+async def _listening_pids(*ports: int) -> set[int]:
+    completed = await _run_capture(["netstat", "-ano"])
+    if completed.returncode != 0:
+        return set()
+    wanted = {str(port) for port in ports}
+    pids: set[int] = set()
+    for line in completed.stdout.splitlines():
+        if "LISTENING" not in line:
+            continue
+        parts = re.split(r"\s+", line.strip())
+        if len(parts) < 5:
+            continue
+        local_address = parts[1]
+        pid = parts[-1]
+        if any(local_address.endswith(f":{port}") for port in wanted) and pid.isdigit():
+            pids.add(int(pid))
+    return pids
+
+
+async def _stop_local_ai_stack() -> list[int]:
+    protected = await _listening_pids(get_settings().control_port)
+    targets = await _listening_pids(7861, 8188)
+    stopped: list[int] = []
+    for pid in sorted(targets - protected):
+        result = await _run_capture(["taskkill", "/PID", str(pid), "/F", "/T"])
+        if result.returncode == 0:
+            stopped.append(pid)
+    return stopped
+
+
 async def _execute_action(action: str, settings: Settings) -> dict[str, Any]:
     normalized = action.upper()
     if normalized == "START":
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck"))
         status = await _stack_status(settings)
-        status.update({"accepted": True, "action": "START", "pid": pid, "message": "AI 绘图启动命令已执行。"})
+        status.update({"accepted": True, "action": "START", "pid": pid, "message": "AI \u7ed8\u56fe\u542f\u52a8\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
         return status
     if normalized == "RESTART":
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck", "-Restart"))
         status = await _stack_status(settings)
-        status.update({"accepted": True, "action": "RESTART", "pid": pid, "message": "AI 绘图重启命令已执行。"})
+        status.update({"accepted": True, "action": "RESTART", "pid": pid, "message": "AI \u7ed8\u56fe\u91cd\u542f\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
         return status
     if normalized == "STOP":
-        result = await _run_capture(_powershell_command(_script_path("stop_cloud_all.ps1")))
-        if result.returncode != 0:
-            raise RuntimeError((result.stderr or result.stdout or "AI 绘图停止命令执行失败。").strip())
+        stopped = await _stop_local_ai_stack()
         status = await _stack_status(settings)
         status.update({
             "accepted": True,
             "action": "STOP",
-            "message": result.stdout.strip() or "AI 绘图停止命令已执行。",
+            "stoppedPids": stopped,
+            "message": "AI \u7ed8\u56fe\u505c\u6b62\u547d\u4ee4\u5df2\u6267\u884c\u3002",
         })
         return status
     raise RuntimeError(f"Unsupported AI control action: {action}")

@@ -420,7 +420,7 @@ class CloudWorker:
             "jobId": job.get("id"),
             "imagePath": str(image_path),
             "localRelativePath": filename.replace("\\", "/"),
-            "message": "AI 绘图已完成。",
+            "message": "AI \u7ed8\u56fe\u5df2\u5b8c\u6210\u3002",
             "promptCn": job.get("promptCn") or "",
             "seed": local_result.get("seed"),
         }
@@ -442,7 +442,7 @@ class CloudWorker:
             "userId": job.get("userId"),
             "jobId": job.get("id"),
             "localJobId": local_job_id,
-            "message": "AI 绘图已进入本机队列，正在排队生成。",
+            "message": "AI \u7ed8\u56fe\u5df2\u8fdb\u5165\u672c\u673a\u961f\u5217\uff0c\u6b63\u5728\u6392\u961f\u751f\u6210\u3002",
             "promptCn": job.get("promptCn") or "",
         }
         try:
@@ -465,7 +465,7 @@ class CloudWorker:
             "workerId": self.settings.ai_worker_id,
             "workerName": self.settings.ai_worker_name,
             "workerVersion": self.settings.ai_worker_version,
-            "message": "AI 绘图 Worker 已启动，正在等待任务。",
+            "message": "AI \u7ed8\u56fe Worker \u5df2\u542f\u52a8\uff0c\u6b63\u5728\u7b49\u5f85\u4efb\u52a1\u3002",
         }
         try:
             async with httpx.AsyncClient(timeout=30, headers=self._qq_bot_headers()) as bot:
@@ -488,7 +488,7 @@ class CloudWorker:
             "workerId": self.settings.ai_worker_id,
             "workerName": self.settings.ai_worker_name,
             "workerVersion": self.settings.ai_worker_version,
-            "message": "AI 绘图 Worker 已停止。",
+            "message": "AI \u7ed8\u56fe Worker \u5df2\u505c\u6b62\u3002",
         }
         try:
             async with httpx.AsyncClient(timeout=30, headers=self._qq_bot_headers()) as bot:
