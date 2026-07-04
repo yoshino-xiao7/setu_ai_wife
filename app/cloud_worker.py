@@ -109,6 +109,7 @@ class CloudWorker:
 
     async def run_forever(self) -> None:
         async with httpx.AsyncClient(timeout=60, headers=self.headers) as client:
+            await self._send_qq_startup_notice()
             while True:
                 try:
                     await self._report_periodic(client)
@@ -450,6 +451,31 @@ class CloudWorker:
                 self._raise_for_status(response, "send QQ queue notice")
         except Exception as exc:
             print(f"[cloud-worker] QQ queue notice failed for job {job.get('id')} to {qq_number}: {exc}")
+
+    async def _send_qq_startup_notice(self) -> None:
+        bot_url = (
+            self.settings.qq_bot_startup_notice_url
+            or self.settings.qq_bot_send_message_url
+            or self.settings.qq_bot_send_image_url
+        )
+        if not bot_url:
+            return
+        payload = {
+            "type": "worker_startup",
+            "workerId": self.settings.ai_worker_id,
+            "workerName": self.settings.ai_worker_name,
+            "workerVersion": self.settings.ai_worker_version,
+            "message": "AI 绘图 Worker 已启动，正在等待任务。",
+        }
+        startup_qq = self.settings.qq_bot_startup_qq.strip()
+        if startup_qq:
+            payload["qq"] = startup_qq
+        try:
+            async with httpx.AsyncClient(timeout=30, headers=self._qq_bot_headers()) as bot:
+                response = await bot.post(bot_url, json=payload)
+                self._raise_for_status(response, "send QQ worker startup notice")
+        except Exception as exc:
+            print(f"[cloud-worker] QQ worker startup notice failed: {exc}")
 
     def _qq_bot_headers(self) -> dict[str, str]:
         headers = {"User-Agent": USER_AGENT}
