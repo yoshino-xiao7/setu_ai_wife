@@ -142,21 +142,58 @@ async def _stop_local_ai_stack() -> list[int]:
     return stopped
 
 
+async def _send_qq_lifecycle_notice(settings: Settings, event_type: str) -> None:
+    if event_type == "worker_shutdown":
+        bot_url = settings.qq_bot_shutdown_notice_url
+    else:
+        bot_url = settings.qq_bot_startup_notice_url
+    bot_url = bot_url or settings.qq_bot_send_message_url or settings.qq_bot_send_image_url
+    if not bot_url:
+        return
+
+    message = (
+        "AI 绘图 Worker 已停止。"
+        if event_type == "worker_shutdown"
+        else "AI 绘图 Worker 已启动，正在等待任务。"
+    )
+    payload = {
+        "type": event_type,
+        "workerId": settings.ai_worker_id,
+        "workerName": settings.ai_worker_name,
+        "workerVersion": settings.ai_worker_version,
+        "message": message,
+        "source": "ai_control_service",
+    }
+    headers = {"User-Agent": USER_AGENT}
+    if settings.qq_bot_token:
+        headers["Authorization"] = f"Bearer {settings.qq_bot_token}"
+
+    try:
+        async with httpx.AsyncClient(timeout=10, headers=headers) as bot:
+            response = await bot.post(bot_url, json=payload)
+            response.raise_for_status()
+    except Exception as exc:
+        print(f"[ai-control] failed to send QQ lifecycle notice: {exc}")
+
+
 async def _execute_action(action: str, settings: Settings) -> dict[str, Any]:
     normalized = action.upper()
     if normalized == "START":
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck"))
         status = await _wait_stack_status(settings)
+        await _send_qq_lifecycle_notice(settings, "worker_startup")
         status.update({"accepted": True, "action": "START", "pid": pid, "message": "AI \u7ed8\u56fe\u542f\u52a8\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
         return status
     if normalized == "RESTART":
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck", "-Restart"))
         status = await _wait_stack_status(settings)
+        await _send_qq_lifecycle_notice(settings, "worker_startup")
         status.update({"accepted": True, "action": "RESTART", "pid": pid, "message": "AI \u7ed8\u56fe\u91cd\u542f\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
         return status
     if normalized == "STOP":
         stopped = await _stop_local_ai_stack()
         status = await _stack_status(settings)
+        await _send_qq_lifecycle_notice(settings, "worker_shutdown")
         status.update({
             "accepted": True,
             "action": "STOP",
