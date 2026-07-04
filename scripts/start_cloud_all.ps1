@@ -74,13 +74,12 @@ function Start-LoggedScript {
     $stdout = Join-Path $LogDir "$Name-$stamp.out.log"
     $stderr = Join-Path $LogDir "$Name-$stamp.err.log"
 
+    $command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`" > `"$stdout`" 2> `"$stderr`""
     $process = Start-Process `
-        -FilePath "powershell.exe" `
-        -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$ScriptPath`"") `
+        -FilePath "cmd.exe" `
+        -ArgumentList @("/d", "/c", $command) `
         -WorkingDirectory $Root `
         -WindowStyle Hidden `
-        -RedirectStandardOutput $stdout `
-        -RedirectStandardError $stderr `
         -PassThru
 
     Write-Host "[STARTED] $Name pid=$($process.Id)"
@@ -89,14 +88,61 @@ function Start-LoggedScript {
     return $process
 }
 
+function Start-LoggedProcess {
+    param(
+        [string]$Name,
+        [string]$FilePath,
+        [string[]]$Arguments
+    )
+
+    $process = Start-Process `
+        -FilePath $FilePath `
+        -ArgumentList $Arguments `
+        -WorkingDirectory $Root `
+        -WindowStyle Hidden `
+        -PassThru
+
+    $pidPath = Join-Path $LogDir "$Name.pid"
+    Set-Content -Path $pidPath -Value $process.Id -Encoding ASCII
+    Write-Host "[STARTED] $Name pid=$($process.Id)"
+    Write-Host "          pidfile: $pidPath"
+    return $process
+}
+
+function Test-ProcessIdRunning {
+    param([string]$PidPath)
+
+    if (!(Test-Path $PidPath)) {
+        return $false
+    }
+
+    $processId = (Get-Content $PidPath -ErrorAction SilentlyContinue | Select-Object -First 1)
+    if ($processId -notmatch "^\d+$") {
+        return $false
+    }
+
+    return $null -ne (Get-Process -Id ([int]$processId) -ErrorAction SilentlyContinue)
+}
+
 function Test-WorkerAlreadyRunning {
+    $pidPath = Join-Path $LogDir "cloud-worker.pid"
+    if (Test-ProcessIdRunning $pidPath) {
+        return $true
+    }
+
     $escapedRoot = [Regex]::Escape($Root)
-    $process = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
-        Where-Object {
-            $_.CommandLine -match $escapedRoot -and $_.CommandLine -match "app\.cloud_worker"
-        } |
-        Select-Object -First 1
-    return $null -ne $process
+    try {
+        $process = Get-CimInstance Win32_Process -ErrorAction Stop |
+            Where-Object {
+                $_.CommandLine -match $escapedRoot -and $_.CommandLine -match "app\.cloud_worker"
+            } |
+            Select-Object -First 1
+        return $null -ne $process
+    }
+    catch {
+        Write-Host "[WARN] Cannot inspect cloud worker command line: $($_.Exception.Message)" -ForegroundColor Yellow
+        return $false
+    }
 }
 
 function Send-QqBotLifecycleNotice {
@@ -199,11 +245,15 @@ if (!(Test-Path $comfyLauncher)) {
 $serviceScript = Join-Path $Root "scripts\start_service.ps1"
 $comfyScript = Join-Path $Root "scripts\start_comfyui.ps1"
 $workerScript = Join-Path $Root "scripts\start_cloud_worker.ps1"
+$venvPython = Join-Path $Root ".venv\Scripts\python.exe"
 
 foreach ($script in @($serviceScript, $comfyScript, $workerScript)) {
     if (!(Test-Path $script)) {
         throw "Missing startup script: $script"
     }
+}
+if (!(Test-Path $venvPython)) {
+    throw "Missing Python virtual environment at $venvPython"
 }
 
 if ($DryRun) {
@@ -235,7 +285,7 @@ if (Test-HttpReady "http://127.0.0.1:7861" 3) {
     Write-Host "[READY] Local AI service is already responding at http://127.0.0.1:7861" -ForegroundColor Green
 }
 else {
-    Start-LoggedScript "local-service" $serviceScript | Out-Null
+    Start-LoggedProcess "local-service" $venvPython @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "7861") | Out-Null
     if (!(Test-HttpReady "http://127.0.0.1:7861" 120)) {
         throw "Local AI service did not become ready within 120 seconds. Check logs in $LogDir."
     }
@@ -246,7 +296,7 @@ if (Test-WorkerAlreadyRunning) {
     Write-Host "[READY] Cloud worker is already running." -ForegroundColor Green
 }
 else {
-    Start-LoggedScript "cloud-worker" $workerScript | Out-Null
+    Start-LoggedProcess "cloud-worker" $venvPython @("-m", "app.cloud_worker") | Out-Null
     Start-Sleep -Seconds 3
     if (!(Test-WorkerAlreadyRunning)) {
         throw "Cloud worker process was not detected after startup. Check logs in $LogDir."

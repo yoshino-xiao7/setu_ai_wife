@@ -103,6 +103,15 @@ async def _stack_status(settings: Settings) -> dict[str, Any]:
     }
 
 
+async def _wait_stack_status(settings: Settings, timeout_seconds: int = 150) -> dict[str, Any]:
+    deadline = asyncio.get_running_loop().time() + timeout_seconds
+    status = await _stack_status(settings)
+    while not status["running"] and asyncio.get_running_loop().time() < deadline:
+        await asyncio.sleep(3)
+        status = await _stack_status(settings)
+    return status
+
+
 async def _listening_pids(*ports: int) -> set[int]:
     completed = await _run_capture(["netstat", "-ano"])
     if completed.returncode != 0:
@@ -137,12 +146,12 @@ async def _execute_action(action: str, settings: Settings) -> dict[str, Any]:
     normalized = action.upper()
     if normalized == "START":
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck"))
-        status = await _stack_status(settings)
+        status = await _wait_stack_status(settings)
         status.update({"accepted": True, "action": "START", "pid": pid, "message": "AI \u7ed8\u56fe\u542f\u52a8\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
         return status
     if normalized == "RESTART":
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck", "-Restart"))
-        status = await _stack_status(settings)
+        status = await _wait_stack_status(settings)
         status.update({"accepted": True, "action": "RESTART", "pid": pid, "message": "AI \u7ed8\u56fe\u91cd\u542f\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
         return status
     if normalized == "STOP":
