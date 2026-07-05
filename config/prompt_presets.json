@@ -3080,6 +3080,21 @@
       "notes": "NSFW 小众瞬间：厨房只穿围裙。remnant 友好，生活化。"
     },
     {
+      "id": "nsfw_kitchen_apron_back",
+      "name": "厨房围裙后面",
+      "category": "NSFW",
+      "category_type": "场景",
+      "trigger_words": "1girl, solo, kitchen, apron only, from behind",
+      "style_tags": "masterpiece, best quality",
+      "default_positive": "girl in kitchen wearing only an apron, seen from behind, cooking or reaching, casual home nudity, natural pose",
+      "default_negative": "lowres, bad anatomy, blurry, front view, full clothes",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_lora": "",
+      "recommended_lora_strength": 0.0,
+      "nsfw_only": true,
+      "notes": "NSFW 小众生活瞬间：厨房只穿围裙的后面视角。"
+    },
+    {
       "id": "nsfw_kitchen_table",
       "name": "厨房桌边吃东西",
       "category": "NSFW",
@@ -3200,6 +3215,36 @@
       "notes": "NSFW 小众生活瞬间：晚上换睡衣的中间状态。"
     },
     {
+      "id": "nsfw_changing_stuck",
+      "name": "换衣服卡住",
+      "category": "NSFW",
+      "category_type": "场景",
+      "trigger_words": "1girl, solo, changing clothes, shirt stuck, half naked",
+      "style_tags": "masterpiece, best quality",
+      "default_positive": "girl trying to take off or put on shirt, clothes stuck over her head or arms, half naked body exposed, natural frustrated or laughing expression, bedroom changing moment",
+      "default_negative": "lowres, bad anatomy, blurry, fully dressed, fully nude",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_lora": "",
+      "recommended_lora_strength": 0.0,
+      "nsfw_only": true,
+      "notes": "NSFW 小众生活瞬间：换衣服时卡住的尴尬可爱状态。"
+    },
+    {
+      "id": "nsfw_morning_stretch",
+      "name": "早上起床伸懒腰",
+      "category": "NSFW",
+      "category_type": "场景",
+      "trigger_words": "1girl, solo, morning, bed, stretching, nude",
+      "style_tags": "masterpiece, best quality, soft morning light",
+      "default_positive": "girl waking up naked in bed, stretching with arms up, back arched, sleepy expression, soft morning light, natural body, relaxed home moment",
+      "default_negative": "lowres, bad anatomy, blurry, clothed, awake energetic",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_lora": "",
+      "recommended_lora_strength": 0.0,
+      "nsfw_only": true,
+      "notes": "NSFW 小众生活瞬间：早上起床自然伸懒腰。"
+    },
+    {
       "id": "nsfw_soft_bedroom",
       "name": "柔光卧室",
       "category": "NSFW",
@@ -3245,6 +3290,21 @@
       "notes": "NSFW 小众生活瞬间：家里沙发上随意裸体看电视。非常日常放松。"
     },
     {
+      "id": "nsfw_couch_phone_touch",
+      "name": "沙发玩手机轻抚",
+      "category": "NSFW",
+      "category_type": "场景",
+      "trigger_words": "1girl, solo, on couch, phone, light touch, relaxed",
+      "style_tags": "masterpiece, best quality, soft lighting",
+      "default_positive": "girl lying on couch scrolling phone, one hand lightly between legs, relaxed bored or content expression, casual home moment",
+      "default_negative": "lowres, bad anatomy, blurry, intense, sitting straight",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_lora": "",
+      "recommended_lora_strength": 0.0,
+      "nsfw_only": true,
+      "notes": "NSFW 小众生活瞬间：刷手机时不经意轻抚。"
+    },
+    {
       "id": "nsfw_after_shower_towel",
       "name": "浴后毛巾半裹",
       "category": "NSFW",
@@ -3258,6 +3318,21 @@
       "recommended_lora_strength": 0.0,
       "nsfw_only": true,
       "notes": "NSFW 小众瞬间：浴后随意裹毛巾。remnant 友好。"
+    },
+    {
+      "id": "nsfw_towel_drop",
+      "name": "浴后毛巾掉落",
+      "category": "NSFW",
+      "category_type": "场景",
+      "trigger_words": "1girl, solo, after shower, towel slipping, nude",
+      "style_tags": "masterpiece, best quality, wet skin, soft lighting",
+      "default_positive": "girl just out of shower, towel slipping off her body, wet hair and skin, standing in bedroom or bathroom, natural surprised or relaxed expression, subtle exposure",
+      "default_negative": "lowres, bad anatomy, blurry, clothed, towel fully on, dramatic",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_lora": "",
+      "recommended_lora_strength": 0.0,
+      "nsfw_only": true,
+      "notes": "NSFW 小众生活瞬间：浴后毛巾意外掉落。"
     },
     {
       "id": "nsfw_bathroom_brush",
@@ -3318,6 +3393,21 @@
       "recommended_lora_strength": 0.0,
       "nsfw_only": true,
       "notes": "湿身和浴室场景。水汽、皮肤高光较多时建议 CFG 不要过高。"
+    },
+    {
+      "id": "nsfw_sleep_panties_half",
+      "name": "睡梦中被偷偷脱胖次",
+      "category": "NSFW",
+      "category_type": "场景",
+      "trigger_words": "1girl, solo, sleeping on bed, completely nude, panties being pulled down halfway, almost waking up, subtle sleepy expression",
+      "style_tags": "masterpiece, best quality, soft lighting, detailed skin",
+      "default_positive": "beautiful girl sleeping naked on bed, someone secretly pulling her panties down to mid-thigh, halfway undressed, her body relaxed, face showing she is almost waking up but still sleepy, soft bedroom light, subtle voyeuristic moment, natural pose",
+      "default_negative": "lowres, bad anatomy, blurry, clothed, fully awake, ahegao, intense expression, fully undressed, looking at viewer",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_lora": "",
+      "recommended_lora_strength": 0.0,
+      "nsfw_only": true,
+      "notes": "NSFW 小众生活瞬间：睡梦中被人偷偷脱胖次到一半，差点醒来。很适合偷窥/轻微惊醒氛围。"
     },
     {
       "id": "nsfw_window_open",
@@ -3573,6 +3663,36 @@
       "recommended_lora_strength": 0.0,
       "nsfw_only": true,
       "notes": "RealVis 湿身场景。写实模型对动态+表情冲突敏感，建议用简洁自然姿势 + 温和表情。已加连贯姿势保护。"
+    },
+    {
+      "id": "nsfw_realvis_sleep_panties",
+      "name": "写实睡梦脱胖次 (RealVis)",
+      "category": "NSFW",
+      "category_type": "场景",
+      "trigger_words": "photorealistic, beautiful woman, sleeping on bed, nude, panties pulled down halfway",
+      "style_tags": "8k, ultra realistic, soft lighting, detailed skin",
+      "default_positive": "photorealistic beautiful woman sleeping naked on bed, panties being secretly pulled down to her thighs, halfway, her face slightly stirring as if almost waking, realistic skin texture, soft morning or night light, subtle intimate voyeur moment, natural sleeping pose",
+      "default_negative": "lowres, bad anatomy, blurry, clothed, fully awake, dramatic, looking at camera, cartoon, anime, plastic skin",
+      "recommended_checkpoint": "RealVisXL_V5.0_fp16.safetensors",
+      "recommended_lora": "",
+      "recommended_lora_strength": 0.0,
+      "nsfw_only": true,
+      "notes": "NSFW 小众生活瞬间 RealVis 版：真实睡梦中被脱胖次到一半的自然状态。"
+    },
+    {
+      "id": "nsfw_realvis_mirror",
+      "name": "写实镜子前 (RealVis)",
+      "category": "NSFW",
+      "category_type": "场景",
+      "trigger_words": "photorealistic, beautiful woman, mirror, nude, reflection",
+      "style_tags": "8k, ultra realistic, detailed skin",
+      "default_positive": "photorealistic woman standing in front of mirror nude, looking at her reflection with soft expression, realistic skin and lighting, intimate bedroom moment",
+      "default_negative": "lowres, bad anatomy, blurry, clothed, cartoon, anime",
+      "recommended_checkpoint": "RealVisXL_V5.0_fp16.safetensors",
+      "recommended_lora": "",
+      "recommended_lora_strength": 0.0,
+      "nsfw_only": true,
+      "notes": "NSFW 小众生活瞬间 RealVis 镜子版。"
     },
     {
       "id": "nsfw_bathroom_shower",
