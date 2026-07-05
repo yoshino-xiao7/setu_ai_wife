@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 
@@ -153,6 +154,7 @@ def normalize_prompt_value(value: object) -> str:
 def parse_json_response(raw: str) -> dict:
     if not raw or not raw.strip():
         raise PromptTranslationError("Ollama returned an empty JSON response.")
+    raw = raw.strip()
     try:
         parsed = json.loads(raw)
         return parsed if isinstance(parsed, dict) else {}
@@ -160,7 +162,11 @@ def parse_json_response(raw: str) -> dict:
         start = raw.find("{")
         end = raw.rfind("}")
         if start >= 0 and end > start:
-            parsed = json.loads(raw[start : end + 1])
+            candidate = raw[start : end + 1]
+            try:
+                parsed = json.loads(candidate)
+            except json.JSONDecodeError:
+                parsed, _ = json.JSONDecoder().raw_decode(raw[start:])
             return parsed if isinstance(parsed, dict) else {}
         raise
 
@@ -171,6 +177,53 @@ def contains_cjk(value: str) -> bool:
 
 def ollama_output_text(data: dict) -> str:
     return str(data.get("response") or data.get("thinking") or "").strip()
+
+
+def chat_completion_output_text(data: dict) -> str:
+    choices = data.get("choices") if isinstance(data, dict) else None
+    if not isinstance(choices, list) or not choices:
+        return ""
+    first = choices[0] if isinstance(choices[0], dict) else {}
+    message = first.get("message") if isinstance(first, dict) else {}
+    if isinstance(message, dict):
+        return str(message.get("content") or "").strip()
+    return str(first.get("text") or "").strip()
+
+
+def chat_completion_sse_output_text(raw: str) -> str:
+    content_parts: list[str] = []
+    error_message = ""
+    for line in (raw or "").splitlines():
+        line = line.strip()
+        if not line.startswith("data:"):
+            continue
+        payload = line.removeprefix("data:").strip()
+        if not payload or payload == "[DONE]":
+            continue
+        try:
+            data = json.loads(payload)
+        except json.JSONDecodeError:
+            continue
+        error = data.get("error") if isinstance(data, dict) else None
+        if isinstance(error, dict):
+            error_message = str(error.get("message") or error)
+            continue
+        choices = data.get("choices") if isinstance(data, dict) else None
+        if not isinstance(choices, list) or not choices:
+            continue
+        first = choices[0] if isinstance(choices[0], dict) else {}
+        delta = first.get("delta") if isinstance(first, dict) else {}
+        message = first.get("message") if isinstance(first, dict) else {}
+        if isinstance(delta, dict) and delta.get("content"):
+            content_parts.append(str(delta.get("content")))
+        elif isinstance(message, dict) and message.get("content"):
+            content_parts.append(str(message.get("content")))
+    text = "".join(content_parts).strip()
+    if text:
+        return text
+    if error_message:
+        raise PromptTranslationError(error_message)
+    return ""
 
 
 def remove_cjk_tags(value: str) -> str:
@@ -299,14 +352,7 @@ def filter_nsfw_incompatible_tags(prompt: str) -> str:
     return ", ".join(tags)
 
 
-async def translate_prompt(
-    prompt_cn: str,
-    settings: Settings,
-    style_tags: str = "",
-    negative_prompt: str = "",
-    nsfw_mode: bool = False,
-    nsfw_visibility_level: str = "STANDARD",
-) -> PromptResult:
+def build_translation_prompts(prompt_cn: str, settings: Settings, negative_prompt: str, nsfw_mode: bool) -> tuple[str, str]:
     system_prompt = (
         "You are a Stable Diffusion anime prompt translator. Convert the Chinese drawing request "
         "into concise English tags. Translate character names, actions, scenes, moods, camera, "
@@ -337,6 +383,51 @@ async def translate_prompt(
         f"{knowledge_context or 'Local prompt knowledge matched: (none)'}\n"
         "Return the final JSON now."
     )
+    return system_prompt, user_prompt
+
+
+def finalize_prompt_result(
+    parsed: dict,
+    *,
+    negative_prompt: str,
+    nsfw_mode: bool,
+    nsfw_visibility_level: str,
+    provider: str,
+    model: str,
+    used_ollama: bool,
+) -> PromptResult:
+    positive = normalize_prompt_value(parsed.get("positive", ""))
+    if contains_cjk(positive):
+        positive = remove_cjk_tags(positive)
+    if nsfw_mode:
+        positive = filter_nsfw_incompatible_tags(positive)
+        positive = apply_nsfw_visibility_profile(positive, nsfw_visibility_level)
+    if not positive:
+        raise PromptTranslationError(f"{provider} could not produce usable English positive tags.")
+    negative = normalize_prompt_value(parsed.get("negative", negative_prompt or DEFAULT_NEGATIVE)) or DEFAULT_NEGATIVE
+    if contains_cjk(negative):
+        negative = remove_cjk_tags(negative) or DEFAULT_NEGATIVE
+    if DEFAULT_NEGATIVE not in negative:
+        negative = f"{negative}, {DEFAULT_NEGATIVE}"
+    if nsfw_mode:
+        negative = apply_nsfw_visibility_negative_profile(negative, nsfw_visibility_level)
+    return PromptResult(
+        positive=positive,
+        negative=negative,
+        style_notes=normalize_prompt_value(parsed.get("style_notes", "")) or f"Translated by {provider} model {model}.",
+        used_ollama=used_ollama,
+    )
+
+
+async def translate_prompt_with_ollama(
+    prompt_cn: str,
+    settings: Settings,
+    *,
+    negative_prompt: str = "",
+    nsfw_mode: bool = False,
+    nsfw_visibility_level: str = "STANDARD",
+) -> PromptResult:
+    system_prompt, user_prompt = build_translation_prompts(prompt_cn, settings, negative_prompt, nsfw_mode)
     payload = {
         "model": settings.ollama_model,
         "stream": False,
@@ -398,27 +489,146 @@ async def translate_prompt(
             except (httpx.HTTPError, json.JSONDecodeError, PromptTranslationError, ValueError):
                 parsed = original_parsed
                 positive = original_positive
-        if contains_cjk(positive):
-            positive = remove_cjk_tags(positive)
-        if nsfw_mode:
-            positive = filter_nsfw_incompatible_tags(positive)
-            positive = apply_nsfw_visibility_profile(positive, nsfw_visibility_level)
-        if not positive:
-            raise PromptTranslationError("Ollama could not produce usable English positive tags.")
-        negative = normalize_prompt_value(parsed.get("negative", negative_prompt or DEFAULT_NEGATIVE)) or DEFAULT_NEGATIVE
-        if contains_cjk(negative):
-            negative = remove_cjk_tags(negative) or DEFAULT_NEGATIVE
-        if DEFAULT_NEGATIVE not in negative:
-            negative = f"{negative}, {DEFAULT_NEGATIVE}"
-        if nsfw_mode:
-            negative = apply_nsfw_visibility_negative_profile(negative, nsfw_visibility_level)
-        return PromptResult(
-            positive=positive,
-            negative=negative,
-            style_notes=normalize_prompt_value(parsed.get("style_notes", "")) or f"Translated by local Ollama model {settings.ollama_model}.",
+        return finalize_prompt_result(
+            parsed,
+            negative_prompt=negative_prompt,
+            nsfw_mode=nsfw_mode,
+            nsfw_visibility_level=nsfw_visibility_level,
+            provider="local Ollama",
+            model=settings.ollama_model,
             used_ollama=True,
         )
     except PromptTranslationError:
         raise
     except Exception as exc:
         raise PromptTranslationError(f"Ollama prompt translation failed: {exc}") from exc
+
+
+async def translate_prompt_with_grok2api(
+    prompt_cn: str,
+    settings: Settings,
+    *,
+    negative_prompt: str = "",
+    nsfw_mode: bool = False,
+    nsfw_visibility_level: str = "STANDARD",
+) -> PromptResult:
+    if not settings.grok2api_url:
+        raise PromptTranslationError("grok2api prompt translation is not configured.")
+    system_prompt, user_prompt = build_translation_prompts(prompt_cn, settings, negative_prompt, nsfw_mode)
+    url = settings.grok2api_url.rstrip("/")
+    if not url.endswith("/chat/completions"):
+        url = f"{url}/chat/completions" if url.endswith("/v1") else f"{url}/v1/chat/completions"
+    model_candidates = [settings.grok2api_model]
+    model_candidates.extend(
+        model.strip()
+        for model in (settings.grok2api_fallback_models or "").split(",")
+        if model.strip() and model.strip() not in model_candidates
+    )
+    headers = {"Content-Type": "application/json"}
+    if settings.grok2api_api_key:
+        headers["Authorization"] = f"Bearer {settings.grok2api_api_key}"
+    errors: list[str] = []
+    try:
+        for model in model_candidates:
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"{user_prompt}\n\nReturn JSON only."},
+                ],
+                "temperature": 0,
+                "max_tokens": 512,
+                "response_format": {"type": "json_object"},
+            }
+            try:
+                async with httpx.AsyncClient(timeout=settings.prompt_translation_timeout_seconds) as client:
+                    response = await client.post(url, json=payload, headers=headers)
+                    response.raise_for_status()
+                content_type = response.headers.get("content-type", "")
+                if "text/event-stream" in content_type or response.text.lstrip().startswith(":"):
+                    raw = chat_completion_sse_output_text(response.text)
+                else:
+                    raw = chat_completion_output_text(response.json())
+                parsed = parse_json_response(raw)
+                return finalize_prompt_result(
+                    parsed,
+                    negative_prompt=negative_prompt,
+                    nsfw_mode=nsfw_mode,
+                    nsfw_visibility_level=nsfw_visibility_level,
+                    provider="grok2api",
+                    model=model,
+                    used_ollama=False,
+                )
+            except Exception as exc:
+                errors.append(f"{model}: {exc}")
+                continue
+        raise PromptTranslationError("; ".join(errors) or "all grok2api models failed")
+    except PromptTranslationError:
+        raise
+    except Exception as exc:
+        raise PromptTranslationError(f"grok2api prompt translation failed: {exc}") from exc
+
+
+async def first_successful_prompt_result(tasks: list[asyncio.Task[PromptResult]]) -> PromptResult:
+    errors: list[str] = []
+    pending = set(tasks)
+    try:
+        while pending:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            winner: PromptResult | None = None
+            for task in done:
+                try:
+                    result = task.result()
+                except PromptTranslationError as exc:
+                    errors.append(str(exc))
+                    continue
+                if winner is None:
+                    winner = result
+            if winner is not None:
+                for pending_task in pending:
+                    pending_task.cancel()
+                return winner
+        raise PromptTranslationError("; ".join(errors) or "Prompt translation failed.")
+    finally:
+        for task in pending:
+            task.cancel()
+
+
+async def translate_prompt(
+    prompt_cn: str,
+    settings: Settings,
+    style_tags: str = "",
+    negative_prompt: str = "",
+    nsfw_mode: bool = False,
+    nsfw_visibility_level: str = "STANDARD",
+) -> PromptResult:
+    del style_tags
+    if not settings.grok2api_url:
+        return await translate_prompt_with_ollama(
+            prompt_cn,
+            settings,
+            negative_prompt=negative_prompt,
+            nsfw_mode=nsfw_mode,
+            nsfw_visibility_level=nsfw_visibility_level,
+        )
+    tasks = [
+        asyncio.create_task(
+            translate_prompt_with_ollama(
+                prompt_cn,
+                settings,
+                negative_prompt=negative_prompt,
+                nsfw_mode=nsfw_mode,
+                nsfw_visibility_level=nsfw_visibility_level,
+            )
+        ),
+        asyncio.create_task(
+            translate_prompt_with_grok2api(
+                prompt_cn,
+                settings,
+                negative_prompt=negative_prompt,
+                nsfw_mode=nsfw_mode,
+                nsfw_visibility_level=nsfw_visibility_level,
+            )
+        ),
+    ]
+    return await first_successful_prompt_result(tasks)

@@ -56,7 +56,8 @@ function Send-QqBotShutdownNotice {
     } | ConvertTo-Json -Compress
 
     try {
-        Invoke-RestMethod -Uri $botUrl -Method Post -Headers $headers -Body $payload -ContentType "application/json" -TimeoutSec 5 | Out-Null
+        $body = [System.Text.Encoding]::UTF8.GetBytes($payload)
+        Invoke-RestMethod -Uri $botUrl -Method Post -Headers $headers -Body $body -ContentType "application/json; charset=utf-8" -TimeoutSec 5 | Out-Null
     }
     catch {
         Write-Host "[WARN] Failed to send QQ bot shutdown notice: $($_.Exception.Message)" -ForegroundColor Yellow
@@ -69,6 +70,7 @@ function Stop-LocalAiProcesses {
         "uvicorn app\.main:app --host 127\.0\.0\.1 --port 7861",
         "scripts\\start_cloud_worker\.ps1",
         "scripts\\start_service\.ps1",
+        "scripts\\keep_awake\.ps1",
         "start_comfyui\.ps1",
         "run_nvidia_gpu\.bat",
         "ComfyUI\\main\.py"

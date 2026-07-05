@@ -145,6 +145,27 @@ function Test-WorkerAlreadyRunning {
     }
 }
 
+function Test-KeepAwakeRunning {
+    $pidPath = Join-Path $LogDir "keep-awake.pid"
+    if (Test-ProcessIdRunning $pidPath) {
+        return $true
+    }
+
+    $escapedRoot = [Regex]::Escape($Root)
+    try {
+        $process = Get-CimInstance Win32_Process -ErrorAction Stop |
+            Where-Object {
+                $_.CommandLine -match $escapedRoot -and $_.CommandLine -match "scripts\\keep_awake\.ps1"
+            } |
+            Select-Object -First 1
+        return $null -ne $process
+    }
+    catch {
+        Write-Host "[WARN] Cannot inspect keep-awake command line: $($_.Exception.Message)" -ForegroundColor Yellow
+        return $false
+    }
+}
+
 function Send-QqBotLifecycleNotice {
     param([string]$EventType)
 
@@ -186,7 +207,8 @@ function Send-QqBotLifecycleNotice {
     } | ConvertTo-Json -Compress
 
     try {
-        Invoke-RestMethod -Uri $botUrl -Method Post -Headers $headers -Body $payload -ContentType "application/json" -TimeoutSec 5 | Out-Null
+        $body = [System.Text.Encoding]::UTF8.GetBytes($payload)
+        Invoke-RestMethod -Uri $botUrl -Method Post -Headers $headers -Body $body -ContentType "application/json; charset=utf-8" -TimeoutSec 5 | Out-Null
     }
     catch {
         Write-Host "[WARN] Failed to send QQ bot lifecycle notice: $($_.Exception.Message)" -ForegroundColor Yellow
@@ -245,9 +267,10 @@ if (!(Test-Path $comfyLauncher)) {
 $serviceScript = Join-Path $Root "scripts\start_service.ps1"
 $comfyScript = Join-Path $Root "scripts\start_comfyui.ps1"
 $workerScript = Join-Path $Root "scripts\start_cloud_worker.ps1"
+$keepAwakeScript = Join-Path $Root "scripts\keep_awake.ps1"
 $venvPython = Join-Path $Root ".venv\Scripts\python.exe"
 
-foreach ($script in @($serviceScript, $comfyScript, $workerScript)) {
+foreach ($script in @($serviceScript, $comfyScript, $workerScript, $keepAwakeScript)) {
     if (!(Test-Path $script)) {
         throw "Missing startup script: $script"
     }
@@ -262,6 +285,14 @@ if ($DryRun) {
 }
 
 Write-Host "Starting local AI drawing stack for cloud users..." -ForegroundColor Cyan
+
+if (Test-KeepAwakeRunning) {
+    Write-Host "[READY] Keep-awake guard is already running." -ForegroundColor Green
+}
+else {
+    Start-LoggedProcess "keep-awake" "powershell.exe" @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $keepAwakeScript) | Out-Null
+    Write-Host "[READY] Keep-awake guard is running." -ForegroundColor Green
+}
 
 if ($Restart) {
     Write-Host "Restart requested. Stopping local service and cloud worker processes..." -ForegroundColor Yellow
