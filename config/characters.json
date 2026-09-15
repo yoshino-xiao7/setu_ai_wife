@@ -9,52 +9,72 @@
       "lora_strength": 0.8,
       "trigger_words": "cartethyia",
       "default_positive": "1girl, solo",
-      "style_tags": "anime style, detailed eyes, high quality",
+      "style_tags": "",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/af0b3526-1fc3-4ed7-868a-377ee0b68015/anim=false,width=450,optimized=true/01.jpeg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
-      "notes": "鸣潮角色卡提希娅，推荐强度 0.7-0.9，适合竖屏人像、半身和全身立绘。"
+      "notes": "鸣潮角色卡提希娅，推荐强度 0.7-0.9，适合竖屏人像、半身和全身立绘。",
+      "default_outfit": "anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "id": "yae_miko",
       "name": "八重神子",
       "category": "原神",
       "category_type": "游戏角色",
-      "lora_name": "yae_miko_offset_9_6.safetensors",
+      "lora_name": "yae_miko_illustrious.safetensors",
       "lora_strength": 0.8,
       "trigger_words": "yae miko, genshin impact",
-      "default_positive": "1girl, fox ears, floppy ears, purple eyes, hair between eyes, pink hair, very long hair, long hair, hair ornament, large breasts, thighs, japanese clothes, bare shoulders, detached sleeves, wide sleeves, earrings, nontraditional miko",
-      "style_tags": "anime style, detailed eyes, high quality",
+      "default_positive": "1girl, fox ears, floppy ears, purple eyes, hair between eyes, pink hair, very long hair, long hair, hair ornament, earrings",
+      "style_tags": "",
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/yae_miko.jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
-      "notes": "原神角色八重神子。选择该预设会自动使用 yae_miko_offset_9_6.safetensors，并注入八重神子的常用角色 tags。"
+      "notes": "原神角色八重神子。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "large breasts, thighs, japanese clothes, bare shoulders, detached sleeves, wide sleeves, nontraditional miko, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "id": "raiden_shogun",
       "name": "雷电将军",
       "category": "原神",
       "category_type": "游戏角色",
-      "lora_name": "RaidenShogun-HandsFix.safetensors",
+      "lora_name": "raiden_shogun_illustrious.safetensors",
       "lora_strength": 0.8,
       "trigger_words": "raiden shogun, genshin impact",
-      "default_positive": "1girl, purple eyes, mole under eye, purple hair, long hair, very long hair, braided ponytail, hair ornament, large breasts, cleavage, thighs, purple kimono, purple nails, obi, bridal gauntlets",
+      "default_positive": "1girl, purple eyes, mole under eye, purple hair, long hair, very long hair, braided ponytail, hair ornament, purple nails",
       "style_tags": "",
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/raiden_shogun.jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
-      "notes": "原神角色雷电将军。选择该预设会自动使用 RaidenShogun-HandsFix.safetensors，并注入雷电将军的常用角色 tags。"
+      "notes": "原神角色雷电将军。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "large breasts, cleavage, thighs, purple kimono, obi, bridal gauntlets",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "id": "lynette",
       "name": "琳妮特",
       "category": "原神",
       "category_type": "游戏角色",
-      "lora_name": "Genshin_Lynette_AP_v1.safetensors",
+      "lora_name": "",
       "lora_strength": 0.8,
       "trigger_words": "lynette (genshin impact), genshin impact",
-      "default_positive": "1girl, cat girl, cat ears, cat tail, animal ear fluff, purple eyes, grey hair, long hair, medium breasts, cleavage, star tattoo, black pantyhose, long sleeves, aqua bow, star facial mark",
+      "default_positive": "1girl, cat girl, cat ears, cat tail, animal ear fluff, purple eyes, grey hair, long hair, star tattoo, aqua bow, star facial mark",
       "style_tags": "",
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/lynette_(genshin_impact).jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
-      "notes": "原神角色琳妮特。选择该预设会自动使用 Genshin_Lynette_AP_v1.safetensors，并注入琳妮特的常用角色 tags。"
+      "notes": "原神角色琳妮特。WAI 用原生 Danbooru 标签即可还原；旧的 Genshin_Lynette_AP_v1 是 SD1.5 LoRA，和当前模型形状不匹配，不再自动挂载。",
+      "default_outfit": "medium breasts, cleavage, black pantyhose, long sleeves",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "id": "sandrone",
@@ -64,11 +84,16 @@
       "lora_name": "sandrone_genshin_impact_ilxl_goofy.safetensors",
       "lora_strength": 0.8,
       "trigger_words": "sandrone (genshin impact), genshin impact",
-      "default_positive": "1girl, blue eyes, short hair with long locks, brown hair, blonde hair, sidelocks, fur-trimmed coat, white gloves, headdress",
+      "default_positive": "1girl, blue eyes, short hair with long locks, brown hair, blonde hair, sidelocks, headdress",
       "style_tags": "",
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/sandrone_(genshin_impact).jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
-      "notes": "原神角色桑多涅。选择该预设会自动使用 sandrone_genshin_impact_ilxl_goofy.safetensors，并注入桑多涅的常用角色 tags。"
+      "notes": "原神角色桑多涅。选择该预设会自动使用 sandrone_genshin_impact_ilxl_goofy.safetensors，并注入桑多涅的常用角色 tags。",
+      "default_outfit": "fur-trimmed coat, white gloves",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "id": "columbina",
@@ -78,11 +103,16 @@
       "lora_name": "columbina_2a_naiVpred-000039.safetensors",
       "lora_strength": 0.8,
       "trigger_words": "columbina (genshin impact), genshin impact",
-      "default_positive": "1girl, eye mask, black hair, two-tone hair, long hair, pink hair, streaked hair, red hair, gradient hair, purple hair, blunt bangs, white mask, fur-trimmed coat, head wings",
+      "default_positive": "1girl, eye mask, black hair, two-tone hair, long hair, pink hair, streaked hair, red hair, gradient hair, purple hair, blunt bangs, white mask, head wings",
       "style_tags": "",
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/columbina_(genshin_impact).jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
-      "notes": "原神角色哥伦比亚。选择该预设会自动使用 columbina_2a_naiVpred-000039.safetensors，并注入哥伦比亚的常用角色 tags。"
+      "notes": "原神角色哥伦比亚。选择该预设会自动使用 columbina_2a_naiVpred-000039.safetensors，并注入哥伦比亚的常用角色 tags。",
+      "default_outfit": "fur-trimmed coat",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "id": "citlali",
@@ -92,11 +122,16 @@
       "lora_name": "c_citlali (genshin impact)_nbe11_xl.safetensors",
       "lora_strength": 0.8,
       "trigger_words": "citlali (genshin impact), genshin impact",
-      "default_positive": "1girl, blue eyes, pink hair, very long hair, long hair, twin braids, braid, medium breasts, bare shoulders, forehead mark",
+      "default_positive": "1girl, blue eyes, pink hair, very long hair, long hair, twin braids, braid, forehead mark",
       "style_tags": "",
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/citlali_(genshin_impact).jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
-      "notes": "原神角色茜特菈莉。选择该预设会自动使用 c_citlali (genshin impact)_nbe11_xl.safetensors，并注入茜特菈莉的常用角色 tags。"
+      "notes": "原神角色茜特菈莉。选择该预设会自动使用 c_citlali (genshin impact)_nbe11_xl.safetensors，并注入茜特菈莉的常用角色 tags。",
+      "default_outfit": "medium breasts, bare shoulders",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "id": "nekomiya_mana",
@@ -106,11 +141,2068 @@
       "lora_name": "NekomiyaManaIL-09.safetensors",
       "lora_strength": 0.8,
       "trigger_words": "nekomiya mana, zenless zone zero",
-      "default_positive": "1girl, cat girl, dark-skinned female, cat ears, animal ear fluff, cat tail, two tails, red eyes, black hair, long hair, red hairband, ponytail, small breasts, forehead tattoo, black thighhighs, detached sleeves, bare shoulders, forehead mark, neck bell",
-      "style_tags": "anime style, detailed eyes, high quality",
+      "default_positive": "1girl, cat girl, dark-skinned female, cat ears, animal ear fluff, cat tail, two tails, red eyes, black hair, long hair, red hairband, ponytail, forehead tattoo, forehead mark, neck bell",
+      "style_tags": "",
       "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/nekomiya_mana.jpg",
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
-      "notes": "绝区零角色猫宫又奈。选择该预设会自动使用 NekomiyaManaIL-09.safetensors，并注入猫宫又奈的常用角色 tags。"
+      "notes": "绝区零角色猫宫又奈。选择该预设会自动使用 NekomiyaManaIL-09.safetensors，并注入猫宫又奈的常用角色 tags。",
+      "default_outfit": "small breasts, black thighhighs, detached sleeves, bare shoulders, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "hu_tao",
+      "name": "胡桃",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "hu tao (genshin impact), genshin impact",
+      "default_positive": "1girl, red eyes, brown hair, long hair, twintails, flower-shaped pupils, symbol-shaped pupils, hat, plum blossoms, ghost",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/hu_tao.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色胡桃。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "chinese clothes, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "ganyu",
+      "name": "甘雨",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "ganyu (genshin impact), genshin impact",
+      "default_positive": "1girl, goat horns, ahoge, purple eyes, blue hair, long hair, lock necklace, bell",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/ganyu.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色甘雨。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "detached sleeves, medium breasts, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "keqing",
+      "name": "刻晴",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "keqing (genshin impact), genshin impact",
+      "default_positive": "1girl, purple eyes, purple hair, cone hair bun, long hair, twintails, hair ornament",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/keqing.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色刻晴。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "medium breasts, gloves, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "furina",
+      "name": "芙宁娜",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "furina (genshin impact), genshin impact",
+      "default_positive": "1girl, heterochromia, blue eyes, white hair, streaked hair, blue hair, drop-shaped pupils, top hat",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/furina.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色芙宁娜。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "blue jacket, shorts, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "nahida",
+      "name": "纳西妲",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "nahida (genshin impact), genshin impact",
+      "default_positive": "1girl, green eyes, white hair, green hair, gradient hair, pointy ears, side ponytail, hair ornament",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/nahida.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色纳西妲。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "white dress, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "arlecchino",
+      "name": "阿蕾奇诺",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "arlecchino (genshin impact), genshin impact",
+      "default_positive": "1girl, red eyes, black hair, two-tone hair, white hair, x-shaped pupils, symbol-shaped pupils, short hair, black nails, sharp eyes",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/arlecchino.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色阿蕾奇诺。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "mavuika",
+      "name": "玛薇卡",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "mavuika (genshin impact), genshin impact",
+      "default_positive": "1girl, red eyes, orange hair, very long hair, sunglasses",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/mavuika.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色玛薇卡。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "large breasts, bike shorts, jacket, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "shenhe",
+      "name": "申鹤",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "shenhe (genshin impact), genshin impact",
+      "default_positive": "1girl, pale skin, blue eyes, white hair, very long hair, braided ponytail, hair over one eye",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/shenhe.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色申鹤。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "large breasts, bodysuit, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "yelan",
+      "name": "夜兰",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "yelan (genshin impact), genshin impact",
+      "default_positive": "1girl, green eyes, black hair, multicolored hair, blue hair, aqua hair, long hair, dice",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/yelan.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色夜兰。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "large breasts, bodysuit, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "nilou",
+      "name": "妮露",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "nilou (genshin impact), genshin impact",
+      "default_positive": "1girl, aqua eyes, red hair, long hair, veil, jewelry",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/nilou.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色妮露。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "harem outfit, midriff, dancer, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "yoimiya",
+      "name": "宵宫",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "yoimiya (genshin impact), genshin impact",
+      "default_positive": "1girl, red eyes, yellow eyes, blonde hair, long hair, ponytail, hair ornament, bandage",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/yoimiya.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色宵宫。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "orange kimono, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "eula",
+      "name": "优菈",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "eula (genshin impact), genshin impact",
+      "default_positive": "1girl, yellow eyes, light blue hair, medium hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/eula.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "原神角色优菈。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "medium breasts, cape, leotard, thighs, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "changli",
+      "name": "长离",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "changli_illustrious.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "changli (wuthering waves), wuthering waves",
+      "default_positive": "1girl, red eyes, white hair, pink hair, gradient hair, mole under eye, long hair, phoenix",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/changli_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "鸣潮角色长离。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "china dress, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "jinhsi",
+      "name": "今汐",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "jinhsi (wuthering waves), wuthering waves",
+      "default_positive": "1girl, yellow eyes, white hair, long hair, horns, jewelry",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/jinhsi_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "鸣潮角色今汐。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "white dress, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "camellya",
+      "name": "椿",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "camellya (wuthering waves), wuthering waves",
+      "default_positive": "1girl, red eyes, black hair, pink hair, twintails, flower, hair flower",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/camellya_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "鸣潮角色椿。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "black dress, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "shorekeeper",
+      "name": "守岸人",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "shorekeeper (wuthering waves), wuthering waves",
+      "default_positive": "1girl, purple eyes, white hair, star-shaped pupils, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/shorekeeper_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "鸣潮角色守岸人。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "white dress, ethereal, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "carlotta",
+      "name": "卡洛塔",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "carlotta (wuthering waves), wuthering waves",
+      "default_positive": "1girl, pink eyes, white hair, long hair, hair ornament",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/carlotta_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "鸣潮角色卡洛塔。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "dress, elegant, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "yinlin",
+      "name": "吟霖",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "yinlin (wuthering waves), wuthering waves",
+      "default_positive": "1girl, red eyes, black hair, purple hair, pointy ears, long hair, electro",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/yinlin_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "鸣潮角色吟霖。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "chinese clothes, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "encore",
+      "name": "恩核",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "encore (wuthering waves), wuthering waves",
+      "default_positive": "1girl, purple eyes, red hair, long hair, twintails, wooly",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/encore_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "鸣潮角色恩核。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "cute, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "ellen_joe",
+      "name": "艾莲",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "ellen joe, zenless zone zero",
+      "default_positive": "1girl, shark girl, shark tail, red eyes, black hair, colored inner hair, red hair, yellow eyes",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/ellen_joe.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "绝区零角色艾莲。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "maid, black dress, red necktie, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "zhu_yuan",
+      "name": "朱鸢",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "zhu yuan, zenless zone zero",
+      "default_positive": "1girl, orange eyes, black hair, long hair, ponytail, holster",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/zhu_yuan.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "绝区零角色朱鸢。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "police uniform, large breasts, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "jane_doe",
+      "name": "简·杜",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "jane doe (zenless zone zero), zenless zone zero",
+      "default_positive": "1girl, mouse girl, mouse ears, mouse tail, black eyes, black hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/jane_doe_(zenless_zone_zero).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "绝区零角色简·杜。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "pantyhose, jacket, midriff, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "burnice",
+      "name": "柏妮思",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "burnice white, zenless zone zero",
+      "default_positive": "1girl, green eyes, blonde hair, long hair, twintails, flame, cocktail shaker",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/burnice_white.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "绝区零角色柏妮思。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "black shorts, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "yanagi",
+      "name": "月城柳",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "tsukishiro yanagi, zenless zone zero",
+      "default_positive": "1girl, glasses, green eyes, green hair, long hair, ponytail",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/tsukishiro_yanagi.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "绝区零角色月城柳。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "suit, pantyhose, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "miyabi",
+      "name": "星见雅",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "hoshimi_miyabi_illustrious.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "hoshimi miyabi, zenless zone zero",
+      "default_positive": "1girl, fox girl, fox ears, fox tail, yellow eyes, black hair, long hair, katana",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/hoshimi_miyabi.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "绝区零角色星见雅。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "school uniform, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "kafka",
+      "name": "卡芙卡",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "kafka (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, purple eyes, purple hair, sunglasses, spider web print",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/kafka.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "崩坏：星穹铁道角色卡芙卡。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "jacket, pantyhose, large breasts, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "firefly",
+      "name": "流萤",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "firefly (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, cyan eyes, grey hair, two-tone hair, white hair, hair between eyes, trailblazer",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/firefly_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "崩坏：星穹铁道角色流萤。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "sparkle",
+      "name": "花火",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "sparkle (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, pink eyes, black hair, red hair, twintails, fox mask, hair ornament",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/sparkle_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "崩坏：星穹铁道角色花火。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "kimono, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "robin",
+      "name": "知更鸟",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "robin (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, aqua eyes, hair between eyes, teal hair, halo, wings",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/robin_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "崩坏：星穹铁道角色知更鸟。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "white dress, idol, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "acheron",
+      "name": "黄泉",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "acheron (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, purple eyes, black hair, streaked hair, purple hair, very long hair, lightning",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/acheron_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "崩坏：星穹铁道角色黄泉。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "coat, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "black_swan",
+      "name": "黑天鹅",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "black swan (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, aqua eyes, hair between eyes, grey hair, purple hair, veil",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/black_swan_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "崩坏：星穹铁道角色黑天鹅。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "large breasts, bare shoulders, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "silver_wolf",
+      "name": "银狼",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "silver wolf (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, heterochromia, grey hair, punchy bangs, crossover, holographic",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/silver_wolf_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "崩坏：星穹铁道角色银狼。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "jacket, shorts, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "ruan_mei",
+      "name": "阮·梅",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "ruan mei (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, aqua eyes, teal hair, hair bun, hair ornament",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/ruan_mei.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "notes": "崩坏：星穹铁道角色阮·梅。WAI/Anima 原生 Danbooru 标签即可还原，无需 LoRA。",
+      "default_outfit": "chinese clothes, elegant, anime style, detailed eyes, high quality",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "id": "hatsune_miku",
+      "name": "初音未来",
+      "category": "VOCALOID",
+      "category_type": "虚拟歌手",
+      "lora_name": "hatsune_miku_illustrious.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "hatsune miku, vocaloid",
+      "default_positive": "1girl, aqua eyes, aqua hair, very long hair, twintails, hair ornament",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/hatsune_miku.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "VOCALOID角色初音未来。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "megurine_luka",
+      "name": "巡音流歌",
+      "category": "VOCALOID",
+      "category_type": "虚拟歌手",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "megurine luka, vocaloid",
+      "default_positive": "1girl, blue eyes, pink hair, long hair, very long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/megurine_luka.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "VOCALOID角色巡音流歌。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "kagamine_rin",
+      "name": "镜音铃",
+      "category": "VOCALOID",
+      "category_type": "虚拟歌手",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "kagamine rin, vocaloid",
+      "default_positive": "1girl, aqua eyes, blonde hair, short hair, hair bow",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/kagamine_rin.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "VOCALOID角色镜音铃。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "kamisato_ayaka",
+      "name": "神里绫华",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "kamisato_ayaka_illustrious.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "kamisato ayaka, genshin impact",
+      "default_positive": "1girl, blue eyes, light blue hair, long hair, ponytail, mole under each eye",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/kamisato_ayaka.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色神里绫华。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "klee",
+      "name": "可莉",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "klee (genshin impact), genshin impact",
+      "default_positive": "1girl, red eyes, blonde hair, short hair, pointy ears, hat",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/klee.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色可莉。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "sangonomiya_kokomi",
+      "name": "珊瑚宫心海",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "sangonomiya kokomi, genshin impact",
+      "default_positive": "1girl, pink eyes, pastel colored hair, long hair, bangs",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/sangonomiya_kokomi.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色珊瑚宫心海。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "jean_gunnhildr",
+      "name": "琴",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "jean (genshin impact), genshin impact",
+      "default_positive": "1girl, blue eyes, blonde hair, ponytail, hair bow",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/jean.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色琴。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "fischl",
+      "name": "菲谢尔",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "fischl (genshin impact), genshin impact",
+      "default_positive": "1girl, green eyes, blonde hair, long hair, twintails, eyepatch",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/fischl.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色菲谢尔。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "mona",
+      "name": "莫娜",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "mona (genshin impact), genshin impact",
+      "default_positive": "1girl, green eyes, black hair, long hair, twintails, hat",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/mona.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色莫娜。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "lumine",
+      "name": "荧",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "lumine (genshin impact), genshin impact",
+      "default_positive": "1girl, yellow eyes, blonde hair, short hair, ahoge, hair flower",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/lumine.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色荧。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "clorinde",
+      "name": "克洛琳德",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "clorinde (genshin impact), genshin impact",
+      "default_positive": "1girl, purple eyes, dark purple hair, long hair, hat, mole under eye",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/clorinde.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色克洛琳德。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "navia",
+      "name": "娜维娅",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "navia (genshin impact), genshin impact",
+      "default_positive": "1girl, blue eyes, blonde hair, long hair, hat, black hairband",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/navia.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色娜维娅。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "mualani",
+      "name": "玛拉妮",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "mualani (genshin impact), genshin impact",
+      "default_positive": "1girl, red eyes, white hair, blue hair, two-tone hair, tan",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/mualani.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色玛拉妮。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "xilonen",
+      "name": "希诺宁",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "xilonen_illustrious.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "xilonen (genshin impact), genshin impact",
+      "default_positive": "1girl, green eyes, blonde hair, animal ears, sunglasses",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/xilonen.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色希诺宁。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "skirk",
+      "name": "丝柯克",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "skirk (genshin impact), genshin impact",
+      "default_positive": "1girl, blue eyes, light blue hair, very long hair, pale skin",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/skirk.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色丝柯克。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "zhezhi",
+      "name": "折枝",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "zhezhi_illustrious.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "zhezhi (wuthering waves), wuthering waves",
+      "default_positive": "1girl, blue eyes, black hair, two-tone hair, glasses, two side up",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/zhezhi_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "鸣潮角色折枝。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "chixia",
+      "name": "炽霞",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "chixia_illustrious.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "chixia (wuthering waves), wuthering waves",
+      "default_positive": "1girl, red eyes, red hair, single braid, freckles",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/chixia_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "鸣潮角色炽霞。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "jianxin",
+      "name": "鉴心",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "jianxin (wuthering waves), wuthering waves",
+      "default_positive": "1girl, green eyes, black hair, long hair, ahoge",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/jianxin_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "鸣潮角色鉴心。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "yangyang",
+      "name": "秧秧",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "yangyang (wuthering waves), wuthering waves",
+      "default_positive": "1girl, grey eyes, grey hair, long hair, antenna hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/yangyang_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "鸣潮角色秧秧。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "cantarella",
+      "name": "坎特蕾拉",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "cantarella (wuthering waves), wuthering waves",
+      "default_positive": "1girl, purple eyes, light purple hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/cantarella_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "鸣潮角色坎特蕾拉。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "phoebe_ww",
+      "name": "菲比",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "phoebe (wuthering waves), wuthering waves",
+      "default_positive": "1girl, blue eyes, white hair, long hair, halo",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/phoebe_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "鸣潮角色菲比。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "seele",
+      "name": "希儿",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "seele (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, red eyes, dark blue hair, long hair, ahoge, scythe",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/seele_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色希儿。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "jingliu",
+      "name": "镜流",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "jingliu (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, red eyes, white hair, long hair, blindfold",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/jingliu_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色镜流。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "fu_xuan",
+      "name": "符玄",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "fu xuan (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, yellow eyes, pink hair, long hair, forehead mark",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/fu_xuan.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色符玄。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "himeko",
+      "name": "姬子",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "himeko (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, yellow eyes, red hair, long hair, glasses",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/himeko_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色姬子。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "march_7th",
+      "name": "三月七",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "march 7th (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, pink eyes, pink hair, medium hair, hair intakes",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/march_7th_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色三月七。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "feixiao",
+      "name": "飞霄",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "feixiao (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, yellow eyes, white hair, long hair, fox ears",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/feixiao_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色飞霄。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "castorice",
+      "name": "遐蝶",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "castorice (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, pink eyes, light purple hair, long hair, butterfly",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/castorice_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色遐蝶。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "the_herta",
+      "name": "大黑塔",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "the herta (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, purple eyes, grey hair, very long hair, hat, key",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/the_herta_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色大黑塔。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "astra_yao",
+      "name": "耀嘉音",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "astra yao, zenless zone zero",
+      "default_positive": "1girl, yellow eyes, black hair, long hair, mole under eye",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/astra_yao.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色耀嘉音。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "evelyn",
+      "name": "伊芙琳",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "evelyn chevalier, zenless zone zero",
+      "default_positive": "1girl, red eyes, blonde hair, long hair, mole",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/evelyn_chevalier.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色伊芙琳。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "caesar_king",
+      "name": "凯撒",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "caesar king, zenless zone zero",
+      "default_positive": "1girl, red eyes, pale blonde hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/caesar_king.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色凯撒。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "piper",
+      "name": "派派",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "piper wheel, zenless zone zero",
+      "default_positive": "1girl, yellow eyes, blonde hair, long hair, hair bun",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/piper_wheel.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色派派。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "yixuan",
+      "name": "仪玄",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "yixuan (zenless zone zero), zenless zone zero",
+      "default_positive": "1girl, yellow eyes, black hair, long hair, china dress",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/yixuan_(zenless_zone_zero).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色仪玄。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "roxy_zzz",
+      "name": "洛克茜",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "roxy_zzz_illustrious.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "roxy (zenless zone zero), zenless zone zero",
+      "default_positive": "1girl, red eyes, pink hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/roxy_(zenless_zone_zero).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色洛克茜。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "mint_nte",
+      "name": "薄荷",
+      "category": "异环",
+      "category_type": "游戏角色",
+      "lora_name": "mint_nte_illustrious.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "mint (nte), neverness to everness",
+      "default_positive": "1girl, cat girl, cat ears, red eyes, aqua hair, pink hair, streaked hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/mint_(nte).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "异环角色薄荷。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "hathor_nte",
+      "name": "哈索尔",
+      "category": "异环",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "hathor (nte), neverness to everness",
+      "default_positive": "1girl, yellow eyes, white hair, long hair, wings",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/hathor_(nte).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "异环角色哈索尔。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "esper_zero_nte",
+      "name": "零",
+      "category": "异环",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "female esper zero (nte), neverness to everness",
+      "default_positive": "1girl, yellow eyes, black hair, short hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/female_esper_zero_(nte).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "异环角色零。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "daffodil_nte",
+      "name": "达芙蒂尔",
+      "category": "异环",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "daffodil (nte), neverness to everness",
+      "default_positive": "1girl, purple eyes, blonde hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/daffodil_(nte).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "异环角色达芙蒂尔。标签来自 Danbooru wiki（与 NoobAI/downloadmost 同源）。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "amber",
+      "name": "安柏",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "amber (genshin impact), genshin impact",
+      "default_positive": "1girl, brown eyes, brown hair, long hair, hair bow",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/amber.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色安柏。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "lisa",
+      "name": "丽莎",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "lisa (genshin impact), genshin impact",
+      "default_positive": "1girl, green eyes, brown hair, long hair, witch hat",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/lisa.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色丽莎。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "noelle",
+      "name": "诺艾尔",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "noelle (genshin impact), genshin impact",
+      "default_positive": "1girl, green eyes, silver hair, short hair, maid",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/noelle.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色诺艾尔。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "rosaria",
+      "name": "罗莎莉亚",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "rosaria (genshin impact), genshin impact",
+      "default_positive": "1girl, red eyes, grey hair, short hair, nun",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/rosaria.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色罗莎莉亚。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "yaoyao",
+      "name": "瑶瑶",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "yaoyao (genshin impact), genshin impact",
+      "default_positive": "1girl, brown eyes, brown hair, twintails, pointy ears",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/yaoyao.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色瑶瑶。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "kirara",
+      "name": "绮良良",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "kirara (genshin impact), genshin impact",
+      "default_positive": "1girl, cat girl, cat ears, green eyes, blonde hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/kirara.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色绮良良。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "chiori",
+      "name": "千织",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "chiori (genshin impact), genshin impact",
+      "default_positive": "1girl, red eyes, brown hair, long hair, mole under eye",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/chiori.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色千织。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "sigewinne",
+      "name": "希格雯",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "sigewinne (genshin impact), genshin impact",
+      "default_positive": "1girl, red eyes, blue hair, long hair, animal ears",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/sigewinne.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色希格雯。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "escoffier",
+      "name": "爱可菲",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "escoffier (genshin impact), genshin impact",
+      "default_positive": "1girl, blue eyes, pink hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/escoffier_(genshin_impact).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "原神角色爱可菲。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "baizhi",
+      "name": "白芷",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "baizhi (wuthering waves), wuthering waves",
+      "default_positive": "1girl, blue eyes, white hair, long hair, glasses",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/baizhi_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "鸣潮角色白芷。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "youhu",
+      "name": "釉瑚",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "youhu (wuthering waves), wuthering waves",
+      "default_positive": "1girl, yellow eyes, brown hair, short hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/youhu_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "鸣潮角色釉瑚。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "lumi_ww",
+      "name": "露弥",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "lumi (wuthering waves), wuthering waves",
+      "default_positive": "1girl, blue eyes, blonde hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/lumi_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "鸣潮角色露弥。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "ciaccona",
+      "name": "夏空",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "ciaccona (wuthering waves), wuthering waves",
+      "default_positive": "1girl, blue eyes, blonde hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/ciaccona_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "鸣潮角色夏空。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "zani",
+      "name": "赞妮",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "zani (wuthering waves), wuthering waves",
+      "default_positive": "1girl, yellow eyes, white hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/zani_(wuthering_waves).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "鸣潮角色赞妮。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "tingyun",
+      "name": "停云",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "tingyun (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, fox girl, fox ears, brown eyes, brown hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/tingyun.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色停云。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "topaz",
+      "name": "托帕",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "topaz (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, blue eyes, red hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/topaz_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色托帕。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "jade_hsr",
+      "name": "翡翠",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "jade (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, purple eyes, grey hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/jade_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色翡翠。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "yunli",
+      "name": "云璃",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "yunli (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, yellow eyes, brown hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/yunli_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色云璃。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "lingsha",
+      "name": "灵砂",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "lingsha (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, yellow eyes, brown hair, long hair, horns",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/lingsha_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色灵砂。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "rappa",
+      "name": "乱破",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "rappa (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, red eyes, grey hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/rappa_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色乱破。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "aglaea",
+      "name": "阿格莱雅",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "aglaea (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, blue eyes, blonde hair, long hair, golden",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/aglaea_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色阿格莱雅。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "tribbie",
+      "name": "缇宝",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "tribbie (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, pink eyes, pink hair, short hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/tribbie_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色缇宝。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "cyrene",
+      "name": "昔涟",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "cyrene (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, blue eyes, pink hair, long hair, elf",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/cyrene_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩坏：星穹铁道角色昔涟。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "nicole_zzz",
+      "name": "妮可",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "nicole demara, zenless zone zero",
+      "default_positive": "1girl, green eyes, blonde hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/nicole_demara.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色妮可。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "anby",
+      "name": "安比",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "anby demara, zenless zone zero",
+      "default_positive": "1girl, orange eyes, grey hair, short hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/anby_demara.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色安比。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "corin",
+      "name": "可琳",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "corin wickes, zenless zone zero",
+      "default_positive": "1girl, green eyes, grey hair, twintails, maid",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/corin_wickes.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色可琳。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "rina_zzz",
+      "name": "丽娜",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "alexandrina sebastiane, zenless zone zero",
+      "default_positive": "1girl, red eyes, grey hair, long hair, maid",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/alexandrina_sebastiane.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色丽娜。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "grace_howard",
+      "name": "格莉丝",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "grace howard, zenless zone zero",
+      "default_positive": "1girl, orange eyes, black hair, long hair, glasses",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/grace_howard.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色格莉丝。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "koleda",
+      "name": "珂蕾妲",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "koleda belobog, zenless zone zero",
+      "default_positive": "1girl, red eyes, red hair, short hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/koleda_belobog.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色珂蕾妲。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "lucy_zzz",
+      "name": "露西",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "luciana de montefio, zenless zone zero",
+      "default_positive": "1girl, red eyes, blonde hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/luciana_de_montefio.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色露西。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "soukaku",
+      "name": "苍角",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "soukaku, zenless zone zero",
+      "default_positive": "1girl, oni, oni horns, blue eyes, blue hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/soukaku.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色苍角。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "trigger_zzz",
+      "name": "扳机",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "trigger (zenless zone zero), zenless zone zero",
+      "default_positive": "1girl, red eyes, grey hair, long hair, eyepatch",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/trigger_(zenless_zone_zero).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色扳机。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "ju_fufu",
+      "name": "橘福福",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "ju fufu, zenless zone zero",
+      "default_positive": "1girl, tiger girl, orange hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/ju_fufu.jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色橘福福。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "seed_zzz",
+      "name": "席德",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "lora_name": "",
+      "lora_strength": 0.8,
+      "trigger_words": "seed (zenless zone zero), zenless zone zero",
+      "default_positive": "1girl, yellow eyes, blonde hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/seed_(zenless_zone_zero).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "绝区零角色席德。标签来自 Danbooru 角色页习惯用法。适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "zankou_nte",
+      "name": "残虹",
+      "category": "异环",
+      "category_type": "游戏角色",
+      "lora_name": "zankou_nte_illustrious.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "ZANKOU, neverness to everness",
+      "default_positive": "1girl, green eyes, white hair, very long hair, high ponytail, hair ornament, multicolored eyes",
+      "style_tags": "",
+      "preview_image": "",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "异环角色残虹。使用 Illustrious LoRA，适配 WAI 与 Animagine。",
+      "default_outfit": "japanese clothes, sleeveless dress, detached sleeves, anime style, detailed eyes, high quality"
+    },
+    {
+      "id": "evernight",
+      "name": "长夜月",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "lora_name": "hsr_girls_illustrious.safetensors",
+      "lora_strength": 0.8,
+      "trigger_words": "evernight (honkai: star rail), honkai: star rail",
+      "default_positive": "1girl, yellow eyes, black hair, long hair",
+      "style_tags": "",
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/evernight_(honkai:_star_rail).jpg",
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "notes": "崩铁角色长夜月。该 Illustrious LoRA 触发词是 evernight，适配 WAI 与 Animagine。",
+      "default_outfit": "anime style, detailed eyes, high quality"
     }
   ]
 }

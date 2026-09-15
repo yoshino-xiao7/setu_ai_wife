@@ -9,7 +9,11 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/af0b3526-1fc3-4ed7-868a-377ee0b68015/anim=false,width=450,optimized=true/01.jpeg",
-      "notes": "鸣潮角色卡提希娅 LoRA。适合竖屏人像和半身插画；双角色模式建议从 0.6-0.65 起步，减少角色特征串味。"
+      "notes": "鸣潮角色卡提希娅 LoRA。适合竖屏人像和半身插画；双角色模式建议从 0.6-0.65 起步，减少角色特征串味。",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "name": "yae_miko_offset_9_6.safetensors",
@@ -18,9 +22,10 @@
       "category_type": "游戏角色",
       "trigger_words": "yae miko, genshin impact",
       "recommended_strength": 0.8,
-      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoint": "",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/a5e824f9-c5b0-48de-1120-289a1166a100/anim=false,width=450,optimized=true/341491.jpeg",
-      "notes": "原神角色八重神子 LoRA。建议通过角色预设使用，会自动注入常用角色 tags。WAI 模型上 NSFW 效果最佳；和 Animagine XL 4.0 搭配时强度建议 0.65-0.75。"
+      "notes": "SD1.5 LoRA，和当前 WAI/Illustrious 权重形状不匹配，加载时会刷 ERROR 并跳过部分层。文件仍保留在本地，但不再推荐给现有模型。",
+      "recommended_checkpoints": []
     },
     {
       "name": "RaidenShogun-HandsFix.safetensors",
@@ -29,9 +34,10 @@
       "category_type": "游戏角色",
       "trigger_words": "raiden shogun, genshin impact",
       "recommended_strength": 0.8,
-      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoint": "",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/abbfe4d7-d72f-4783-860e-cd970efc0a7a/anim=false,width=450,optimized=true/00025-2713605955.jpeg",
-      "notes": "原神角色雷电将军 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；多人或双 LoRA 场景建议降低到 0.6-0.65。"
+      "notes": "SD1.5 LoRA，和当前 WAI/Illustrious 权重形状不匹配，加载时会刷 ERROR 并跳过部分层。文件仍保留在本地，但不再推荐给现有模型。",
+      "recommended_checkpoints": []
     },
     {
       "name": "Genshin_Lynette_AP_v1.safetensors",
@@ -40,9 +46,10 @@
       "category_type": "游戏角色",
       "trigger_words": "lynette (genshin impact), genshin impact",
       "recommended_strength": 0.8,
-      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoint": "",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/eacdff64-5caa-4e96-bd5a-092b0ca79a1d/anim=false,width=450,optimized=true/01631-2804914936-masterpiece,%20best%20quality,%201girl,%20purple%20eyes,%20official,%20dynamic%20angle,%20simple%20background,%20(green%20background),%20white%20background,.jpeg",
-      "notes": "原神角色琳妮特 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；普通单角色构图推荐 0.75-0.85。"
+      "notes": "SD1.5 LoRA，和当前 WAI/Illustrious 权重形状不匹配，加载时会刷 ERROR 并跳过部分层。文件仍保留在本地，但不再推荐给现有模型。",
+      "recommended_checkpoints": []
     },
     {
       "name": "sandrone_genshin_impact_ilxl_goofy.safetensors",
@@ -53,7 +60,11 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/0e8f19d2-3f57-4eea-b788-df4e73280513/anim=false,width=450,optimized=true/00009-3338321267.jpeg",
-      "notes": "原神角色桑多涅 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；与 Illustrious/WAI 系模型适配优先。"
+      "notes": "原神角色桑多涅 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；与 Illustrious/WAI 系模型适配优先。",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "name": "columbina_2a_naiVpred-000039.safetensors",
@@ -64,7 +75,11 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/f1b6845b-5775-4e00-9266-e799754a79b1/anim=false,width=450,optimized=true/00024-1044239695.jpeg",
-      "notes": "原神角色哥伦比娅 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；如果人物特征过强或污染背景，降低到 0.65-0.75。"
+      "notes": "原神角色哥伦比娅 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；如果人物特征过强或污染背景，降低到 0.65-0.75。",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "name": "c_citlali (genshin impact)_nbe11_xl.safetensors",
@@ -75,7 +90,11 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/34afcc2e-c655-4b85-ace5-04d152154880/anim=false,width=450,optimized=true/00107-756123321.jpeg",
-      "notes": "原神角色茜特菈莉 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；动漫模型下推荐 0.75-0.85 起步。"
+      "notes": "原神角色茜特菈莉 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；动漫模型下推荐 0.75-0.85 起步。",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "name": "extremely detailed.safetensors",
@@ -84,9 +103,10 @@
       "category_type": "质量/细节",
       "trigger_words": "extremely detailed",
       "recommended_strength": 0.6,
-      "recommended_checkpoint": "RealVisXL_V5.0_fp16.safetensors",
+      "recommended_checkpoint": "",
       "preview_image": "https://huggingface.co/ntc-ai/SDXL-LoRA-slider.extremely-detailed/resolve/main/images/extremely%20detailed_17_3.0.png",
-      "notes": "SDXL 通用细节滑杆 LoRA，MIT license。写实和二次元都可测试；建议 0.35-0.75 起步，过高容易锐化过度或产生脏细节。"
+      "notes": "SDXL 通用细节滑杆 LoRA，MIT license。二次元模型可测试；建议 0.35-0.75 起步，过高容易锐化过度或产生脏细节。",
+      "recommended_checkpoints": []
     },
     {
       "name": "dynamic anatomy.safetensors",
@@ -95,9 +115,10 @@
       "category_type": "人体/姿态",
       "trigger_words": "dynamic anatomy",
       "recommended_strength": 0.55,
-      "recommended_checkpoint": "RealVisXL_V5.0_fp16.safetensors",
+      "recommended_checkpoint": "",
       "preview_image": "https://huggingface.co/ntc-ai/SDXL-LoRA-slider.dynamic-anatomy/resolve/main/images/dynamic%20anatomy_17_3.0.png",
-      "notes": "SDXL 人体和姿态倾向滑杆 LoRA，MIT license。适合全身、动态姿势、人体轮廓辅助；建议 0.35-0.7，和角色 LoRA 同用时先降到 0.35-0.5。"
+      "notes": "SDXL 人体和姿态倾向滑杆 LoRA，MIT license。适合全身、动态姿势、人体轮廓辅助；建议 0.35-0.7，和角色 LoRA 同用时先降到 0.35-0.5。",
+      "recommended_checkpoints": []
     },
     {
       "name": "sdxl-pdxl-tuning-face-detailer-lora.safetensors",
@@ -106,9 +127,10 @@
       "category_type": "脸部/细节",
       "trigger_words": "",
       "recommended_strength": 0.45,
-      "recommended_checkpoint": "RealVisXL_V5.0_fp16.safetensors",
+      "recommended_checkpoint": "",
       "preview_image": "https://huggingface.co/Muapi/sdxl-pdxl-tuning-face-detailer-lora/resolve/main/preview.jpg",
-      "notes": "SDXL/PonyXL 脸部细节调校 LoRA，OpenRAIL++。适合头像、半身、人像修脸；建议 0.25-0.55，过高可能让脸部质感变硬。"
+      "notes": "SDXL/PonyXL 脸部细节调校 LoRA，OpenRAIL++。适合头像、半身、人像修脸；建议 0.25-0.55，过高可能让脸部质感变硬。",
+      "recommended_checkpoints": []
     },
     {
       "name": "n-sfw-filter-slider-tool-lora-xl-animagine.safetensors",
@@ -119,7 +141,10 @@
       "recommended_strength": 0.45,
       "recommended_checkpoint": "animagine-xl-4.0-opt.safetensors",
       "preview_image": "https://huggingface.co/Muapi/n-sfw-filter-slider-tool-lora-xl-animagine/resolve/main/preview.jpg",
-      "notes": "面向 SDXL/Animagine 的可见度滑杆 LoRA，OpenRAIL++。仅用于成人、授权或虚构内容；建议 0.25-0.6，避免和角色 LoRA 同时拉得过高。"
+      "notes": "面向 SDXL/Animagine 的可见度滑杆 LoRA，OpenRAIL++。仅用于成人、授权或虚构内容；建议 0.25-0.6，避免和角色 LoRA 同时拉得过高。",
+      "recommended_checkpoints": [
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "name": "ani4.0-opt-pvc_00009e_065205s.safetensors",
@@ -130,7 +155,10 @@
       "recommended_strength": 0.75,
       "recommended_checkpoint": "animagine-xl-4.0-opt.safetensors",
       "preview_image": "https://huggingface.co/p1atdev/animagine-xl-4.0-opt-pvc-style-lora/resolve/main/images/image.jpg",
-      "notes": "Animagine XL 4.0 opt 专用 PVC/手办质感风格 LoRA，Apache-2.0。适合二次元角色、玩具质感、手办展示；建议 0.6-0.9。"
+      "notes": "Animagine XL 4.0 opt 专用 PVC/手办质感风格 LoRA，Apache-2.0。适合二次元角色、玩具质感、手办展示；建议 0.6-0.9。",
+      "recommended_checkpoints": [
+        "animagine-xl-4.0-opt.safetensors"
+      ]
     },
     {
       "name": "NekomiyaManaIL-09.safetensors",
@@ -141,7 +169,266 @@
       "recommended_strength": 0.8,
       "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
       "preview_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/6255e175-3865-43fe-90cb-81f8dbea7533/anim=false,width=450,optimized=true/00003-2914035455.jpeg",
-      "notes": "绝区零角色猫宫又奈 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；单角色推荐强度 0.75-0.85，双角色建议降到 0.6-0.65。"
+      "notes": "绝区零角色猫宫又奈 LoRA。建议通过角色预设使用，会自动注入常用角色 tags；单角色推荐强度 0.75-0.85，双角色建议降到 0.6-0.65。",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ]
+    },
+    {
+      "name": "watercolor.safetensors",
+      "display_name": "水彩风格滑杆",
+      "category": "二次元风格",
+      "category_type": "风格",
+      "trigger_words": "watercolor",
+      "recommended_strength": 0.7,
+      "recommended_checkpoint": "",
+      "preview_image": "https://huggingface.co/ntc-ai/SDXL-LoRA-slider.watercolor/resolve/main/images/watercolor_17_3.0.png",
+      "notes": "SDXL 水彩风格滑杆 LoRA，MIT license。二次元模型可测试；建议 0.4-0.8。和角色 LoRA 同用时先降到 0.4-0.55。",
+      "recommended_checkpoints": []
+    },
+    {
+      "name": "oil painting.safetensors",
+      "display_name": "油画风格滑杆",
+      "category": "二次元风格",
+      "category_type": "风格",
+      "trigger_words": "oil painting",
+      "recommended_strength": 0.7,
+      "recommended_checkpoint": "",
+      "preview_image": "https://huggingface.co/ntc-ai/SDXL-LoRA-slider.oil-painting/resolve/main/images/oil%20painting_17_3.0.png",
+      "notes": "SDXL 油画风格滑杆 LoRA，MIT license。适合肖像和厚涂质感；建议 0.4-0.8。",
+      "recommended_checkpoints": []
+    },
+    {
+      "name": "cinematic lighting with moody ambiance.safetensors",
+      "display_name": "电影光影滑杆",
+      "category": "通用增强",
+      "category_type": "光影",
+      "trigger_words": "cinematic lighting with moody ambiance",
+      "recommended_strength": 0.55,
+      "recommended_checkpoint": "",
+      "preview_image": "https://huggingface.co/ntc-ai/SDXL-LoRA-slider.cinematic-lighting-with-moody-ambiance/resolve/main/images/cinematic%20lighting%20with%20moody%20ambiance_17_3.0.png",
+      "notes": "SDXL 电影光影滑杆 LoRA，MIT license。适合氛围人像；建议 0.35-0.7，过高可能过暗。",
+      "recommended_checkpoints": []
+    },
+    {
+      "name": "anime.safetensors",
+      "display_name": "动漫风格滑杆",
+      "category": "二次元风格",
+      "category_type": "风格",
+      "trigger_words": "anime",
+      "recommended_strength": 0.55,
+      "recommended_checkpoint": "",
+      "preview_image": "https://huggingface.co/ntc-ai/SDXL-LoRA-slider.anime/resolve/main/images/anime_17_3.0.png",
+      "notes": "SDXL 动漫风格滑杆 LoRA，MIT license。可把画面往二次元方向推；建议 0.35-0.7。",
+      "recommended_checkpoints": []
+    },
+    {
+      "name": "90s anime.safetensors",
+      "display_name": "九十年代动漫滑杆",
+      "category": "二次元风格",
+      "category_type": "风格",
+      "trigger_words": "90s anime",
+      "recommended_strength": 0.6,
+      "recommended_checkpoint": "",
+      "preview_image": "https://huggingface.co/ntc-ai/SDXL-LoRA-slider.90s-anime/resolve/main/images/90s%20anime_17_3.0.png",
+      "notes": "SDXL 90 年代动漫风格滑杆 LoRA，MIT license。赛璐璐怀旧风；建议 0.4-0.8。",
+      "recommended_checkpoints": []
+    },
+    {
+      "name": "yae_miko_illustrious.safetensors",
+      "display_name": "八重神子 (Illustrious)",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "trigger_words": "KJOmiko, yae miko, genshin impact, pink hair, purple eyes, floppy ears",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/yae_miko.jpg",
+      "notes": "Illustrious 角色 LoRA，适配 WAI 与 Animagine。推荐强度 0.75-0.85。"
+    },
+    {
+      "name": "raiden_shogun_illustrious.safetensors",
+      "display_name": "雷电将军 (Illustrious)",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "trigger_words": "raiden shogun, genshin impact, purple hair, braided ponytail, purple eyes, mole under eye",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/raiden_shogun.jpg",
+      "notes": "Illustrious 角色 LoRA，适配 WAI 与 Animagine。推荐强度 0.75-0.85。"
+    },
+    {
+      "name": "hatsune_miku_illustrious.safetensors",
+      "display_name": "初音未来 (Illustrious)",
+      "category": "VOCALOID",
+      "category_type": "虚拟歌手",
+      "trigger_words": "ilhatsunemiku, hatsune miku, vocaloid",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/hatsune_miku.jpg",
+      "notes": "Illustrious 角色 LoRA，适配 WAI 与 Animagine。WAI 原生标签已经很强，LoRA 用于加强还原。"
+    },
+    {
+      "name": "zhezhi_illustrious.safetensors",
+      "display_name": "折枝 (Illustrious)",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "trigger_words": "wwzz, zhezhi (wuthering waves), two side up, black hair, gradient hair",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/zhezhi_(wuthering_waves).jpg",
+      "notes": "Illustrious 角色 LoRA，适配 WAI 与 Animagine。"
+    },
+    {
+      "name": "chixia_illustrious.safetensors",
+      "display_name": "炽霞 (Illustrious)",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "trigger_words": "cxia, chixia (wuthering waves), red hair, red eyes, freckles",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/chixia_(wuthering_waves).jpg",
+      "notes": "Illustrious 角色 LoRA，适配 WAI 与 Animagine。"
+    },
+    {
+      "name": "roxy_zzz_illustrious.safetensors",
+      "display_name": "洛克茜 (Illustrious)",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "trigger_words": "roxy (zenless zone zero), zenless zone zero",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/roxy_(zenless_zone_zero).jpg",
+      "notes": "Illustrious 角色 LoRA，适配 WAI 与 Animagine。新角色建议挂 LoRA。"
+    },
+    {
+      "name": "mint_nte_illustrious.safetensors",
+      "display_name": "薄荷 (Illustrious)",
+      "category": "异环",
+      "category_type": "游戏角色",
+      "trigger_words": "mint (nte), neverness to everness",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/mint_(nte).jpg",
+      "notes": "异环（Neverness to Everness）Illustrious LoRA，适配 WAI 与 Animagine。"
+    },
+    {
+      "name": "xilonen_illustrious.safetensors",
+      "display_name": "希诺宁 (Illustrious)",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "trigger_words": "xilonen (genshin impact), genshin impact",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "https://www.downloadmost.com/NoobAI-XL/danbooru-character/preview/xilonen.jpg",
+      "notes": "Illustrious 角色 LoRA，适配 WAI 与 Animagine。"
+    },
+    {
+      "name": "kamisato_ayaka_illustrious.safetensors",
+      "display_name": "神里绫华 (Illustrious)",
+      "category": "原神",
+      "category_type": "游戏角色",
+      "trigger_words": "kamisato ayaka, genshin impact",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "",
+      "notes": "Illustrious 角色 LoRA，适配 WAI 与 Animagine。"
+    },
+    {
+      "name": "changli_illustrious.safetensors",
+      "display_name": "长离 (Illustrious)",
+      "category": "鸣潮",
+      "category_type": "游戏角色",
+      "trigger_words": "changli (wuthering waves), wuthering waves",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "",
+      "notes": "Illustrious 角色 LoRA，适配 WAI 与 Animagine。"
+    },
+    {
+      "name": "hoshimi_miyabi_illustrious.safetensors",
+      "display_name": "星见雅 (Illustrious)",
+      "category": "绝区零",
+      "category_type": "游戏角色",
+      "trigger_words": "hoshimi miyabi, zenless zone zero",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "",
+      "notes": "Illustrious 角色 LoRA，适配 WAI 与 Animagine。"
+    },
+    {
+      "name": "zankou_nte_illustrious.safetensors",
+      "display_name": "残虹 (Illustrious)",
+      "category": "异环",
+      "category_type": "游戏角色",
+      "trigger_words": "ZANKOU, neverness to everness",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "",
+      "notes": "异环残虹 Illustrious LoRA，适配 WAI 与 Animagine。"
+    },
+    {
+      "name": "hsr_girls_illustrious.safetensors",
+      "display_name": "长夜月 (Illustrious)",
+      "category": "崩坏：星穹铁道",
+      "category_type": "游戏角色",
+      "trigger_words": "evernight (honkai: star rail)",
+      "recommended_strength": 0.8,
+      "recommended_checkpoint": "waiIllustriousSDXL_v170.safetensors",
+      "recommended_checkpoints": [
+        "waiIllustriousSDXL_v170.safetensors",
+        "animagine-xl-4.0-opt.safetensors"
+      ],
+      "preview_image": "",
+      "notes": "Illustrious LoRA，实际触发词是 evernight（长夜月），不是崩铁全角色合集。适配 WAI 与 Animagine。"
     }
   ]
 }

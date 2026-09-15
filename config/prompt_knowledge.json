@@ -251,6 +251,11 @@
     { "aliases": ["霍尔海雅"], "target": "Ho'olheyak", "franchise": "Arknights" },
     { "aliases": ["维什戴尔"], "target": "Wis'adel", "franchise": "Arknights" },
     { "aliases": ["阿斯卡纶"], "target": "Ascalon", "franchise": "Arknights" },
-    { "aliases": ["逻各斯"], "target": "Logos", "franchise": "Arknights" }
+    { "aliases": ["逻各斯"], "target": "Logos", "franchise": "Arknights" },
+
+    { "aliases": ["水光皮肤", "高光皮肤", "光泽皮肤", "湿润皮肤"], "target": "glossy skin", "tags": ["glossy skin", "wet skin", "shimmering body", "high luminosity", "bright ambient light"], "note": "Always keep every listed skin/light tag in positive. Do not reduce this recipe to a single tag." },
+    { "aliases": ["粉彩", "马卡龙色", "浅粉浅蓝"], "target": "pastel color palette", "tags": ["pastel color palette", "white and light blue and soft pink tones"], "note": "Lock conflicting colors in negative: dark clothing, deep blue dress, bright blue clothing." },
+    { "aliases": ["回眸一笑", "回头笑", "回眸笑", "回眸微笑"], "target": "light smile", "tags": ["looking back over shoulder", "light smile"], "note": "Keep light smile in positive. Do not put smiling, smile, light smile, or open mouth in negative." },
+    { "aliases": ["回眸", "过肩看", "回头看"], "target": "looking back over shoulder", "tags": ["looking back over shoulder"], "note": "Gaze only. Do not add closed mouth, and do not put smiling or open mouth in negative unless the user asked for a blank or serious face." }
   ]
 }

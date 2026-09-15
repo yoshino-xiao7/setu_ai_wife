@@ -22,7 +22,10 @@ config/prompt_knowledge.json
 
 - 已知 LoRA 的触发词。
 - 能改善本地 checkpoint 输出的风格说明。
+- 光照、皮肤、色板配方，例如水光皮肤或粉彩色锁定。
 - 常见瑕疵的负面提示词片段。
 - 需要时加入 NSFW 可见性规则。
+
+翻译结果应保持为逗号分隔的 Danbooru 标签，不要在知识库 tags 里存放英文散文。
 
 不要在此文件中放 secret、云端 token 或机器绝对路径。

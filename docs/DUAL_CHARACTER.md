@@ -6,8 +6,10 @@ Dual-character generation supports two character/LoRA selections, separate stren
 
 `DUAL_CHARACTER_STRATEGY` controls behavior:
 
-- `auto`: default single-pass dual generation; painted regions become layout hints.
-- `mask-conditioning`: use A/B masks as prompt-conditioning regions in one sampling pass.
+- `auto`: use one shared scene without automatic left/right assignment. Painted A/B regions provide only approximate spatial hints; they never enable regional sampling or restrict body boundaries in auto mode.
+- `mask-conditioning`: use complete painted A/B masks when provided, otherwise a shared scene.
+- `regional-area`: explicitly use left/right conditioning for separate character presentation, not close interactions.
+- `single-pass`: preserve the original global dual-character prompt without regional conditioning.
 - `inpaint`: legacy experimental mode that composes first and repaints masked regions.
 
 ## Why Separation Is Imperfect
@@ -26,6 +28,8 @@ Write the scene as one coherent interaction, then use character A/B notes for id
 - `DUAL_INPAINT_MASK_OVERLAP_RATIO`
 
 Use lower LoRA strengths when faces or outfits bleed between characters.
+
+Both LoRAs still share the model and cannot guarantee identity isolation. Auto mode always shares composition and lighting; painted regions provide position hints only. Specify depth and occlusion order in the description because 2D strokes cannot determine them. Extra regional conditioning also adds computation.
 
 ## Future Direction
 

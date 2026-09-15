@@ -256,6 +256,12 @@ document.querySelectorAll("[data-size]").forEach((button) => {
   });
 });
 
+document.querySelectorAll("[data-steps]").forEach((button) => {
+  button.addEventListener("click", () => {
+    field("#steps").value = button.dataset.steps;
+  });
+});
+
 refreshHealthBtn.addEventListener("click", loadHealth);
 refreshHistoryBtn.addEventListener("click", loadHistory);
 refreshPresetsBtn.addEventListener("click", async () => {

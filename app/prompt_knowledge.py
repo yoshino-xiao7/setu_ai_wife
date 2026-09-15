@@ -46,7 +46,7 @@ def _entry_from_payload(item: dict[str, Any]) -> KnowledgeEntry:
     )
 
 
-def matched_knowledge_context(prompt: str, path: Path, limit: int = 24) -> str:
+def matched_knowledge_entries(prompt: str, path: Path, limit: int = 24) -> tuple[KnowledgeEntry, ...]:
     matched: list[KnowledgeEntry] = []
     seen_targets: set[str] = set()
     source = prompt or ""
@@ -60,7 +60,30 @@ def matched_knowledge_context(prompt: str, path: Path, limit: int = 24) -> str:
             seen_targets.add(entry.target)
         if len(matched) >= limit:
             break
+    return tuple(matched)
 
+
+def knowledge_positive_tags(prompt: str, path: Path, limit: int = 24) -> str:
+    tags: list[str] = []
+    for entry in matched_knowledge_entries(prompt, path, limit):
+        if entry.tags:
+            tags.extend(entry.tags)
+        elif entry.target:
+            tags.append(entry.target)
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for tag in tags:
+        cleaned = " ".join((tag or "").split())
+        key = cleaned.lower()
+        if not cleaned or key in seen:
+            continue
+        seen.add(key)
+        ordered.append(cleaned)
+    return ", ".join(ordered)
+
+
+def matched_knowledge_context(prompt: str, path: Path, limit: int = 24) -> str:
+    matched = matched_knowledge_entries(prompt, path, limit)
     if not matched:
         return ""
 

@@ -6,47 +6,15 @@
       "category": "二次元动漫",
       "category_type": "基础模型",
       "preview_image": "",
-      "notes": "当前默认 NSFW 效果最好的模型。动漫风格强，对 explicit anatomy、uncensored、ahegao、fluids 等支持优秀。与当前 prompt_presets 和 nsfw_mode 过滤配合最佳。大多数预设默认推荐此模型。推荐用于强 NSFW 角色图。"
+      "notes": "当前默认主力模型。动漫风格强，NSFW explicit 支持最好，和现有 prompt_presets、nsfw_mode 过滤配合最佳。大多数通用预设默认推荐此模型。"
     },
     {
       "name": "animagine-xl-4.0-opt.safetensors",
-      "display_name": "二次元动漫 Animagine 4.0 优化",
+      "display_name": "二次元动漫 Anima",
       "category": "二次元动漫",
       "category_type": "基础模型",
       "preview_image": "",
-      "notes": "Animagine XL 4.0 优化版。动漫/插画风格好，但 NSFW explicit 强度通常弱于 WAI。建议搭配更强的 anatomy 描述（wet pussy, detailed anatomy, explicit 等）。在 nsfw_mode 下可能需要手动补充正面标签，或降低 CFG。适合偏干净动漫风的图。"
-    },
-    {
-      "name": "animagine-xl-4.0.safetensors",
-      "display_name": "二次元动漫 Animagine 4.0",
-      "category": "二次元动漫",
-      "category_type": "基础模型",
-      "preview_image": "",
-      "notes": "Animagine XL 4.0 标准版。效果与优化版接近，NSFW 表现一般。使用时可尝试在 positive 里加强 explicit 元素，或切换回 WAI 获得更好裸露效果。"
-    },
-    {
-      "name": "RealVisXL_V5.0_fp16.safetensors",
-      "display_name": "写实 RealVisXL V5.0 FP16",
-      "category": "写实摄影",
-      "category_type": "基础模型",
-      "preview_image": "",
-      "notes": "写实/摄影模型。NSFW 效果与动漫模型差异大。不要用太多 danbooru 风格 tag（1girl, ahegao 等）。推荐用更自然/摄影的描述：beautiful woman, detailed skin texture, realistic anatomy, glossy skin, explicit nude, aroused expression。适合写真、真实感 NSFW。和 gravure 构图预设搭配较好。"
-    },
-    {
-      "name": "RealVisXL_V5.0_fp32.safetensors",
-      "display_name": "写实 RealVisXL V5.0 FP32",
-      "category": "写实摄影",
-      "category_type": "基础模型",
-      "preview_image": "",
-      "notes": "写实模型 FP32 版，质量略高于 FP16 但显存吃紧。NSFW 提示词风格同上，建议用摄影语言而非动漫 tag。NSFW 强度通常不如 WAI 在动漫领域强。"
-    },
-    {
-      "name": "hassakuXLPony_v13BetterEyesVersion.safetensors",
-      "display_name": "二次元动漫 Hassaku Pony v13 眼睛优化",
-      "category": "二次元动漫 / NSFW",
-      "category_type": "基础模型",
-      "preview_image": "",
-      "notes": "Hassaku XL Pony 版本（v13 Better Eyes）。基于 Pony 的 Hassaku Hentai 模型，动漫风格优秀，眼睛细节更好。NSFW 控制强，适合各种重口和角色。使用 Pony 提示词格式（score_9, score_8_up 等 + source_anime）。CLIP skip 2。推荐用于需要 Pony 灵活性但更偏日式动漫画风的场景。"
+      "notes": "Animagine XL 4.0 优化版，产品里称为 Anima。偏干净动漫/插画风；NSFW explicit 通常弱于 WAI，需要更明确的 anatomy 标签或略降 CFG。"
     }
   ]
 }

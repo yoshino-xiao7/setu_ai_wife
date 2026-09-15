@@ -8,10 +8,29 @@ from unittest.mock import patch
 import httpx
 
 from app.config import Settings
-from app.prompting import translate_prompt
+from app.prompting import (
+    DEFAULT_NEGATIVE,
+    PromptTranslationError,
+    build_translation_prompts,
+    finalize_prompt_result,
+    translate_prompt,
+)
 
 
 class PromptingTest(unittest.IsolatedAsyncioTestCase):
+    async def test_total_deadline_cancels_ollama(self) -> None:
+        stopped = []
+        async def slow_provider(*args, **kwargs):
+            try:
+                await asyncio.sleep(10)
+            finally:
+                stopped.append(True)
+        settings = Settings(PROMPT_TRANSLATION_TOTAL_TIMEOUT_SECONDS=0.02)
+        with patch("app.prompting.translate_prompt_with_ollama", side_effect=slow_provider):
+            with self.assertRaisesRegex(PromptTranslationError, "total timeout"):
+                await translate_prompt("雨夜", settings)
+        self.assertEqual(len(stopped), 1)
+
     async def test_retries_chinese_positive_as_english_json(self) -> None:
         responses = iter(
             (
@@ -49,6 +68,7 @@ class PromptingTest(unittest.IsolatedAsyncioTestCase):
         settings = Settings(
             OLLAMA_URL="http://ollama.test",
             OLLAMA_MODEL="qwen3:4b",
+            OLLAMA_PROMPT_NUM_GPU=-1,
         )
 
         with patch("app.prompting.httpx.AsyncClient", side_effect=clients):
@@ -56,7 +76,9 @@ class PromptingTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result.positive, "adult woman, silver hair, rainy night")
         self.assertEqual(result.style_notes, "corrected")
-        self.assertEqual([payload["options"]["num_gpu"] for payload in payloads], [1, 1])
+        self.assertEqual([payload["options"]["num_gpu"] for payload in payloads], [-1, -1])
+        self.assertTrue(all(payload["think"] is False for payload in payloads))
+        self.assertTrue(all(payload["keep_alive"] == 0 for payload in payloads))
 
     async def test_malformed_correction_keeps_usable_english_tags(self) -> None:
         responses = iter(
@@ -86,6 +108,7 @@ class PromptingTest(unittest.IsolatedAsyncioTestCase):
         settings = Settings(
             OLLAMA_URL="http://ollama.test",
             OLLAMA_MODEL="qwen3:4b",
+            OLLAMA_PROMPT_NUM_GPU=-1,
         )
 
         with patch("app.prompting.httpx.AsyncClient", side_effect=clients):
@@ -93,7 +116,7 @@ class PromptingTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result.positive, "adult woman, rainy night")
         self.assertEqual(result.style_notes, "initial")
-        self.assertEqual([payload["options"]["num_gpu"] for payload in payloads], [1, 1])
+        self.assertEqual([payload["options"]["num_gpu"] for payload in payloads], [-1, -1])
 
     async def test_prompt_translation_can_be_configured_to_use_gpu(self) -> None:
         def handler(request: httpx.Request) -> httpx.Response:
@@ -161,157 +184,93 @@ class PromptingTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(payloads), 1)
         self.assertNotIn("very long preset tag list", payloads[0]["prompt"])
 
-    async def test_grok2api_and_ollama_race_uses_faster_result(self) -> None:
-        async def slow_ollama_handler(request: httpx.Request) -> httpx.Response:
-            await asyncio.sleep(0.05)
-            return httpx.Response(
-                200,
-                request=request,
-                json={
-                    "response": json.dumps(
-                        {
-                            "positive": "slow local result",
-                            "negative": "low quality",
-                            "style_notes": "ollama",
-                        }
-                    )
-                },
-            )
+    def test_default_negative_is_quality_only(self) -> None:
+        self.assertIn("bad anatomy", DEFAULT_NEGATIVE)
+        self.assertNotIn("looking at viewer", DEFAULT_NEGATIVE)
+        self.assertNotIn("eye contact", DEFAULT_NEGATIVE)
 
-        async def fast_grok_handler(request: httpx.Request) -> httpx.Response:
-            payload = json.loads(request.content.decode("utf-8"))
-            self.assertEqual(payload["model"], "grok-4.20-0309-non-reasoning")
-            return httpx.Response(
-                200,
-                request=request,
-                json={
-                    "choices": [
-                        {
-                            "message": {
-                                "content": json.dumps(
-                                    {
-                                        "positive": "fast grok result",
-                                        "negative": "low quality",
-                                        "style_notes": "grok",
-                                    }
-                                )
-                            }
-                        }
-                    ]
-                },
-            )
+    def test_translation_prompt_asks_for_danbooru_layers(self) -> None:
+        settings = Settings()
+        system_prompt, _user_prompt = build_translation_prompts("回眸趴在床上", settings, "", False)
+        self.assertIn("Danbooru", system_prompt)
+        self.assertIn("one expression", system_prompt)
+        self.assertIn("looking back", system_prompt)
+        self.assertNotIn("Add 'not looking at viewer'", system_prompt)
 
-        clients = [
-            httpx.AsyncClient(transport=httpx.MockTransport(slow_ollama_handler)),
-            httpx.AsyncClient(transport=httpx.MockTransport(fast_grok_handler)),
-        ]
-        settings = Settings(
-            OLLAMA_URL="http://ollama.test",
-            OLLAMA_MODEL="qwen3:4b",
-            GROK2API_URL="http://grok.test/v1",
-            GROK2API_API_KEY="test-key",
-            GROK2API_MODEL="grok-4.20-0309-non-reasoning",
+    def test_finalize_injects_lookback_and_glossy_skin_knowledge(self) -> None:
+        from pathlib import Path
+
+        knowledge_path = Path(__file__).resolve().parents[1] / "config" / "prompt_knowledge.json"
+        result = finalize_prompt_result(
+            {
+                "positive": "bikini, two piece swimsuit, in adorable bikini, beach setting, happy expression, coverage",
+                "negative": "low quality, looking at viewer",
+                "style_notes": "ok",
+            },
+            negative_prompt="",
+            nsfw_mode=False,
+            nsfw_visibility_level="STANDARD",
+            provider="ollama",
+            model="qwen3:4b",
+            used_ollama=True,
+            prompt_cn="八重神子 水光皮肤 回眸 可爱比基尼 沙滩",
+            knowledge_path=knowledge_path,
         )
+        self.assertIn("looking back over shoulder", result.positive)
+        self.assertNotIn("closed mouth", result.positive)
+        self.assertIn("glossy skin", result.positive)
+        self.assertIn("wet skin", result.positive)
+        self.assertIn("shimmering body", result.positive)
+        self.assertIn("bikini", result.positive)
+        self.assertIn("happy expression", result.positive)
+        self.assertNotIn("coverage", result.positive)
+        self.assertNotIn("looking at viewer", result.negative)
+        self.assertNotIn("open mouth", result.negative)
+        self.assertNotIn("smiling", result.negative)
 
-        with patch("app.prompting.httpx.AsyncClient", side_effect=clients):
-            result = await translate_prompt("银发成年女性，雨夜", settings)
+    def test_lookback_smile_keeps_smile_and_drops_closed_mouth(self) -> None:
+        from pathlib import Path
 
-        self.assertEqual(result.positive, "fast grok result")
-        self.assertFalse(result.used_ollama)
-
-    async def test_prompt_race_waits_for_ollama_when_grok2api_fails_first(self) -> None:
-        def ollama_handler(request: httpx.Request) -> httpx.Response:
-            return httpx.Response(
-                200,
-                request=request,
-                json={
-                    "response": json.dumps(
-                        {
-                            "positive": "local fallback result",
-                            "negative": "low quality",
-                            "style_notes": "ollama",
-                        }
-                    )
-                },
-            )
-
-        def grok_handler(request: httpx.Request) -> httpx.Response:
-            return httpx.Response(500, request=request, json={"error": "upstream failed"})
-
-        clients = [
-            httpx.AsyncClient(transport=httpx.MockTransport(ollama_handler)),
-            httpx.AsyncClient(transport=httpx.MockTransport(grok_handler)),
-        ]
-        settings = Settings(
-            OLLAMA_URL="http://ollama.test",
-            OLLAMA_MODEL="qwen3:4b",
-            GROK2API_URL="http://grok.test/v1",
-            GROK2API_API_KEY="test-key",
+        knowledge_path = Path(__file__).resolve().parents[1] / "config" / "prompt_knowledge.json"
+        result = finalize_prompt_result(
+            {
+                "positive": "bikini, closed mouth, calm expression",
+                "negative": "low quality, smiling, open mouth, looking at viewer",
+                "style_notes": "ok",
+            },
+            negative_prompt="",
+            nsfw_mode=False,
+            nsfw_visibility_level="STANDARD",
+            provider="ollama",
+            model="qwen3:4b",
+            used_ollama=True,
+            prompt_cn="八重神子 回眸一笑",
+            knowledge_path=knowledge_path,
         )
+        self.assertIn("looking back over shoulder", result.positive)
+        self.assertIn("light smile", result.positive)
+        self.assertNotIn("closed mouth", result.positive)
+        self.assertNotIn("calm expression", result.positive)
+        self.assertNotIn("smiling", result.negative)
+        self.assertNotIn("open mouth", result.negative)
+        self.assertNotIn("looking at viewer", result.negative)
 
-        with patch("app.prompting.httpx.AsyncClient", side_effect=clients):
-            result = await translate_prompt("银发成年女性，雨夜", settings)
-
-        self.assertEqual(result.positive, "local fallback result")
-        self.assertTrue(result.used_ollama)
-
-    async def test_grok2api_can_run_without_api_key(self) -> None:
-        seen_headers: list[httpx.Headers] = []
-
-        async def slow_ollama_handler(request: httpx.Request) -> httpx.Response:
-            await asyncio.sleep(0.05)
-            return httpx.Response(
-                200,
-                request=request,
-                json={
-                    "response": json.dumps(
-                        {
-                            "positive": "slow local result",
-                            "negative": "low quality",
-                            "style_notes": "ollama",
-                        }
-                    )
-                },
-            )
-
-        def grok_handler(request: httpx.Request) -> httpx.Response:
-            seen_headers.append(request.headers)
-            return httpx.Response(
-                200,
-                request=request,
-                json={
-                    "choices": [
-                        {
-                            "message": {
-                                "content": json.dumps(
-                                    {
-                                        "positive": "grok no auth result",
-                                        "negative": "low quality",
-                                        "style_notes": "grok",
-                                    }
-                                )
-                            }
-                        }
-                    ]
-                },
-            )
-
-        clients = [
-            httpx.AsyncClient(transport=httpx.MockTransport(slow_ollama_handler)),
-            httpx.AsyncClient(transport=httpx.MockTransport(grok_handler)),
-        ]
-        settings = Settings(
-            OLLAMA_URL="http://ollama.test",
-            OLLAMA_MODEL="qwen3:4b",
-            GROK2API_URL="http://grok.test/v1",
-            GROK2API_API_KEY="",
+    def test_finalize_does_not_inject_gaze_lock(self) -> None:
+        result = finalize_prompt_result(
+            {
+                "positive": "1girl, looking back over shoulder, closed mouth",
+                "negative": "low quality",
+                "style_notes": "ok",
+            },
+            negative_prompt="",
+            nsfw_mode=False,
+            nsfw_visibility_level="STANDARD",
+            provider="ollama",
+            model="qwen3:4b",
+            used_ollama=True,
         )
-
-        with patch("app.prompting.httpx.AsyncClient", side_effect=clients):
-            result = await translate_prompt("银发成年女性，雨夜", settings)
-
-        self.assertEqual(result.positive, "grok no auth result")
-        self.assertNotIn("authorization", seen_headers[0])
+        self.assertEqual(result.positive, "1girl, looking back over shoulder, closed mouth")
+        self.assertNotIn("looking at viewer", result.negative)
 
 
 if __name__ == "__main__":

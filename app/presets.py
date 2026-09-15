@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 from app.config import Settings
 
@@ -22,7 +22,16 @@ class CharacterPreset(BaseModel):
     style_tags: str = ""
     preview_image: str = ""
     recommended_checkpoint: str = ""
+    recommended_checkpoints: list[str] = Field(default_factory=list)
     notes: str = ""
+
+    @model_validator(mode="after")
+    def fill_recommended_checkpoints(self):
+        if not self.recommended_checkpoints and self.recommended_checkpoint:
+            self.recommended_checkpoints = [self.recommended_checkpoint]
+        elif self.recommended_checkpoints and not self.recommended_checkpoint:
+            self.recommended_checkpoint = self.recommended_checkpoints[0]
+        return self
 
 
 class LoraMetadata(BaseModel):
@@ -33,8 +42,17 @@ class LoraMetadata(BaseModel):
     trigger_words: str = ""
     recommended_strength: float = 1.0
     recommended_checkpoint: str = ""
+    recommended_checkpoints: list[str] = Field(default_factory=list)
     preview_image: str = ""
     notes: str = ""
+
+    @model_validator(mode="after")
+    def fill_recommended_checkpoints(self):
+        if not self.recommended_checkpoints and self.recommended_checkpoint:
+            self.recommended_checkpoints = [self.recommended_checkpoint]
+        elif self.recommended_checkpoints and not self.recommended_checkpoint:
+            self.recommended_checkpoint = self.recommended_checkpoints[0]
+        return self
 
 
 class CheckpointMetadata(BaseModel):

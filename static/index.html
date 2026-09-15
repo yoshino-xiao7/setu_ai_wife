@@ -69,6 +69,11 @@
               </section>
 
               <section class="panel-section flat">
+                <div class="quick-sizes" aria-label="采样步数快捷选择">
+                  <button type="button" data-steps="24">快速 · 24 步</button>
+                  <button type="button" data-steps="28">均衡 · 28 步</button>
+                  <button type="button" data-steps="35">精细尝试 · 35 步</button>
+                </div>
                 <div class="quick-sizes">
                   <button type="button" data-size="832x1216">竖屏</button>
                   <button type="button" data-size="1216x832">横屏</button>
@@ -78,7 +83,7 @@
                 <div class="split four">
                   <label>宽 <input id="width" type="number" min="512" max="1536" step="64" value="832" /></label>
                   <label>高 <input id="height" type="number" min="512" max="1536" step="64" value="1216" /></label>
-                  <label>步数 <input id="steps" type="number" min="8" max="80" value="35" /></label>
+                  <label>步数 <input id="steps" type="number" min="8" max="60" value="28" /></label>
                   <label>CFG <input id="cfg" type="number" min="1" max="20" step="0.5" value="4.5" /></label>
                 </div>
                 <label>Checkpoint <input id="checkpoint" type="text" placeholder="使用 .env 默认值" /></label>

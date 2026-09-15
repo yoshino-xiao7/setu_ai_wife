@@ -22,7 +22,10 @@ Keep entries short and model-oriented:
 
 - Trigger words for known LoRAs.
 - Style notes that improve local checkpoint output.
+- Lighting, skin, and palette recipes such as glossy/wet skin or pastel color locks.
 - Negative prompt fragments for common artifacts.
 - NSFW visibility guidance when applicable.
+
+Translated prompts should stay as comma-separated Danbooru tags. Do not store English prose in knowledge tags.
 
 Do not put secrets, cloud tokens, or machine-specific absolute paths in this file.

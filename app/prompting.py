@@ -3,20 +3,23 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
 
 import httpx
 from pydantic import BaseModel
 
 from app.config import Settings
-from app.prompt_knowledge import matched_knowledge_context
-
-
-DEFAULT_NEGATIVE = (
-    "low quality, worst quality, bad anatomy, bad hands, extra fingers, "
-    "missing fingers, deformed, blurry, text, watermark, logo, cropped, "
-    "looking at viewer, eye contact, facing camera, direct gaze, staring at viewer, "
-    "front view, head facing forward, facing the viewer, looking straight at camera"
+from app.prompt_knowledge import knowledge_positive_tags, matched_knowledge_context
+from app.prompt_tags import (
+    GAZE_AT_VIEWER_TAGS,
+    QUALITY_NEGATIVE,
+    compose_stacked_negative,
+    compose_stacked_prompt,
+    rewrite_positive_tags,
 )
+
+
+DEFAULT_NEGATIVE = QUALITY_NEGATIVE
 NSFW_INCOMPATIBLE_TAG_TOKENS = {
     "clothes",
     "clothing",
@@ -54,6 +57,18 @@ NSFW_INCOMPATIBLE_TAG_TOKENS = {
     "bodysuit",
     "leotard",
     "swimsuit",
+    "shorts",
+    "necktie",
+    "maid",
+    "suit",
+    "pants",
+    "jeans",
+    "bikini",
+    "underwear",
+    "vest",
+    "hoodie",
+    "sweater",
+    "apron",
     "censor",
     "censored",
     "censoring",
@@ -119,6 +134,66 @@ NSFW_ALLOWED_REMNANT_PHRASES = {
 NSFW_VISIBILITY_POSITIVE_TAGS = (
     "full body visible",
 )
+CHARACTER_STYLE_DROP = {
+    "anime style",
+    "detailed eyes",
+    "high quality",
+    "masterpiece",
+    "best quality",
+    "highres",
+    "cute",
+    "elegant",
+    "ethereal",
+    "idol",
+    "dancer",
+    "bare shoulders",
+}
+CHARACTER_BODY_TOKENS = {
+    "breast",
+    "breasts",
+    "cleavage",
+    "thigh",
+    "thighs",
+    "midriff",
+    "navel",
+    "hips",
+}
+SMILE_REQUEST_MARKERS = ("回眸一笑", "回头笑", "回眸笑", "回眸微笑", "一笑", "微笑", "浅笑", "笑着", "笑容")
+SMILE_NEGATIVE_TAGS = {
+    "smiling",
+    "smile",
+    "light smile",
+    "grin",
+    "open mouth",
+    "happy expression",
+    "winking",
+}
+CLOSED_MOUTH_WHEN_SMILING = {
+    "closed mouth",
+    "calm expression",
+}
+
+
+def filter_character_identity_tags(prompt: str) -> str:
+    if not prompt:
+        return ""
+    tags: list[str] = []
+    for raw_tag in prompt.split(","):
+        tag = raw_tag.strip()
+        if not tag:
+            continue
+        key = normalize_tag_key(tag)
+        tokens = set(re.findall(r"[a-z]+", key))
+        if key in CHARACTER_STYLE_DROP or key in NSFW_INCOMPATIBLE_EXACT_TAGS:
+            continue
+        if tokens.intersection(CHARACTER_BODY_TOKENS):
+            continue
+        if tokens.intersection(NSFW_INCOMPATIBLE_TAG_TOKENS):
+            continue
+        tags.append(tag)
+    return ", ".join(tags)
+
+
 NSFW_VISIBILITY_NEGATIVE_TAGS = (
     "censored",
     "mosaic censorship",
@@ -177,53 +252,6 @@ def contains_cjk(value: str) -> bool:
 
 def ollama_output_text(data: dict) -> str:
     return str(data.get("response") or data.get("thinking") or "").strip()
-
-
-def chat_completion_output_text(data: dict) -> str:
-    choices = data.get("choices") if isinstance(data, dict) else None
-    if not isinstance(choices, list) or not choices:
-        return ""
-    first = choices[0] if isinstance(choices[0], dict) else {}
-    message = first.get("message") if isinstance(first, dict) else {}
-    if isinstance(message, dict):
-        return str(message.get("content") or "").strip()
-    return str(first.get("text") or "").strip()
-
-
-def chat_completion_sse_output_text(raw: str) -> str:
-    content_parts: list[str] = []
-    error_message = ""
-    for line in (raw or "").splitlines():
-        line = line.strip()
-        if not line.startswith("data:"):
-            continue
-        payload = line.removeprefix("data:").strip()
-        if not payload or payload == "[DONE]":
-            continue
-        try:
-            data = json.loads(payload)
-        except json.JSONDecodeError:
-            continue
-        error = data.get("error") if isinstance(data, dict) else None
-        if isinstance(error, dict):
-            error_message = str(error.get("message") or error)
-            continue
-        choices = data.get("choices") if isinstance(data, dict) else None
-        if not isinstance(choices, list) or not choices:
-            continue
-        first = choices[0] if isinstance(choices[0], dict) else {}
-        delta = first.get("delta") if isinstance(first, dict) else {}
-        message = first.get("message") if isinstance(first, dict) else {}
-        if isinstance(delta, dict) and delta.get("content"):
-            content_parts.append(str(delta.get("content")))
-        elif isinstance(message, dict) and message.get("content"):
-            content_parts.append(str(message.get("content")))
-    text = "".join(content_parts).strip()
-    if text:
-        return text
-    if error_message:
-        raise PromptTranslationError(error_message)
-    return ""
 
 
 def remove_cjk_tags(value: str) -> str:
@@ -354,13 +382,27 @@ def filter_nsfw_incompatible_tags(prompt: str) -> str:
 
 def build_translation_prompts(prompt_cn: str, settings: Settings, negative_prompt: str, nsfw_mode: bool) -> tuple[str, str]:
     system_prompt = (
-        "You are a Stable Diffusion anime prompt translator. Convert the Chinese drawing request "
-        "into concise English tags. Translate character names, actions, scenes, moods, camera, "
-        "composition, clothes, lighting, and background details. Never copy Chinese text into "
-        "positive or negative. Return JSON only with keys positive, negative, style_notes. "
-        "Use comma-separated English tags. Do not prepend generic quality boosters such as "
-        "masterpiece, best quality, high quality, anime illustration, detailed eyes, or clean "
-        "lineart unless the user explicitly asks for them. Keep negative prompt practical. "
+        "You are a Danbooru tag translator for anime checkpoints such as WAI and Animagine. "
+        "Convert the Chinese drawing request into comma-separated English Danbooru tags, "
+        "not English sentences. Never copy Chinese text into positive or negative. Return JSON only "
+        "with keys positive, negative, style_notes. "
+        "Order positive tags as: subject count, identity (hair, eyes, accessories), one expression, "
+        "gaze, pose (body, limbs, orientation), clothing with colors, color palette, lighting and "
+        "skin finish, then a simple background. "
+        "Do not write prose such as beautiful girl, cute girl, elegant atmosphere, or excellent composition. "
+        "Keep the user's requested expression. Do not default to closed mouth or a blank face. "
+        "If the user asks for a smile, 回眸一笑, or 微笑, put light smile in positive and do not put "
+        "smiling, smile, or open mouth in negative. Only ban smile or open mouth when the user "
+        "explicitly asks for a serious, calm, or closed-mouth face. If clothing colors are specified, "
+        "put conflicting colors in negative. "
+        "Do not prepend masterpiece, best quality, highres, high quality, anime illustration, or "
+        "detailed eyes unless the user explicitly asks for quality or style boosters. "
+        "Keep the default negative practical: anatomy, hands, extra limbs, blur, text, watermark. "
+        "Do not put looking at viewer, eye contact, or facing camera in negative when the user asks "
+        "for looking back, over-shoulder, looking at viewer, or eye contact. "
+        "Only prefer looking away, profile, back view, or looking down when the user asks for that "
+        "gaze, or describes a task-focused everyday action such as reading, cooking, or looking out "
+        "a window without asking for eye contact. "
         "When NSFW compatibility mode is enabled, omit full garment, outfit, uniform, dress, "
         "censorship, occlusion, covering, foreground-blocking, and cropped-composition tags. "
         "However, deliberately keep intentional NSFW remnant clothing such as micro bikini, "
@@ -368,10 +410,6 @@ def build_translation_prompts(prompt_cn: str, settings: Settings, negative_promp
         "partially undressed, garter. Preserve identity, body, pose, expression, camera, lighting, "
         "and background tags. Preserve requested cross-section, cutaway, x-ray, internal-anatomy, "
         "and anatomical-visibility descriptors. "
-        "If the scene describes looking out a window, reading, cooking, or any everyday moment, "
-        "strongly prefer natural poses where the character is NOT facing the camera — use looking away, "
-        "gazing out, side view, back view, looking down, profile, turned head. Add 'not looking at viewer' "
-        "to negative when appropriate. "
         "Do not add extra composition-control tags unless the user requests them. "
         "If local prompt knowledge is provided, follow it exactly."
     )
@@ -395,10 +433,17 @@ def finalize_prompt_result(
     provider: str,
     model: str,
     used_ollama: bool,
+    prompt_cn: str = "",
+    knowledge_path=None,
 ) -> PromptResult:
     positive = normalize_prompt_value(parsed.get("positive", ""))
     if contains_cjk(positive):
         positive = remove_cjk_tags(positive)
+    positive = rewrite_positive_tags(positive)
+    if prompt_cn and knowledge_path is not None:
+        positive = merge_unique_tags(knowledge_positive_tags(prompt_cn, knowledge_path), positive)
+    positive = apply_lookback_positive_locks(positive, prompt_cn)
+    positive = compose_stacked_prompt(positive)
     if nsfw_mode:
         positive = filter_nsfw_incompatible_tags(positive)
         positive = apply_nsfw_visibility_profile(positive, nsfw_visibility_level)
@@ -409,6 +454,8 @@ def finalize_prompt_result(
         negative = remove_cjk_tags(negative) or DEFAULT_NEGATIVE
     if DEFAULT_NEGATIVE not in negative:
         negative = f"{negative}, {DEFAULT_NEGATIVE}"
+    negative = apply_lookback_negative_locks(positive, negative, prompt_cn)
+    negative = compose_stacked_negative(negative, positive)
     if nsfw_mode:
         negative = apply_nsfw_visibility_negative_profile(negative, nsfw_visibility_level)
     return PromptResult(
@@ -417,6 +464,38 @@ def finalize_prompt_result(
         style_notes=normalize_prompt_value(parsed.get("style_notes", "")) or f"Translated by {provider} model {model}.",
         used_ollama=used_ollama,
     )
+
+
+def _has_lookback(positive: str) -> bool:
+    keys = {normalize_tag_key(tag) for tag in (positive or "").split(",") if tag.strip()}
+    return any(
+        key == "looking back over shoulder" or key.startswith("looking back")
+        for key in keys
+    )
+
+
+def _wants_smile(prompt_cn: str) -> bool:
+    source = prompt_cn or ""
+    return any(marker in source for marker in SMILE_REQUEST_MARKERS)
+
+
+def apply_lookback_positive_locks(positive: str, prompt_cn: str = "") -> str:
+    tags = [tag.strip() for tag in (positive or "").split(",") if tag.strip()]
+    if _wants_smile(prompt_cn):
+        tags = [tag for tag in tags if normalize_tag_key(tag) not in CLOSED_MOUTH_WHEN_SMILING]
+    return ", ".join(tags)
+
+
+def apply_lookback_negative_locks(positive: str, negative: str, prompt_cn: str = "") -> str:
+    tags = [tag.strip() for tag in (negative or "").split(",") if tag.strip()]
+    drop: set[str] = set()
+    if _has_lookback(positive):
+        drop.update(GAZE_AT_VIEWER_TAGS)
+    if _wants_smile(prompt_cn):
+        drop.update(SMILE_NEGATIVE_TAGS)
+    if drop:
+        tags = [tag for tag in tags if normalize_tag_key(tag) not in drop]
+    return ", ".join(tags)
 
 
 async def translate_prompt_with_ollama(
@@ -431,12 +510,14 @@ async def translate_prompt_with_ollama(
     payload = {
         "model": settings.ollama_model,
         "stream": False,
+        "think": False,
+        "keep_alive": settings.ollama_prompt_keep_alive,
         "format": "json",
         "prompt": f"/no_think\n{system_prompt}\n\n{user_prompt}\n\nJSON:",
         "options": {
             "temperature": 0,
             "num_predict": 512,
-            "num_gpu": max(0, settings.ollama_prompt_num_gpu),
+            "num_gpu": settings.ollama_prompt_num_gpu,
         },
     }
     try:
@@ -464,12 +545,14 @@ async def translate_prompt_with_ollama(
             correction_payload = {
                 "model": settings.ollama_model,
                 "stream": False,
+                "think": False,
+                "keep_alive": settings.ollama_prompt_keep_alive,
                 "format": "json",
                 "prompt": correction_prompt,
                 "options": {
                     "temperature": 0,
                     "num_predict": 512,
-                    "num_gpu": max(0, settings.ollama_prompt_num_gpu),
+                    "num_gpu": settings.ollama_prompt_num_gpu,
                 },
             }
             try:
@@ -497,101 +580,13 @@ async def translate_prompt_with_ollama(
             provider="local Ollama",
             model=settings.ollama_model,
             used_ollama=True,
+            prompt_cn=prompt_cn,
+            knowledge_path=settings.prompt_knowledge_path,
         )
     except PromptTranslationError:
         raise
     except Exception as exc:
         raise PromptTranslationError(f"Ollama prompt translation failed: {exc}") from exc
-
-
-async def translate_prompt_with_grok2api(
-    prompt_cn: str,
-    settings: Settings,
-    *,
-    negative_prompt: str = "",
-    nsfw_mode: bool = False,
-    nsfw_visibility_level: str = "STANDARD",
-) -> PromptResult:
-    if not settings.grok2api_url:
-        raise PromptTranslationError("grok2api prompt translation is not configured.")
-    system_prompt, user_prompt = build_translation_prompts(prompt_cn, settings, negative_prompt, nsfw_mode)
-    url = settings.grok2api_url.rstrip("/")
-    if not url.endswith("/chat/completions"):
-        url = f"{url}/chat/completions" if url.endswith("/v1") else f"{url}/v1/chat/completions"
-    model_candidates = [settings.grok2api_model]
-    model_candidates.extend(
-        model.strip()
-        for model in (settings.grok2api_fallback_models or "").split(",")
-        if model.strip() and model.strip() not in model_candidates
-    )
-    headers = {"Content-Type": "application/json"}
-    if settings.grok2api_api_key:
-        headers["Authorization"] = f"Bearer {settings.grok2api_api_key}"
-    errors: list[str] = []
-    try:
-        for model in model_candidates:
-            payload = {
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"{user_prompt}\n\nReturn JSON only."},
-                ],
-                "temperature": 0,
-                "max_tokens": 512,
-                "response_format": {"type": "json_object"},
-            }
-            try:
-                async with httpx.AsyncClient(timeout=settings.prompt_translation_timeout_seconds) as client:
-                    response = await client.post(url, json=payload, headers=headers)
-                    response.raise_for_status()
-                content_type = response.headers.get("content-type", "")
-                if "text/event-stream" in content_type or response.text.lstrip().startswith(":"):
-                    raw = chat_completion_sse_output_text(response.text)
-                else:
-                    raw = chat_completion_output_text(response.json())
-                parsed = parse_json_response(raw)
-                return finalize_prompt_result(
-                    parsed,
-                    negative_prompt=negative_prompt,
-                    nsfw_mode=nsfw_mode,
-                    nsfw_visibility_level=nsfw_visibility_level,
-                    provider="grok2api",
-                    model=model,
-                    used_ollama=False,
-                )
-            except Exception as exc:
-                errors.append(f"{model}: {exc}")
-                continue
-        raise PromptTranslationError("; ".join(errors) or "all grok2api models failed")
-    except PromptTranslationError:
-        raise
-    except Exception as exc:
-        raise PromptTranslationError(f"grok2api prompt translation failed: {exc}") from exc
-
-
-async def first_successful_prompt_result(tasks: list[asyncio.Task[PromptResult]]) -> PromptResult:
-    errors: list[str] = []
-    pending = set(tasks)
-    try:
-        while pending:
-            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-            winner: PromptResult | None = None
-            for task in done:
-                try:
-                    result = task.result()
-                except PromptTranslationError as exc:
-                    errors.append(str(exc))
-                    continue
-                if winner is None:
-                    winner = result
-            if winner is not None:
-                for pending_task in pending:
-                    pending_task.cancel()
-                return winner
-        raise PromptTranslationError("; ".join(errors) or "Prompt translation failed.")
-    finally:
-        for task in pending:
-            task.cancel()
 
 
 async def translate_prompt(
@@ -603,32 +598,26 @@ async def translate_prompt(
     nsfw_visibility_level: str = "STANDARD",
 ) -> PromptResult:
     del style_tags
-    if not settings.grok2api_url:
-        return await translate_prompt_with_ollama(
-            prompt_cn,
-            settings,
-            negative_prompt=negative_prompt,
-            nsfw_mode=nsfw_mode,
-            nsfw_visibility_level=nsfw_visibility_level,
-        )
-    tasks = [
-        asyncio.create_task(
-            translate_prompt_with_ollama(
+    started = time.perf_counter()
+    outcome = "failed"
+    try:
+        # One deadline covers Ollama generation and the English correction pass.
+        async with asyncio.timeout(settings.prompt_translation_total_timeout_seconds):
+            result = await translate_prompt_with_ollama(
                 prompt_cn,
                 settings,
                 negative_prompt=negative_prompt,
                 nsfw_mode=nsfw_mode,
                 nsfw_visibility_level=nsfw_visibility_level,
             )
-        ),
-        asyncio.create_task(
-            translate_prompt_with_grok2api(
-                prompt_cn,
-                settings,
-                negative_prompt=negative_prompt,
-                nsfw_mode=nsfw_mode,
-                nsfw_visibility_level=nsfw_visibility_level,
-            )
-        ),
-    ]
-    return await first_successful_prompt_result(tasks)
+        outcome = "ollama"
+        return result
+    except TimeoutError as exc:
+        outcome = "timeout"
+        raise PromptTranslationError(
+            f"Prompt translation exceeded {settings.prompt_translation_total_timeout_seconds:g}s total timeout."
+        ) from exc
+    finally:
+        print("[prompt-timing] " + json.dumps({
+            "outcome": outcome, "seconds": round(time.perf_counter() - started, 3),
+        }), flush=True)

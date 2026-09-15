@@ -9,12 +9,22 @@ from app.prompting import (
     apply_nsfw_visibility_negative_profile,
     apply_nsfw_visibility_positive,
     apply_nsfw_visibility_profile,
+    filter_character_identity_tags,
     filter_nsfw_incompatible_tags,
     remove_cjk_tags,
 )
 
 
 class NsfwModeTest(unittest.TestCase):
+    def test_character_identity_filter_keeps_face_and_drops_outfit(self) -> None:
+        self.assertEqual(
+            filter_character_identity_tags(
+                "yae miko, fox ears, pink hair, large breasts, thighs, "
+                "japanese clothes, nontraditional miko, anime style, detailed eyes"
+            ),
+            "yae miko, fox ears, pink hair",
+        )
+
     def test_filters_clothing_tags_without_removing_identity_tags(self) -> None:
         prompt = (
             "1girl, purple eyes, purple kimono, detached sleeves, "
