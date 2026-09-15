@@ -283,6 +283,7 @@ class CloudWorker:
             "second_lora_strength": job.get("secondLoraStrength") or 0,
             "nsfw_mode": job.get("nsfwMode") is True,
             "nsfw_visibility_level": job.get("nsfwVisibilityLevel") or "STANDARD",
+            "light_hires": job.get("lightHires") is True,
             "job_type": job.get("jobType") or "TEXT2IMG",
             "parent_job_id": job.get("parentJobId"),
             "inpaint_instruction": job.get("inpaintInstruction") or "",

@@ -11,6 +11,14 @@ import httpx
 from app.config import Settings
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
+CLASSIC_DEFAULT_CFG = 4.5
+CLASSIC_LIGHT_HIRES_CFG = 5.5
+CLASSIC_LIGHT_HIRES_SAMPLER = "euler_ancestral"
+CLASSIC_LIGHT_HIRES_CLIP_SKIP = -2
+CLASSIC_LIGHT_HIRES_SCALE = 1.25
+CLASSIC_LIGHT_HIRES_STEPS = 16
+CLASSIC_LIGHT_HIRES_DENOISE = 0.4
+CLASSIC_LIGHT_HIRES_MAX_SIDE = 1600
 
 
 class ComfyUIExecutionError(RuntimeError):
@@ -20,6 +28,50 @@ class ComfyUIExecutionError(RuntimeError):
 def is_anima_checkpoint(checkpoint: str | None) -> bool:
     name = (checkpoint or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
     return name.startswith("anima-")
+
+
+def classic_hires_scale_for_size(
+    width: int,
+    height: int,
+    scale: float = CLASSIC_LIGHT_HIRES_SCALE,
+) -> float:
+    longest = max(int(width), int(height))
+    if longest <= 0:
+        return 1.0
+    if longest * scale <= CLASSIC_LIGHT_HIRES_MAX_SIDE:
+        return scale
+    return max(1.0, CLASSIC_LIGHT_HIRES_MAX_SIDE / longest)
+
+
+def resolve_classic_sampling(
+    *,
+    light_hires: bool,
+    cfg: float,
+    default_sampler: str,
+    default_scheduler: str,
+    width: int,
+    height: int,
+) -> dict[str, Any]:
+    if not light_hires:
+        return {
+            "sampler": default_sampler,
+            "scheduler": default_scheduler,
+            "cfg": cfg,
+            "clip_skip": 0,
+            "hires_scale": 1.0,
+            "hires_steps": CLASSIC_LIGHT_HIRES_STEPS,
+            "hires_denoise": CLASSIC_LIGHT_HIRES_DENOISE,
+        }
+    resolved_cfg = CLASSIC_LIGHT_HIRES_CFG if abs(float(cfg) - CLASSIC_DEFAULT_CFG) < 1e-6 else float(cfg)
+    return {
+        "sampler": CLASSIC_LIGHT_HIRES_SAMPLER,
+        "scheduler": default_scheduler,
+        "cfg": resolved_cfg,
+        "clip_skip": CLASSIC_LIGHT_HIRES_CLIP_SKIP,
+        "hires_scale": classic_hires_scale_for_size(width, height),
+        "hires_steps": CLASSIC_LIGHT_HIRES_STEPS,
+        "hires_denoise": CLASSIC_LIGHT_HIRES_DENOISE,
+    }
 
 
 def build_anima_workflow(
@@ -95,6 +147,10 @@ def build_workflow(
     second_lora_strength: float = 0,
     regional_left_positive: str = "",
     regional_right_positive: str = "",
+    clip_skip: int = 0,
+    hires_scale: float = 1.0,
+    hires_steps: int = CLASSIC_LIGHT_HIRES_STEPS,
+    hires_denoise: float = CLASSIC_LIGHT_HIRES_DENOISE,
     filename_prefix: str = "local_ai_drawing",
 ) -> dict[str, Any]:
     workflow: dict[str, Any] = {
@@ -151,6 +207,14 @@ def build_workflow(
     workflow["3"]["inputs"]["model"] = model_ref
     workflow["6"]["inputs"]["clip"] = clip_ref
     workflow["7"]["inputs"]["clip"] = clip_ref
+    if clip_skip:
+        workflow["18"] = {
+            "class_type": "CLIPSetLastLayer",
+            "inputs": {"clip": clip_ref, "stop_at_clip_layer": clip_skip},
+        }
+        clip_ref = ["18", 0]
+        workflow["6"]["inputs"]["clip"] = clip_ref
+        workflow["7"]["inputs"]["clip"] = clip_ref
     if regional_left_positive and regional_right_positive:
         left_width, right_width, right_x = regional_area_geometry(width)
         workflow["12"] = {"class_type": "CLIPTextEncode", "inputs": {"text": regional_left_positive, "clip": clip_ref}}
@@ -186,6 +250,31 @@ def build_workflow(
             "inputs": {"conditioning_1": ["16", 0], "conditioning_2": ["15", 0]},
         }
         workflow["3"]["inputs"]["positive"] = ["17", 0]
+    if hires_scale and hires_scale > 1.0001:
+        workflow["19"] = {
+            "class_type": "LatentUpscaleBy",
+            "inputs": {
+                "samples": ["3", 0],
+                "upscale_method": "bislerp",
+                "scale_by": hires_scale,
+            },
+        }
+        workflow["20"] = {
+            "class_type": "KSampler",
+            "inputs": {
+                "seed": seed,
+                "steps": hires_steps,
+                "cfg": cfg,
+                "sampler_name": sampler,
+                "scheduler": scheduler,
+                "denoise": hires_denoise,
+                "model": model_ref,
+                "positive": workflow["3"]["inputs"]["positive"],
+                "negative": ["7", 0],
+                "latent_image": ["19", 0],
+            },
+        }
+        workflow["8"]["inputs"]["samples"] = ["20", 0]
     return workflow
 
 

@@ -24,6 +24,7 @@ from app.comfyui import (
     build_mask_conditioning_workflow,
     build_workflow,
     is_anima_checkpoint,
+    resolve_classic_sampling,
     random_seed,
 )
 from app.config import Settings, get_settings
@@ -87,6 +88,7 @@ class GenerateRequest(BaseModel):
     character_mask_json: str = Field("", max_length=120000)
     nsfw_mode: bool = False
     nsfw_visibility_level: str = "STANDARD"
+    light_hires: bool = False
     job_type: str = "TEXT2IMG"
     parent_job_id: int | None = None
     inpaint_instruction: str = ""
@@ -361,6 +363,7 @@ async def generate(
         "lora_strength": lora_strength,
         "second_lora_name": second_lora_name if is_dual else "",
         "second_lora_strength": second_lora_strength if is_dual else 0,
+        "light_hires": 1 if payload.light_hires and not is_anima_checkpoint(payload.checkpoint) else 0,
         "status": "queued",
         "image_path": "",
     }
@@ -403,6 +406,14 @@ async def run_generation(job_id: str, settings: Settings) -> None:
             image_path = await run_dual_mask_conditioning_generation(job, settings, store, client)
         else:
             use_regions = should_use_dual_regions(settings, job)
+            sampling = resolve_classic_sampling(
+                light_hires=bool(job.get("light_hires")),
+                cfg=job["cfg"],
+                default_sampler=settings.default_sampler,
+                default_scheduler=settings.default_scheduler,
+                width=job["width"],
+                height=job["height"],
+            )
             workflow = build_workflow(
                 positive=(job.get("regional_global_positive") or job["prompt_positive"]) if use_regions else job["prompt_positive"],
                 negative=job["prompt_negative"],
@@ -410,16 +421,20 @@ async def run_generation(job_id: str, settings: Settings) -> None:
                 width=job["width"],
                 height=job["height"],
                 steps=job["steps"],
-                cfg=job["cfg"],
+                cfg=sampling["cfg"],
                 checkpoint=job["checkpoint"],
-                sampler=settings.default_sampler,
-                scheduler=settings.default_scheduler,
+                sampler=sampling["sampler"],
+                scheduler=sampling["scheduler"],
                 lora_name=job["lora_name"],
                 lora_strength=job["lora_strength"],
                 second_lora_name=job["second_lora_name"],
                 second_lora_strength=job["second_lora_strength"],
                 regional_left_positive=job["regional_left_positive"] if use_regions else "",
                 regional_right_positive=job["regional_right_positive"] if use_regions else "",
+                clip_skip=sampling["clip_skip"],
+                hires_scale=sampling["hires_scale"],
+                hires_steps=sampling["hires_steps"],
+                hires_denoise=sampling["hires_denoise"],
                 filename_prefix=f"local_ai_drawing/{job_id}",
             )
             image_path = await queue_and_download(
