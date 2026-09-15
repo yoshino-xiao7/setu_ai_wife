@@ -18,7 +18,7 @@ from app.comfyui import (
 )
 from app.config import Settings
 from app.db import JobStore
-from app.main import app, get_settings, get_store, save_source_image
+from app.main import app, get_settings, get_store, save_source_image, cleanup_source_image_file
 
 
 ONE_PIXEL_PNG = (
@@ -141,6 +141,13 @@ class Img2ImgLocalApiTest(unittest.TestCase):
         self.assertTrue(path.exists())
         with Image.open(path) as image:
             self.assertEqual(image.size, (1, 1))
+
+    def test_cleanup_source_image_file_removes_saved_png(self) -> None:
+        path = Path(save_source_image(ONE_PIXEL_PNG.decode("ascii"), "job-2", self.settings))
+        self.assertTrue(path.exists())
+        cleanup_source_image_file({"source_image_path": str(path)})
+        self.assertFalse(path.exists())
+        cleanup_source_image_file({"source_image_path": ""})
 
 
 class Img2ImgCloudWorkerTest(unittest.IsolatedAsyncioTestCase):

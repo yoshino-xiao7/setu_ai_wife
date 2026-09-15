@@ -456,6 +456,8 @@ async def run_generation(job_id: str, settings: Settings) -> None:
         store.update_job(job_id, status="completed", image_path=relative_path)
     except Exception as exc:
         store.update_job(job_id, status="failed", error=str(exc))
+    finally:
+        cleanup_source_image_file(job)
 
 
 @app.get("/api/jobs/{job_id}")
@@ -1512,10 +1514,19 @@ def normalized_points(points: list, width: int, height: int) -> list[tuple[int, 
 def cleanup_temp_paths(paths: list[Path]) -> None:
     for path in paths:
         try:
-            if path.exists():
+            if path and path.exists():
                 path.unlink()
         except OSError as exc:
             print(f"[dual-inpaint] cleanup skipped for {path.name}: {exc}")
+
+
+def cleanup_source_image_file(job: dict | None) -> None:
+    if not job:
+        return
+    value = str(job.get("source_image_path") or "").strip()
+    if not value:
+        return
+    cleanup_temp_paths([Path(value)])
 
 
 def character_tags(character, *, nsfw_mode: bool = False) -> str:
