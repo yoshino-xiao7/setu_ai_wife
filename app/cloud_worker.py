@@ -10,7 +10,7 @@ from urllib.parse import quote
 import httpx
 
 from app.config import Settings, get_settings
-from app.presets import list_checkpoints, list_loras, load_characters, load_prompt_presets
+from app.presets import list_anima_models, list_checkpoints, list_loras, load_characters, load_prompt_presets
 from app.prompting import PromptTranslationError, translate_prompt
 
 
@@ -83,7 +83,7 @@ def scan_capabilities(settings: Settings) -> dict[str, Any]:
         "workerId": settings.ai_worker_id,
         "nodeName": settings.ai_worker_name,
         "version": settings.ai_worker_version,
-        "checkpoints": list_checkpoints(settings),
+        "checkpoints": list_checkpoints(settings) + list_anima_models(settings),
         "loras": list_loras(settings),
         "vaes": _list_model_files(settings.comfyui_models_dir, "vae"),
         "characters": characters,
@@ -309,7 +309,7 @@ class CloudWorker:
                     return job
                 if status == "failed":
                     raise LocalGenerationError(job.get("error") or "Local generation failed", job)
-                await asyncio.sleep(2)
+                await asyncio.sleep(self.settings.generation_poll_seconds)
 
     async def _download_local_image(self, local_job: dict[str, Any]) -> tuple[bytes, str]:
         filename = local_job.get("image_path")

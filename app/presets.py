@@ -18,6 +18,7 @@ class CharacterPreset(BaseModel):
     lora_strength: float = 0.8
     trigger_words: str = ""
     default_positive: str = ""
+    default_outfit: str = ""
     style_tags: str = ""
     preview_image: str = ""
     recommended_checkpoint: str = ""
@@ -127,14 +128,51 @@ def list_checkpoints(settings: Settings) -> list[dict[str, Any]]:
             continue
         relative_name = str(file.relative_to(checkpoint_dir)).replace("\\", "/")
         metadata = metadata_by_name.get(relative_name) or metadata_by_name.get(file.name)
-        metadata_json = metadata.model_dump_json() if metadata else ""
+        if metadata is None:
+            continue
         items.append(
             {
                 "name": relative_name,
-                "displayName": metadata.display_name if metadata and metadata.display_name else file.stem,
+                "displayName": metadata.display_name or file.stem,
                 "size": file.stat().st_size,
                 "sizeBytes": file.stat().st_size,
-                "metadataJson": metadata_json,
+                "metadataJson": metadata.model_dump_json(),
+            }
+        )
+    return items
+
+
+def anima_display_name(filename: str) -> str:
+    stem = Path(filename).stem.replace("_", "-")
+    return " ".join(part.upper() if part.lower() == "anima" else part for part in stem.split("-"))
+
+
+def list_anima_models(settings: Settings) -> list[dict[str, Any]]:
+    unet_dir = settings.comfyui_models_dir / "diffusion_models"
+    if not unet_dir.exists():
+        return []
+    items: list[dict[str, Any]] = []
+    for file in sorted(unet_dir.iterdir(), key=lambda item: item.name.lower()):
+        if not file.is_file() or file.suffix.lower() != ".safetensors":
+            continue
+        if not file.name.lower().startswith("anima-"):
+            continue
+        display_name = anima_display_name(file.name)
+        metadata = {
+            "name": file.name,
+            "display_name": display_name,
+            "category": "Anima",
+            "category_type": "工作流",
+            "pipeline": "anima",
+            "notes": "CircleStone Anima，使用独立 UNET / Qwen 工作流。现有 Illustrious LoRA 不会套用。",
+        }
+        items.append(
+            {
+                "name": file.name,
+                "displayName": display_name,
+                "size": file.stat().st_size,
+                "sizeBytes": file.stat().st_size,
+                "metadataJson": json.dumps(metadata, ensure_ascii=False),
             }
         )
     return items

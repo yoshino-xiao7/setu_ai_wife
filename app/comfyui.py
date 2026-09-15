@@ -17,6 +17,66 @@ class ComfyUIExecutionError(RuntimeError):
     pass
 
 
+def is_anima_checkpoint(checkpoint: str | None) -> bool:
+    name = (checkpoint or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
+    return name.startswith("anima-")
+
+
+def build_anima_workflow(
+    *,
+    positive: str,
+    negative: str,
+    seed: int,
+    width: int,
+    height: int,
+    steps: int,
+    cfg: float,
+    unet_name: str,
+    clip_name: str,
+    vae_name: str,
+    sampler: str = "er_sde",
+    scheduler: str = "simple",
+    filename_prefix: str = "local_ai_drawing_anima",
+) -> dict[str, Any]:
+    return {
+        "1": {
+            "class_type": "UNETLoader",
+            "inputs": {"unet_name": unet_name, "weight_dtype": "default"},
+        },
+        "2": {
+            "class_type": "CLIPLoader",
+            "inputs": {"clip_name": clip_name, "type": "qwen_image", "device": "default"},
+        },
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": vae_name}},
+        "4": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["2", 0]}},
+        "5": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["2", 0]}},
+        "6": {
+            "class_type": "EmptyLatentImage",
+            "inputs": {"width": width, "height": height, "batch_size": 1},
+        },
+        "7": {
+            "class_type": "KSampler",
+            "inputs": {
+                "seed": seed,
+                "steps": steps,
+                "cfg": cfg,
+                "sampler_name": sampler,
+                "scheduler": scheduler,
+                "denoise": 1,
+                "model": ["1", 0],
+                "positive": ["4", 0],
+                "negative": ["5", 0],
+                "latent_image": ["6", 0],
+            },
+        },
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["7", 0], "vae": ["3", 0]}},
+        "9": {
+            "class_type": "SaveImage",
+            "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]},
+        },
+    }
+
+
 def build_workflow(
     *,
     positive: str,
@@ -474,7 +534,7 @@ class ComfyUIClient:
                 data = response.json()
                 if prompt_id in data:
                     return data[prompt_id]
-                await asyncio.sleep(2)
+                await asyncio.sleep(self.settings.generation_poll_seconds)
         raise TimeoutError("ComfyUI generation timed out.")
 
     async def download_first_image(self, history: dict[str, Any], output_dir: Path, job_id: str) -> Path:

@@ -4,6 +4,7 @@ import json
 import base64
 import os
 import uuid
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -17,23 +18,31 @@ from pydantic import BaseModel, Field
 from app.comfyui import (
     ComfyUIClient,
     ComfyUIExecutionError,
+    build_anima_workflow,
     build_brushnet_inpaint_workflow,
     build_inpaint_workflow,
     build_mask_conditioning_workflow,
     build_workflow,
+    is_anima_checkpoint,
     random_seed,
 )
 from app.config import Settings, get_settings
 from app.db import JobStore
 from app.presets import find_character, list_loras, load_characters, load_prompt_presets, merge_tags
+from app.prompt_tags import compose_stacked_negative, compose_stacked_prompt
 from app.prompting import (
     PromptResult,
     PromptTranslationError,
+    apply_lookback_negative_locks,
+    apply_lookback_positive_locks,
     apply_nsfw_visibility_negative_profile,
     apply_nsfw_visibility_profile,
+    filter_character_identity_tags,
     filter_nsfw_incompatible_tags,
+    merge_unique_tags,
     translate_prompt,
 )
+from app.prompt_knowledge import knowledge_positive_tags
 
 
 app = FastAPI(title="Local AI Drawing Service")
@@ -50,12 +59,10 @@ DUAL_CHARACTER_BLOCKED_TAGS = {
 }
 
 DUAL_CHARACTER_NEGATIVE_TAGS = (
-    "merged characters, fused characters, hybrid character, mixed character features, "
-    "same face, identical faces, wrong character on left, wrong character on right, "
-    "shared hair color, shared outfit, duplicated outfit, conjoined bodies, "
-    "more than two people, extra people, three girls, crowd, duplicate character, "
-    "extra arms, extra hands, extra legs, extra feet, too many limbs, "
-    "broken interaction, disconnected hands, tangled limbs"
+    "merged characters, mixed character features, identical faces, "
+    "shared hair color, shared outfit, conjoined bodies, "
+    "extra people, duplicate character, extra limbs, "
+    "disconnected hands, tangled limbs"
 )
 class GenerateRequest(BaseModel):
     prompt_cn: str = Field(..., min_length=1, max_length=1000)
@@ -164,6 +171,16 @@ async def health(settings: Settings = Depends(get_settings)) -> dict:
             "loraStrengthCap": settings.dual_lora_strength_cap,
             "maskConditioningStrength": settings.dual_mask_conditioning_strength,
         },
+        "generationDefaults": {
+            "steps": settings.default_steps,
+            "pollSeconds": settings.generation_poll_seconds,
+        },
+        "promptTranslation": {
+            "ollamaGpuLayers": settings.ollama_prompt_num_gpu,
+            "ollamaKeepAlive": settings.ollama_prompt_keep_alive,
+            "thinking": False,
+            "totalTimeoutSeconds": settings.prompt_translation_total_timeout_seconds,
+        },
         "capabilities": capabilities,
         "checks": checks,
     }
@@ -207,9 +224,17 @@ async def generate(
     has_custom_mask = has_complete_character_mask(payload.character_mask_json)
     layout_hint = build_character_layout_hint(payload.character_mask_json) if is_dual and has_custom_mask else ""
     if payload.prompt_positive.strip():
+        positive = merge_unique_tags(
+            knowledge_positive_tags(payload.prompt_cn, settings.prompt_knowledge_path),
+            payload.prompt_positive.strip(),
+        )
+        positive = apply_lookback_positive_locks(positive, payload.prompt_cn)
+        positive = compose_stacked_prompt(positive)
+        negative = payload.prompt_negative.strip() or PromptResult.model_fields["negative"].default
+        negative = apply_lookback_negative_locks(positive, negative, payload.prompt_cn)
         prompt = PromptResult(
-            positive=payload.prompt_positive.strip(),
-            negative=payload.prompt_negative.strip() or PromptResult.model_fields["negative"].default,
+            positive=positive,
+            negative=compose_stacked_negative(negative, positive),
             style_notes=payload.style_notes.strip() or "provided by cloud prompt editor",
         )
     else:
@@ -293,6 +318,11 @@ async def generate(
                 second_lora_strength or default_strength,
                 max_strength,
             )
+    if is_anima_checkpoint(payload.checkpoint):
+        lora_name = ""
+        lora_strength = 0
+        second_lora_name = ""
+        second_lora_strength = 0
     job_id = uuid.uuid4().hex
     source_image_path = ""
     if str(payload.job_type or "").strip().upper() == "INPAINT":
@@ -349,13 +379,32 @@ async def run_generation(job_id: str, settings: Settings) -> None:
     try:
         if str(job.get("job_type") or "").upper() == "INPAINT":
             image_path = await run_manual_inpaint_generation(job, settings, store, client)
+        elif is_anima_checkpoint(job.get("checkpoint")):
+            workflow = build_anima_workflow(
+                positive=job["prompt_positive"],
+                negative=job["prompt_negative"],
+                seed=job["seed"],
+                width=job["width"],
+                height=job["height"],
+                steps=job["steps"],
+                cfg=job["cfg"],
+                unet_name=str(job["checkpoint"]),
+                clip_name=settings.anima_clip_name,
+                vae_name=settings.anima_vae_name,
+                sampler=settings.anima_sampler,
+                scheduler=settings.anima_scheduler,
+                filename_prefix=f"local_ai_drawing/{job_id}",
+            )
+            image_path = await queue_and_download(
+                client, store, job_id, workflow, settings.output_dir, local_image_stem(job))
         elif should_use_dual_inpaint(settings, job):
             image_path = await run_dual_inpaint_generation(job, settings, store, client)
         elif should_use_dual_mask_conditioning(settings, job):
             image_path = await run_dual_mask_conditioning_generation(job, settings, store, client)
         else:
+            use_regions = should_use_dual_regions(settings, job)
             workflow = build_workflow(
-                positive=job["prompt_positive"],
+                positive=(job.get("regional_global_positive") or job["prompt_positive"]) if use_regions else job["prompt_positive"],
                 negative=job["prompt_negative"],
                 seed=job["seed"],
                 width=job["width"],
@@ -369,13 +418,12 @@ async def run_generation(job_id: str, settings: Settings) -> None:
                 lora_strength=job["lora_strength"],
                 second_lora_name=job["second_lora_name"],
                 second_lora_strength=job["second_lora_strength"],
+                regional_left_positive=job["regional_left_positive"] if use_regions else "",
+                regional_right_positive=job["regional_right_positive"] if use_regions else "",
                 filename_prefix=f"local_ai_drawing/{job_id}",
             )
-            prompt_id = await client.queue_prompt(workflow, client_id=job_id)
-            store.update_job(job_id, comfy_prompt_id=prompt_id)
-            history = await client.wait_for_history(prompt_id)
-            image_path = await client.download_first_image(
-                history, settings.output_dir, local_image_stem(job))
+            image_path = await queue_and_download(
+                client, store, job_id, workflow, settings.output_dir, local_image_stem(job))
         relative_path = image_path.resolve().relative_to(settings.output_dir.resolve()).as_posix()
         store.update_job(job_id, status="completed", image_path=relative_path)
     except Exception as exc:
@@ -517,11 +565,9 @@ def build_character_layout_hint(mask_json: str) -> str:
     secondary_box = normalized_bounds(secondary)
     relation = describe_character_relation(primary_box, secondary_box)
     return merge_tags(
-        "use the drawn A/B regions as a rough composition guide only",
-        f"character A position: {describe_box_position(primary_box)}",
-        f"character B position: {describe_box_position(secondary_box)}",
-        relation,
-        "exactly two separate characters, preserve two distinct faces and two distinct bodies",
+        f"first character roughly toward {describe_box_position(primary_box)}",
+        f"second character roughly toward {describe_box_position(secondary_box)}",
+        relation.replace("character A", "first character").replace("character B", "second character"),
     )
 
 
@@ -593,7 +639,7 @@ def describe_character_relation(
     overlap = normalized_iou(primary, secondary)
 
     if overlap > 0.08 or distance < 0.24:
-        return "close interaction, overlapping composition, keep two separate heads and bodies"
+        return "close interaction, overlapping composition"
     if abs(dx) >= abs(dy):
         if dx > 0:
             return "character A is left of character B"
@@ -627,14 +673,24 @@ def should_use_dual_inpaint(settings: Settings, job: dict) -> bool:
     )
 
 
-def should_use_dual_mask_conditioning(settings: Settings, job: dict) -> bool:
+def should_use_dual_regions(settings: Settings, job: dict) -> bool:
     strategy = settings.dual_character_strategy.strip().lower()
     return (
         str(job.get("generation_mode") or "").upper() == "DUAL"
-        and strategy in {"mask", "masked", "mask-conditioning", "conditioning", "regional-mask"}
-        and bool(str(job.get("character_mask_json") or "").strip())
+        and strategy == "regional-area"
         and bool(job.get("regional_left_positive"))
         and bool(job.get("regional_right_positive"))
+    )
+
+
+def should_use_dual_mask_conditioning(settings: Settings, job: dict) -> bool:
+    return (
+        str(job.get("generation_mode") or "").upper() == "DUAL"
+        and settings.dual_character_strategy.strip().lower()
+        in {"mask", "masked", "mask-conditioning", "conditioning", "regional-mask", "regional-area"}
+        and bool(job.get("regional_left_positive"))
+        and bool(job.get("regional_right_positive"))
+        and has_complete_character_mask(str(job.get("character_mask_json") or ""))
     )
 
 
@@ -1078,10 +1134,32 @@ async def queue_and_download(
     output_dir: Path,
     image_name: str,
 ) -> Path:
+    started = time.perf_counter()
     prompt_id = await client.queue_prompt(workflow, client_id=job_id)
     store.update_job(job_id, comfy_prompt_id=prompt_id)
+    queued = time.perf_counter()
     history = await client.wait_for_history(prompt_id)
-    return await client.download_first_image(history, output_dir, image_name)
+    ready = time.perf_counter()
+    image_path = await client.download_first_image(history, output_dir, image_name)
+    finished = time.perf_counter()
+    timestamps = {
+        event: details["timestamp"]
+        for event, details in history.get("status", {}).get("messages", [])
+        if isinstance(details, dict) and isinstance(details.get("timestamp"), (int, float))
+    }
+    execution_ms = (
+        timestamps["execution_success"] - timestamps["execution_start"]
+        if "execution_success" in timestamps and "execution_start" in timestamps else None
+    )
+    print("[generation-timing] " + json.dumps({
+        "job_id": job_id, "prompt_id": prompt_id,
+        "submit_seconds": round(queued - started, 3),
+        "queue_and_execute_seconds": round(ready - queued, 3),
+        "comfy_execution_seconds": round(execution_ms / 1000, 3) if execution_ms is not None else None,
+        "download_seconds": round(finished - ready, 3),
+        "total_seconds": round(finished - started, 3),
+    }), flush=True)
+    return image_path
 
 
 def create_split_mask(path: Path, width: int, height: int, side: str, overlap_ratio: float) -> None:
@@ -1351,18 +1429,25 @@ def cleanup_temp_paths(paths: list[Path]) -> None:
 def character_tags(character, *, nsfw_mode: bool = False) -> str:
     if not character:
         return ""
-    tags = merge_tags(character.trigger_words, character.default_positive, character.style_tags)
+    tags = filter_character_identity_tags(
+        merge_tags(character.trigger_words, character.default_positive, character.style_tags)
+    )
     return filter_nsfw_incompatible_tags(tags) if nsfw_mode else tags
 
 
+def character_outfit_tags(character) -> str:
+    if not character:
+        return ""
+    stored = str(getattr(character, "default_outfit", "") or "")
+    if stored.strip():
+        return stored
+    raw = merge_tags(character.default_positive, character.style_tags)
+    identity = filter_character_identity_tags(raw)
+    return subtract_prompt_tags(raw, identity)
+
+
 def dual_character_guard(custom_mask: bool = False) -> str:
-    base = (
-        "2girls, exactly two characters total, two distinct characters, duo, "
-        "separate faces, separate outfits, no extra people, no fusion, no mixed features"
-    )
-    if custom_mask:
-        return merge_tags(base, "natural close interaction, clear individual character identities")
-    return merge_tags(base, "left and right characters")
+    return "2girls, duo, distinct faces, one continuous scene, consistent lighting, consistent art style"
 
 
 def normalize_tag_key(tag: str) -> str:
@@ -1411,28 +1496,32 @@ def build_positive_prompt(
     layout_hint: str = "",
 ) -> str:
     if not is_dual:
-        return merge_tags(
+        scene = subtract_prompt_tags(translated_positive, character_outfit_tags(character))
+        return compose_stacked_prompt(merge_tags(
             character_tags(character, nsfw_mode=payload.nsfw_mode),
             payload.trigger_words,
             payload.style_tags,
-            translated_positive,
-        )
+            scene,
+        ))
 
     first_tags = filter_dual_character_tags(merge_tags(
         character_tags(character, nsfw_mode=payload.nsfw_mode),
         payload.trigger_words,
     ))
     second_tags = filter_dual_character_tags(character_tags(second_character, nsfw_mode=payload.nsfw_mode))
-    scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
-    first_label = "character A" if custom_mask else "character A on the left side"
-    second_label = "character B" if custom_mask else "character B on the right side"
-    return merge_tags(
-        dual_character_guard(custom_mask),
-        layout_hint,
-        scene_tags,
-        f"{first_label}: {first_tags}" if first_tags else "",
-        f"{second_label}: {second_tags}" if second_tags else "",
+    scene_source = subtract_prompt_tags(
+        translated_positive,
+        character_outfit_tags(character),
+        character_outfit_tags(second_character),
     )
+    scene_tags = build_dual_scene_tags(payload, scene_source, first_tags, second_tags)
+    return compose_stacked_prompt(merge_tags(
+        scene_tags,
+        dual_character_guard(custom_mask),
+        layout_hint if custom_mask else "",
+        f"first character: {first_tags}" if first_tags else "",
+        f"second character: {second_tags}" if second_tags else "",
+    ))
 
 
 def build_dual_scene_tags(
@@ -1441,8 +1530,17 @@ def build_dual_scene_tags(
     first_tags: str,
     second_tags: str,
 ) -> str:
+    scene = merge_tags(payload.style_tags, translated_positive)
+    # Older consoles inject this exact guard even when no region was painted.
+    # Remove the old boilerplate only when its signature is present; preserve
+    # ordinary user-authored placement instructions such as "woman on the left".
+    keys = {normalize_tag_key(tag) for tag in scene.split(",")}
+    if {"two distinct characters", "no fusion", "no mixed features"} <= keys:
+        scene = subtract_prompt_tags(scene,
+            "2girls, two distinct characters, left and right characters, character A, character B, "
+            "separate faces, separate outfits, no fusion, no mixed features, natural close interaction")
     return subtract_prompt_tags(
-        merge_tags(payload.style_tags, translated_positive),
+        scene,
         first_tags,
         second_tags,
         dual_character_guard(True),
@@ -1466,16 +1564,23 @@ def build_regional_global_positive(
         payload.trigger_words,
     ))
     second_tags = filter_dual_character_tags(character_tags(second_character, nsfw_mode=payload.nsfw_mode))
-    scene_tags = build_dual_scene_tags(payload, translated_positive, first_tags, second_tags)
+    scene_source = subtract_prompt_tags(
+        translated_positive,
+        character_outfit_tags(character),
+        character_outfit_tags(second_character),
+    )
+    scene_tags = build_dual_scene_tags(payload, scene_source, first_tags, second_tags)
     composition_tags = (
-        "natural close interaction between exactly two characters, preserve the requested contact and relative positions, no extra people"
+        "coherent interaction"
         if custom_mask
-        else "balanced two character composition, clear left-right separation, exactly one character on each side, no extra people"
+        else "one character on each side"
     )
     return merge_tags(
         dual_character_guard(custom_mask),
         composition_tags,
-        layout_hint,
+        # The mask already carries placement. Textual A/B bounding-box descriptions
+        # can turn the scene into a labelled character sheet and lengthen conditioning.
+        layout_hint if not custom_mask else "",
         scene_tags,
     )
 
@@ -1496,14 +1601,14 @@ def build_regional_positive_prompts(
     ))
     second_tags = filter_dual_character_tags(character_tags(second_character, nsfw_mode=payload.nsfw_mode))
     first_region = (
-        "character A only, one person only in this region, no character B, no second person, one complete body, distinct face, distinct outfit"
+        "one person"
         if custom_mask
-        else "left side of image, character A only, one person only in this region, no character B, no second person, one complete body, distinct face, distinct outfit"
+        else "left person"
     )
     second_region = (
-        "character B only, one person only in this region, no character A, no second person, one complete body, distinct face, distinct outfit"
+        "one person"
         if custom_mask
-        else "right side of image, character B only, one person only in this region, no character A, no second person, one complete body, distinct face, distinct outfit"
+        else "right person"
     )
     left_positive = merge_tags(
         first_region,
