@@ -124,7 +124,12 @@ class CloudWorker:
                     if not claimed.get("hasJob"):
                         await asyncio.sleep(self.settings.ai_worker_poll_seconds)
                         continue
-                    await self._process_job(client, claimed["job"], claimed.get("inpaintSourceUrl") or "")
+                    await self._process_job(
+                        client,
+                        claimed["job"],
+                        claimed.get("inpaintSourceUrl") or "",
+                        claimed.get("img2imgSourceUrl") or "",
+                    )
                 except Exception as exc:
                     print(f"[cloud-worker] loop error: {exc}")
                     await asyncio.sleep(self.settings.ai_worker_poll_seconds)
@@ -212,6 +217,7 @@ class CloudWorker:
         client: httpx.AsyncClient,
         job: dict[str, Any],
         inpaint_source_url: str = "",
+        img2img_source_url: str = "",
     ) -> None:
         job_id = job["id"]
         local_job_id = ""
@@ -221,7 +227,7 @@ class CloudWorker:
         try:
             stage = "STARTING_LOCAL_GENERATION"
             detail = "Posting generation request to local FastAPI."
-            local_job = await self._start_local_generation(job, inpaint_source_url)
+            local_job = await self._start_local_generation(job, inpaint_source_url, img2img_source_url)
             local_job_id = local_job["job_id"]
             stage = "LOCAL_GENERATION_RUNNING"
             detail = "Local FastAPI accepted generation request."
@@ -261,7 +267,12 @@ class CloudWorker:
         except Exception as exc:
             await self._fail_cloud_job(client, job_id, str(exc), local_job_id, comfy_prompt_id, stage, detail)
 
-    async def _start_local_generation(self, job: dict[str, Any], inpaint_source_url: str = "") -> dict[str, Any]:
+    async def _start_local_generation(
+        self,
+        job: dict[str, Any],
+        inpaint_source_url: str = "",
+        img2img_source_url: str = "",
+    ) -> dict[str, Any]:
         payload = {
             "prompt_cn": job.get("promptCn") or "",
             "prompt_positive": job.get("promptPositive") or "",
@@ -288,12 +299,26 @@ class CloudWorker:
             "parent_job_id": job.get("parentJobId"),
             "inpaint_instruction": job.get("inpaintInstruction") or "",
             "inpaint_mask_json": job.get("inpaintMaskJson") or "",
+            "denoise": job.get("denoise"),
             "cloud_job_id": job.get("id"),
             "user_id": job.get("userId"),
             "storage_date": str(job.get("createdAt") or "")[:10] or None,
         }
         if payload["job_type"] == "INPAINT":
             raise RuntimeError("局部修复已下线，请使用一次性生成重新出图。")
+        if payload["job_type"] == "IMG2IMG":
+            source_url = img2img_source_url or inpaint_source_url
+            if not source_url:
+                raise RuntimeError("图生图缺少源图下载地址。")
+            payload["source_image_base64"] = await self._download_source_image_base64(source_url)
+            payload["light_hires"] = False
+            payload["generation_mode"] = "SINGLE"
+            payload["second_character_id"] = None
+            payload["second_lora_name"] = ""
+            payload["second_lora_strength"] = 0
+            payload["character_mask_json"] = ""
+        if payload.get("denoise") is None:
+            payload.pop("denoise", None)
         async with httpx.AsyncClient(timeout=30, headers={"User-Agent": USER_AGENT}) as local:
             response = await local.post(f"{self.local_url}/api/generate", json=payload)
             self._raise_for_status(response, "start local generation")
@@ -311,6 +336,16 @@ class CloudWorker:
                 if status == "failed":
                     raise LocalGenerationError(job.get("error") or "Local generation failed", job)
                 await asyncio.sleep(self.settings.generation_poll_seconds)
+
+    async def _download_source_image_base64(self, url: str) -> str:
+        async with httpx.AsyncClient(timeout=60, headers={"User-Agent": USER_AGENT}) as client:
+            response = await client.get(url)
+            self._raise_for_status(response, "download img2img source image")
+            if not response.content:
+                raise RuntimeError("图生图源图下载结果为空。")
+            if len(response.content) > 8 * 1024 * 1024:
+                raise RuntimeError("图生图源图超过 8MB 限制。")
+            return base64.b64encode(response.content).decode("ascii")
 
     async def _download_local_image(self, local_job: dict[str, Any]) -> tuple[bytes, str]:
         filename = local_job.get("image_path")

@@ -19,6 +19,9 @@ CLASSIC_LIGHT_HIRES_SCALE = 1.25
 CLASSIC_LIGHT_HIRES_STEPS = 16
 CLASSIC_LIGHT_HIRES_DENOISE = 0.4
 CLASSIC_LIGHT_HIRES_MAX_SIDE = 1600
+IMG2IMG_DEFAULT_DENOISE = 0.45
+IMG2IMG_MIN_DENOISE = 0.25
+IMG2IMG_MAX_DENOISE = 0.70
 
 
 class ComfyUIExecutionError(RuntimeError):
@@ -28,6 +31,12 @@ class ComfyUIExecutionError(RuntimeError):
 def is_anima_checkpoint(checkpoint: str | None) -> bool:
     name = (checkpoint or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
     return name.startswith("anima-")
+
+
+def clamp_img2img_denoise(value: float | None) -> float:
+    if value is None:
+        return IMG2IMG_DEFAULT_DENOISE
+    return max(IMG2IMG_MIN_DENOISE, min(IMG2IMG_MAX_DENOISE, float(value)))
 
 
 def classic_hires_scale_for_size(
@@ -388,6 +397,171 @@ def build_mask_conditioning_workflow(
     workflow["12"]["inputs"]["clip"] = clip_ref
     workflow["13"]["inputs"]["clip"] = clip_ref
     return workflow
+
+
+def build_img2img_workflow(
+    *,
+    positive: str,
+    negative: str,
+    seed: int,
+    width: int,
+    height: int,
+    steps: int,
+    cfg: float,
+    checkpoint: str,
+    sampler: str,
+    scheduler: str,
+    source_image: str,
+    denoise: float,
+    lora_name: str = "",
+    lora_strength: float = 0,
+    second_lora_name: str = "",
+    second_lora_strength: float = 0,
+    filename_prefix: str = "local_ai_drawing_img2img",
+) -> dict[str, Any]:
+    workflow: dict[str, Any] = {
+        "1": {"class_type": "LoadImage", "inputs": {"image": source_image}},
+        "2": {
+            "class_type": "ImageScale",
+            "inputs": {
+                "image": ["1", 0],
+                "upscale_method": "lanczos",
+                "width": width,
+                "height": height,
+                "crop": "center",
+            },
+        },
+        "3": {
+            "class_type": "KSampler",
+            "inputs": {
+                "seed": seed,
+                "steps": steps,
+                "cfg": cfg,
+                "sampler_name": sampler,
+                "scheduler": scheduler,
+                "denoise": clamp_img2img_denoise(denoise),
+                "model": ["4", 0],
+                "positive": ["6", 0],
+                "negative": ["7", 0],
+                "latent_image": ["5", 0],
+            },
+        },
+        "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint}},
+        "5": {
+            "class_type": "VAEEncode",
+            "inputs": {
+                "pixels": ["2", 0],
+                "vae": ["4", 2],
+            },
+        },
+        "6": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["4", 1]}},
+        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["4", 1]}},
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
+        "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]}},
+    }
+    model_ref: list[Any] = ["4", 0]
+    clip_ref: list[Any] = ["4", 1]
+    if lora_name and lora_strength > 0:
+        workflow["10"] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "lora_name": lora_name,
+                "strength_model": lora_strength,
+                "strength_clip": lora_strength,
+                "model": model_ref,
+                "clip": clip_ref,
+            },
+        }
+        model_ref = ["10", 0]
+        clip_ref = ["10", 1]
+    if second_lora_name and second_lora_strength > 0:
+        workflow["11"] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "lora_name": second_lora_name,
+                "strength_model": second_lora_strength,
+                "strength_clip": second_lora_strength,
+                "model": model_ref,
+                "clip": clip_ref,
+            },
+        }
+        model_ref = ["11", 0]
+        clip_ref = ["11", 1]
+    workflow["3"]["inputs"]["model"] = model_ref
+    workflow["6"]["inputs"]["clip"] = clip_ref
+    workflow["7"]["inputs"]["clip"] = clip_ref
+    return workflow
+
+
+def build_anima_img2img_workflow(
+    *,
+    positive: str,
+    negative: str,
+    seed: int,
+    width: int,
+    height: int,
+    steps: int,
+    cfg: float,
+    unet_name: str,
+    clip_name: str,
+    vae_name: str,
+    source_image: str,
+    denoise: float,
+    sampler: str = "er_sde",
+    scheduler: str = "simple",
+    filename_prefix: str = "local_ai_drawing_anima_img2img",
+) -> dict[str, Any]:
+    return {
+        "1": {
+            "class_type": "UNETLoader",
+            "inputs": {"unet_name": unet_name, "weight_dtype": "default"},
+        },
+        "2": {
+            "class_type": "CLIPLoader",
+            "inputs": {"clip_name": clip_name, "type": "qwen_image", "device": "default"},
+        },
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": vae_name}},
+        "4": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["2", 0]}},
+        "5": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["2", 0]}},
+        "10": {"class_type": "LoadImage", "inputs": {"image": source_image}},
+        "11": {
+            "class_type": "ImageScale",
+            "inputs": {
+                "image": ["10", 0],
+                "upscale_method": "lanczos",
+                "width": width,
+                "height": height,
+                "crop": "center",
+            },
+        },
+        "6": {
+            "class_type": "VAEEncode",
+            "inputs": {
+                "pixels": ["11", 0],
+                "vae": ["3", 0],
+            },
+        },
+        "7": {
+            "class_type": "KSampler",
+            "inputs": {
+                "seed": seed,
+                "steps": steps,
+                "cfg": cfg,
+                "sampler_name": sampler,
+                "scheduler": scheduler,
+                "denoise": clamp_img2img_denoise(denoise),
+                "model": ["1", 0],
+                "positive": ["4", 0],
+                "negative": ["5", 0],
+                "latent_image": ["6", 0],
+            },
+        },
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["7", 0], "vae": ["3", 0]}},
+        "9": {
+            "class_type": "SaveImage",
+            "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]},
+        },
+    }
 
 
 def build_inpaint_workflow(

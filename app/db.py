@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     inpaint_instruction TEXT NOT NULL DEFAULT '',
     inpaint_mask_json TEXT NOT NULL DEFAULT '',
     source_image_path TEXT NOT NULL DEFAULT '',
+    denoise REAL NOT NULL DEFAULT 1,
     light_hires INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL,
     comfy_prompt_id TEXT NOT NULL DEFAULT '',
@@ -89,6 +90,7 @@ class JobStore:
                 "inpaint_instruction": "TEXT NOT NULL DEFAULT ''",
                 "inpaint_mask_json": "TEXT NOT NULL DEFAULT ''",
                 "source_image_path": "TEXT NOT NULL DEFAULT ''",
+                "denoise": "REAL NOT NULL DEFAULT 1",
                 "light_hires": "INTEGER NOT NULL DEFAULT 0",
             }
             for name, definition in additions.items():

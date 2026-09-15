@@ -15,6 +15,7 @@ const capabilitySummary = document.querySelector("#capability-summary");
 const loraList = document.querySelector("#lora-list");
 const characterList = document.querySelector("#character-list");
 let characters = [];
+let sourceImageBase64 = "";
 
 function field(id) {
   return document.querySelector(id);
@@ -135,7 +136,7 @@ async function loadPresets() {
 }
 
 function buildPayload() {
-  return {
+  const payload = {
     prompt_cn: value("#prompt-cn") || value("#style-tags") || "local debug image",
     character_id: value("#character-id") || null,
     trigger_words: value("#trigger-words"),
@@ -148,7 +149,13 @@ function buildPayload() {
     checkpoint: value("#checkpoint") || null,
     lora_name: value("#lora-name"),
     lora_strength: Number(value("#lora-strength") || 0),
+    job_type: value("#job-type") || "TEXT2IMG",
   };
+  if (payload.job_type === "IMG2IMG") {
+    payload.source_image_base64 = sourceImageBase64;
+    payload.denoise = numberValue("#denoise") || 0.45;
+  }
+  return payload;
 }
 
 function setStageLoading(message) {
@@ -187,6 +194,12 @@ translateBtn.addEventListener("click", async () => {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (value("#job-type") === "IMG2IMG" && !sourceImageBase64) {
+    currentResult.className = "job-state error compact-stage";
+    currentResult.textContent = "图生图需要先选择源图。";
+    jobMeta.textContent = "提交失败";
+    return;
+  }
   setStageLoading("已提交本机测试任务，等待 ComfyUI...");
   jobMeta.textContent = "正在排队";
   try {
@@ -260,6 +273,35 @@ document.querySelectorAll("[data-steps]").forEach((button) => {
   button.addEventListener("click", () => {
     field("#steps").value = button.dataset.steps;
   });
+});
+
+document.querySelectorAll("[data-denoise]").forEach((button) => {
+  button.addEventListener("click", () => {
+    field("#denoise").value = button.dataset.denoise;
+  });
+});
+
+field("#job-type").addEventListener("change", () => {
+  const img2img = value("#job-type") === "IMG2IMG";
+  field("#img2img-fields").hidden = !img2img;
+});
+
+field("#source-image").addEventListener("change", async (event) => {
+  const file = event.target.files && event.target.files[0];
+  const preview = field("#source-preview");
+  sourceImageBase64 = "";
+  preview.hidden = true;
+  preview.removeAttribute("src");
+  if (!file) return;
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+  sourceImageBase64 = dataUrl.includes(",") ? dataUrl.split(",", 2)[1] : dataUrl;
+  preview.src = dataUrl;
+  preview.hidden = false;
 });
 
 refreshHealthBtn.addEventListener("click", loadHealth);

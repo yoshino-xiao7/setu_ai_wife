@@ -51,6 +51,24 @@
             <summary>本机调试生图</summary>
             <form id="generate-form">
               <section class="panel-section flat">
+                <label>生成方式
+                  <select id="job-type">
+                    <option value="TEXT2IMG">文生图</option>
+                    <option value="IMG2IMG">图生图</option>
+                  </select>
+                </label>
+                <div id="img2img-fields" hidden>
+                  <label>源图
+                    <input id="source-image" type="file" accept="image/png,image/jpeg,image/webp" />
+                  </label>
+                  <img id="source-preview" alt="源图预览" hidden />
+                  <div class="quick-sizes" aria-label="图生图改动强度">
+                    <button type="button" data-denoise="0.35">轻度 · 0.35</button>
+                    <button type="button" data-denoise="0.45">均衡 · 0.45</button>
+                    <button type="button" data-denoise="0.55">重绘 · 0.55</button>
+                  </div>
+                  <label>改动强度 <input id="denoise" type="number" min="0.25" max="0.70" step="0.05" value="0.45" /></label>
+                </div>
                 <label>自然语言描绘
                   <textarea id="prompt-cn" maxlength="1000" placeholder="例如：银发少女，雨夜街角，霓虹灯，电影感光影"></textarea>
                 </label>

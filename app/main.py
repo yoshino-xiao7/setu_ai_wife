@@ -18,11 +18,14 @@ from pydantic import BaseModel, Field
 from app.comfyui import (
     ComfyUIClient,
     ComfyUIExecutionError,
+    build_anima_img2img_workflow,
     build_anima_workflow,
     build_brushnet_inpaint_workflow,
+    build_img2img_workflow,
     build_inpaint_workflow,
     build_mask_conditioning_workflow,
     build_workflow,
+    clamp_img2img_denoise,
     is_anima_checkpoint,
     resolve_classic_sampling,
     random_seed,
@@ -94,6 +97,7 @@ class GenerateRequest(BaseModel):
     inpaint_instruction: str = ""
     inpaint_mask_json: str = Field("", max_length=120000)
     source_image_base64: str = ""
+    denoise: float | None = Field(None, ge=0.25, le=0.70)
     cloud_job_id: int | None = None
     user_id: int | None = None
     storage_date: str | None = None
@@ -218,8 +222,14 @@ async def generate(
     settings: Settings = Depends(get_settings),
     store: JobStore = Depends(get_store),
 ) -> dict[str, str]:
-    if str(payload.job_type or "").strip().upper() == "INPAINT":
+    job_type = str(payload.job_type or "TEXT2IMG").strip().upper() or "TEXT2IMG"
+    if job_type == "INPAINT":
         raise HTTPException(status_code=400, detail="局部修复已下线，请使用一次性生成重新出图。")
+    if job_type == "IMG2IMG":
+        if is_dual_generation(payload):
+            raise HTTPException(status_code=400, detail="图生图暂不支持双角色。")
+        if not payload.source_image_base64.strip():
+            raise HTTPException(status_code=400, detail="图生图需要上传源图。")
     character = find_character(settings, payload.character_id)
     second_character = find_character(settings, payload.second_character_id)
     is_dual = is_dual_generation(payload)
@@ -327,8 +337,8 @@ async def generate(
         second_lora_strength = 0
     job_id = uuid.uuid4().hex
     source_image_path = ""
-    if str(payload.job_type or "").strip().upper() == "INPAINT":
-        source_image_path = save_inpaint_source(payload.source_image_base64, job_id, settings)
+    if job_type == "IMG2IMG":
+        source_image_path = save_source_image(payload.source_image_base64, job_id, settings)
     storage_date = normalized_storage_date(payload.storage_date)
     seed = payload.seed or random_seed()
     job = {
@@ -354,16 +364,17 @@ async def generate(
         "regional_left_positive": regional_left_positive,
         "regional_right_positive": regional_right_positive,
         "nsfw_visibility_level": normalize_visibility_level(payload.nsfw_visibility_level),
-        "job_type": str(payload.job_type or "TEXT2IMG").strip().upper(),
+        "job_type": job_type,
         "parent_job_id": payload.parent_job_id,
         "inpaint_instruction": payload.inpaint_instruction.strip(),
         "inpaint_mask_json": payload.inpaint_mask_json.strip(),
         "source_image_path": source_image_path,
+        "denoise": clamp_img2img_denoise(payload.denoise) if job_type == "IMG2IMG" else 1.0,
         "lora_name": lora_name,
         "lora_strength": lora_strength,
         "second_lora_name": second_lora_name if is_dual else "",
         "second_lora_strength": second_lora_strength if is_dual else 0,
-        "light_hires": 1 if payload.light_hires and not is_anima_checkpoint(payload.checkpoint) else 0,
+        "light_hires": 0 if job_type == "IMG2IMG" else (1 if payload.light_hires and not is_anima_checkpoint(payload.checkpoint) else 0),
         "status": "queued",
         "image_path": "",
     }
@@ -382,6 +393,8 @@ async def run_generation(job_id: str, settings: Settings) -> None:
     try:
         if str(job.get("job_type") or "").upper() == "INPAINT":
             image_path = await run_manual_inpaint_generation(job, settings, store, client)
+        elif str(job.get("job_type") or "").upper() == "IMG2IMG":
+            image_path = await run_img2img_generation(job, settings, store, client)
         elif is_anima_checkpoint(job.get("checkpoint")):
             workflow = build_anima_workflow(
                 positive=job["prompt_positive"],
@@ -502,16 +515,23 @@ def nsfw_lora_range(level: str | None) -> tuple[float, float]:
 
 
 def save_inpaint_source(encoded: str, job_id: str, settings: Settings) -> str:
-    if not encoded.strip():
-        raise HTTPException(status_code=400, detail="Inpaint source image is missing.")
-    try:
-        image_bytes = base64.b64decode(encoded, validate=True)
-    except (ValueError, TypeError) as exc:
-        raise HTTPException(status_code=400, detail="Invalid inpaint source image.") from exc
-    if len(image_bytes) > 25 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Inpaint source image is too large.")
+    return save_source_image(encoded, job_id, settings)
 
-    source_dir = settings.database_path.parent / "inpaint_sources"
+
+def save_source_image(encoded: str, job_id: str, settings: Settings) -> str:
+    if not encoded.strip():
+        raise HTTPException(status_code=400, detail="Source image is missing.")
+    value = encoded.strip()
+    if value.startswith("data:") and "," in value:
+        value = value.split(",", 1)[1]
+    try:
+        image_bytes = base64.b64decode(value, validate=True)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid source image.") from exc
+    if len(image_bytes) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Source image is too large.")
+
+    source_dir = settings.database_path.parent / "source_images"
     source_dir.mkdir(parents=True, exist_ok=True)
     source_path = source_dir / f"{job_id}.png"
     try:
@@ -520,7 +540,7 @@ def save_inpaint_source(encoded: str, job_id: str, settings: Settings) -> str:
         with Image.open(BytesIO(image_bytes)) as image:
             image.convert("RGB").save(source_path, format="PNG")
     except Exception as exc:
-        raise HTTPException(status_code=400, detail="Invalid inpaint source image.") from exc
+        raise HTTPException(status_code=400, detail="Invalid source image.") from exc
     return str(source_path)
 
 
@@ -1139,6 +1159,63 @@ async def run_dual_inpaint_generation(
         for filename in uploaded_inputs:
             client.cleanup_comfyui_input_file(filename)
         cleanup_temp_paths(temp_paths)
+
+
+async def run_img2img_generation(
+    job: dict,
+    settings: Settings,
+    store: JobStore,
+    client: ComfyUIClient,
+) -> Path:
+    source_path = Path(str(job.get("source_image_path") or ""))
+    if not source_path.exists():
+        raise RuntimeError("Img2img source image is missing.")
+    source_upload = await client.upload_image(source_path, f"{job['id']}_img2img_source.png")
+    denoise = clamp_img2img_denoise(job.get("denoise"))
+    try:
+        if is_anima_checkpoint(job.get("checkpoint")):
+            workflow = build_anima_img2img_workflow(
+                positive=job["prompt_positive"],
+                negative=job["prompt_negative"],
+                seed=job["seed"],
+                width=job["width"],
+                height=job["height"],
+                steps=job["steps"],
+                cfg=job["cfg"],
+                unet_name=str(job["checkpoint"]),
+                clip_name=settings.anima_clip_name,
+                vae_name=settings.anima_vae_name,
+                source_image=source_upload,
+                denoise=denoise,
+                sampler=settings.anima_sampler,
+                scheduler=settings.anima_scheduler,
+                filename_prefix=f"local_ai_drawing/{job['id']}",
+            )
+        else:
+            workflow = build_img2img_workflow(
+                positive=job["prompt_positive"],
+                negative=job["prompt_negative"],
+                seed=job["seed"],
+                width=job["width"],
+                height=job["height"],
+                steps=job["steps"],
+                cfg=job["cfg"],
+                checkpoint=job["checkpoint"],
+                sampler=settings.default_sampler,
+                scheduler=settings.default_scheduler,
+                source_image=source_upload,
+                denoise=denoise,
+                lora_name=job["lora_name"],
+                lora_strength=job["lora_strength"],
+                second_lora_name="",
+                second_lora_strength=0,
+                filename_prefix=f"local_ai_drawing/{job['id']}",
+            )
+        return await queue_and_download(
+            client, store, job["id"], workflow, settings.output_dir, local_image_stem(job)
+        )
+    finally:
+        client.cleanup_comfyui_input_file(source_upload)
 
 
 async def queue_and_download(
