@@ -8,7 +8,13 @@ from pathlib import Path
 
 from PIL import Image
 
-from app.comfyui import build_brushnet_inpaint_workflow, build_inpaint_workflow
+from app.comfyui import (
+    INPAINT_BLEND_DENOISE,
+    INPAINT_REDRAW_DENOISE,
+    build_brushnet_inpaint_workflow,
+    build_inpaint_workflow,
+    build_redraw_inpaint_workflow,
+)
 from app.config import Settings
 from app.main import (
     composite_inpaint_crop,
@@ -18,7 +24,9 @@ from app.main import (
     inpaint_positive_prompt,
     inpaint_profile,
     select_brushnet_model,
+    select_fooocus_inpaint_models,
     should_use_brushnet_inpaint,
+    should_use_redraw_inpaint,
 )
 
 
@@ -179,9 +187,118 @@ class InpaintTest(unittest.TestCase):
             selected = select_brushnet_model(settings)
 
             self.assertEqual(selected, os.path.join("brushnet", "random_mask.safetensors"))
+            self.assertTrue(should_use_redraw_inpaint(settings))
             self.assertTrue(should_use_brushnet_inpaint(settings, selected))
             legacy = Settings(COMFYUI_MODELS_DIR=models_dir, INPAINT_ENGINE="legacy")
+            self.assertFalse(should_use_redraw_inpaint(legacy))
             self.assertFalse(should_use_brushnet_inpaint(legacy, selected))
+            brushnet_only = Settings(COMFYUI_MODELS_DIR=models_dir, INPAINT_ENGINE="brushnet")
+            self.assertFalse(should_use_redraw_inpaint(brushnet_only))
+            self.assertTrue(should_use_brushnet_inpaint(brushnet_only, selected))
+
+    def test_redraw_workflow_uses_full_image_differential_and_blend_pass(self) -> None:
+        workflow = build_redraw_inpaint_workflow(
+            positive="positive",
+            negative="negative",
+            seed=1,
+            steps=20,
+            cfg=4,
+            checkpoint="model.safetensors",
+            sampler="euler",
+            scheduler="normal",
+            base_image="source.png",
+            mask_image="mask.png",
+            grow_mask_by=16,
+            lora_name="a.safetensors",
+            lora_strength=0.6,
+            second_lora_name="b.safetensors",
+            second_lora_strength=0.5,
+        )
+
+        self.assertEqual(workflow["14"]["class_type"], "DifferentialDiffusion")
+        self.assertEqual(workflow["15"]["class_type"], "InpaintModelConditioning")
+        self.assertTrue(workflow["15"]["inputs"]["noise_mask"])
+        self.assertEqual(workflow["15"]["inputs"]["pixels"], ["1", 0])
+        self.assertEqual(workflow["15"]["inputs"]["mask"], ["13", 0])
+        self.assertNotIn("23", workflow)
+        self.assertEqual(workflow["3"]["inputs"]["denoise"], INPAINT_REDRAW_DENOISE)
+        self.assertEqual(workflow["3"]["inputs"]["latent_image"], ["15", 2])
+        self.assertEqual(workflow["14"]["inputs"]["model"], ["11", 0])
+        self.assertEqual(workflow["20"]["inputs"]["denoise"], INPAINT_BLEND_DENOISE)
+        self.assertEqual(workflow["9"]["inputs"]["images"], ["21", 0])
+
+    def test_redraw_workflow_can_skip_blend_pass(self) -> None:
+        workflow = build_redraw_inpaint_workflow(
+            positive="positive",
+            negative="negative",
+            seed=1,
+            steps=20,
+            cfg=4,
+            checkpoint="model.safetensors",
+            sampler="euler",
+            scheduler="normal",
+            base_image="source.png",
+            mask_image="mask.png",
+            blend_denoise=0,
+        )
+
+        self.assertNotIn("20", workflow)
+        self.assertEqual(workflow["9"]["inputs"]["images"], ["8", 0])
+
+    def test_redraw_workflow_uses_fooocus_expand_blur_and_color_match(self) -> None:
+        workflow = build_redraw_inpaint_workflow(
+            positive="positive",
+            negative="negative",
+            seed=1,
+            steps=20,
+            cfg=4,
+            checkpoint="model.safetensors",
+            sampler="euler",
+            scheduler="normal",
+            base_image="source.png",
+            mask_image="mask.png",
+            fooocus_head="fooocus_inpaint_head.pth",
+            fooocus_patch="inpaint_v26.fooocus.patch",
+        )
+
+        self.assertEqual(workflow["13"]["class_type"], "INPAINT_ExpandMask")
+        self.assertEqual(workflow["13"]["inputs"]["blur_type"], "gaussian")
+        self.assertEqual(workflow["25"]["class_type"], "INPAINT_LoadFooocusInpaint")
+        self.assertEqual(workflow["26"]["class_type"], "INPAINT_ApplyFooocusInpaint")
+        self.assertEqual(workflow["15"]["class_type"], "INPAINT_VAEEncodeInpaintConditioning")
+        self.assertEqual(workflow["26"]["inputs"]["latent"], ["15", 2])
+        self.assertEqual(workflow["3"]["inputs"]["latent_image"], ["15", 3])
+        self.assertEqual(workflow["14"]["inputs"]["model"], ["26", 0])
+        self.assertNotIn("20", workflow)
+        self.assertEqual(workflow["27"]["class_type"], "INPAINT_ColorMatch")
+        self.assertEqual(workflow["9"]["inputs"]["images"], ["27", 0])
+
+    def test_selects_fooocus_models_and_skips_them_for_brushnet(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            models_dir = Path(directory) / "models"
+            inpaint_dir = models_dir / "inpaint"
+            inpaint_dir.mkdir(parents=True)
+            (inpaint_dir / "fooocus_inpaint_head.pth").write_bytes(b"head")
+            (inpaint_dir / "inpaint_v26.fooocus.patch").write_bytes(b"patch")
+            (inpaint_dir / "brushnet").mkdir()
+            (inpaint_dir / "brushnet" / "random_mask.safetensors").write_bytes(b"fake")
+            settings = Settings(COMFYUI_MODELS_DIR=models_dir)
+
+            head, patch = select_fooocus_inpaint_models(settings)
+            self.assertEqual(head, "")
+            self.assertEqual(patch, "")
+            explicit = Settings(
+                COMFYUI_MODELS_DIR=models_dir,
+                FOOOCUS_INPAINT_HEAD="fooocus_inpaint_head.pth",
+                FOOOCUS_INPAINT_PATCH="inpaint_v26.fooocus.patch",
+            )
+            head, patch = select_fooocus_inpaint_models(explicit)
+            self.assertEqual(head, "fooocus_inpaint_head.pth")
+            self.assertEqual(patch, "inpaint_v26.fooocus.patch")
+            self.assertEqual(
+                select_brushnet_model(settings),
+                os.path.join("brushnet", "random_mask.safetensors"),
+            )
 
     def test_configured_brushnet_model_uses_runtime_path_separator(self) -> None:
         settings = Settings(BRUSHNET_MODEL="brushnet/random_mask.safetensors")

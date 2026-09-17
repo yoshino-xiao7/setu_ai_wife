@@ -22,6 +22,13 @@ CLASSIC_LIGHT_HIRES_MAX_SIDE = 1600
 IMG2IMG_DEFAULT_DENOISE = 0.45
 IMG2IMG_MIN_DENOISE = 0.25
 IMG2IMG_MAX_DENOISE = 0.70
+INPAINT_REDRAW_DENOISE = 1.0
+INPAINT_BLEND_DENOISE = 0.32
+INPAINT_BLEND_STEPS = 16
+INPAINT_BLEND_MASK_EXPAND = 24
+INPAINT_MASK_BLUR = 0
+INPAINT_MASK_BLUR_SIGMA = 6.0
+INPAINT_COLOR_MATCH = 0.55
 
 
 class ComfyUIExecutionError(RuntimeError):
@@ -749,6 +756,226 @@ def build_brushnet_inpaint_workflow(
     workflow["12"]["inputs"]["model"] = model_ref
     workflow["6"]["inputs"]["clip"] = clip_ref
     workflow["7"]["inputs"]["clip"] = clip_ref
+    return workflow
+
+
+def build_redraw_inpaint_workflow(
+    *,
+    positive: str,
+    negative: str,
+    seed: int,
+    steps: int,
+    cfg: float,
+    checkpoint: str,
+    sampler: str,
+    scheduler: str,
+    base_image: str,
+    mask_image: str,
+    grow_mask_by: int = 16,
+    blend_denoise: float = INPAINT_BLEND_DENOISE,
+    blend_steps: int = INPAINT_BLEND_STEPS,
+    blend_mask_expand: int = INPAINT_BLEND_MASK_EXPAND,
+    mask_blur: int = INPAINT_MASK_BLUR,
+    color_match: float = INPAINT_COLOR_MATCH,
+    fooocus_head: str = "",
+    fooocus_patch: str = "",
+    lora_name: str = "",
+    lora_strength: float = 0,
+    second_lora_name: str = "",
+    second_lora_strength: float = 0,
+    filename_prefix: str = "local_ai_drawing_redraw_inpaint",
+) -> dict[str, Any]:
+    use_fooocus = bool(fooocus_head and fooocus_patch)
+    blur_radius = max(0, min(31, int(mask_blur)))
+    workflow: dict[str, Any] = {
+        "1": {"class_type": "LoadImage", "inputs": {"image": base_image}},
+        "2": {"class_type": "LoadImageMask", "inputs": {"image": mask_image, "channel": "red"}},
+        "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": checkpoint}},
+        "6": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["4", 1]}},
+        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["4", 1]}},
+        "9": {
+            "class_type": "SaveImage",
+            "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]},
+        },
+    }
+    model_ref: list[Any] = ["4", 0]
+    clip_ref: list[Any] = ["4", 1]
+    if lora_name and lora_strength > 0:
+        workflow["10"] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "lora_name": lora_name,
+                "strength_model": lora_strength,
+                "strength_clip": lora_strength,
+                "model": model_ref,
+                "clip": clip_ref,
+            },
+        }
+        model_ref = ["10", 0]
+        clip_ref = ["10", 1]
+    if second_lora_name and second_lora_strength > 0:
+        workflow["11"] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "lora_name": second_lora_name,
+                "strength_model": second_lora_strength,
+                "strength_clip": second_lora_strength,
+                "model": model_ref,
+                "clip": clip_ref,
+            },
+        }
+        model_ref = ["11", 0]
+        clip_ref = ["11", 1]
+    workflow["6"]["inputs"]["clip"] = clip_ref
+    workflow["7"]["inputs"]["clip"] = clip_ref
+    mask_ref: list[Any]
+    if use_fooocus:
+        workflow["13"] = {
+            "class_type": "INPAINT_ExpandMask",
+            "inputs": {
+                "mask": ["2", 0],
+                "grow": max(0, grow_mask_by),
+                "blur": max(0, blur_radius),
+                "blur_type": "gaussian",
+            },
+        }
+        mask_ref = ["13", 0]
+        workflow["25"] = {
+            "class_type": "INPAINT_LoadFooocusInpaint",
+            "inputs": {"head": fooocus_head, "patch": fooocus_patch},
+        }
+        workflow["15"] = {
+            "class_type": "INPAINT_VAEEncodeInpaintConditioning",
+            "inputs": {
+                "positive": ["6", 0],
+                "negative": ["7", 0],
+                "vae": ["4", 2],
+                "pixels": ["1", 0],
+                "mask": mask_ref,
+            },
+        }
+        workflow["26"] = {
+            "class_type": "INPAINT_ApplyFooocusInpaint",
+            "inputs": {
+                "model": model_ref,
+                "patch": ["25", 0],
+                "latent": ["15", 2],
+            },
+        }
+        model_ref = ["26", 0]
+        positive_ref: list[Any] = ["15", 0]
+        negative_ref: list[Any] = ["15", 1]
+        latent_ref: list[Any] = ["15", 3]
+    else:
+        workflow["13"] = {
+            "class_type": "GrowMask",
+            "inputs": {
+                "mask": ["2", 0],
+                "expand": max(0, grow_mask_by),
+                "tapered_corners": True,
+            },
+        }
+        mask_ref = ["13", 0]
+        if blur_radius > 0:
+            workflow["22"] = {"class_type": "MaskToImage", "inputs": {"mask": mask_ref}}
+            workflow["23"] = {
+                "class_type": "ImageBlur",
+                "inputs": {
+                    "image": ["22", 0],
+                    "blur_radius": blur_radius,
+                    "sigma": INPAINT_MASK_BLUR_SIGMA,
+                },
+            }
+            workflow["24"] = {
+                "class_type": "ImageToMask",
+                "inputs": {"image": ["23", 0], "channel": "red"},
+            }
+            mask_ref = ["24", 0]
+        workflow["15"] = {
+            "class_type": "InpaintModelConditioning",
+            "inputs": {
+                "positive": ["6", 0],
+                "negative": ["7", 0],
+                "vae": ["4", 2],
+                "pixels": ["1", 0],
+                "mask": mask_ref,
+                "noise_mask": True,
+            },
+        }
+        positive_ref = ["15", 0]
+        negative_ref = ["15", 1]
+        latent_ref = ["15", 2]
+    workflow["14"] = {
+        "class_type": "DifferentialDiffusion",
+        "inputs": {"model": model_ref, "strength": 1.0},
+    }
+    workflow["3"] = {
+        "class_type": "KSampler",
+        "inputs": {
+            "seed": seed,
+            "steps": steps,
+            "cfg": cfg,
+            "sampler_name": sampler,
+            "scheduler": scheduler,
+            "denoise": INPAINT_REDRAW_DENOISE,
+            "model": ["14", 0],
+            "positive": positive_ref,
+            "negative": negative_ref,
+            "latent_image": latent_ref,
+        },
+    }
+    workflow["8"] = {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}}
+    decode_ref: list[Any] = ["8", 0]
+    resolved_blend = clamp_img2img_denoise(blend_denoise) if blend_denoise and blend_denoise > 0 else 0
+    if resolved_blend > 0 and not use_fooocus:
+        workflow["16"] = {
+            "class_type": "GrowMask",
+            "inputs": {
+                "mask": mask_ref,
+                "expand": max(0, blend_mask_expand),
+                "tapered_corners": True,
+            },
+        }
+        workflow["17"] = {
+            "class_type": "VAEEncode",
+            "inputs": {"pixels": ["8", 0], "vae": ["4", 2]},
+        }
+        workflow["18"] = {
+            "class_type": "SetLatentNoiseMask",
+            "inputs": {"samples": ["17", 0], "mask": ["16", 0]},
+        }
+        workflow["20"] = {
+            "class_type": "KSampler",
+            "inputs": {
+                "seed": seed + 1,
+                "steps": max(8, min(steps, blend_steps)),
+                "cfg": cfg,
+                "sampler_name": sampler,
+                "scheduler": scheduler,
+                "denoise": resolved_blend,
+                "model": ["14", 0],
+                "positive": ["6", 0],
+                "negative": ["7", 0],
+                "latent_image": ["18", 0],
+            },
+        }
+        workflow["21"] = {
+            "class_type": "VAEDecode",
+            "inputs": {"samples": ["20", 0], "vae": ["4", 2]},
+        }
+        decode_ref = ["21", 0]
+    if use_fooocus and color_match and color_match > 0:
+        workflow["27"] = {
+            "class_type": "INPAINT_ColorMatch",
+            "inputs": {
+                "target": decode_ref,
+                "reference": ["1", 0],
+                "exclude_mask": mask_ref,
+                "strength": max(0.0, min(1.0, float(color_match))),
+            },
+        }
+        decode_ref = ["27", 0]
+    workflow["9"]["inputs"]["images"] = decode_ref
     return workflow
 
 

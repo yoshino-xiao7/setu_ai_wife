@@ -24,6 +24,7 @@ from app.comfyui import (
     build_img2img_workflow,
     build_inpaint_workflow,
     build_mask_conditioning_workflow,
+    build_redraw_inpaint_workflow,
     build_workflow,
     clamp_img2img_denoise,
     is_anima_checkpoint,
@@ -754,18 +755,131 @@ async def run_manual_inpaint_generation(
     temp_paths = [source_path, mask_path, crop_source_path, crop_mask_path]
     try:
         create_manual_inpaint_mask(mask_path, width, height, job.get("inpaint_mask_json") or "")
-        crop_box = create_manual_inpaint_crop(
+        denoise, grow_mask_by = inpaint_profile(job.get("nsfw_visibility_level"))
+        if should_use_redraw_inpaint(settings):
+            try:
+                return await run_full_image_redraw_inpaint(
+                    job,
+                    settings,
+                    store,
+                    client,
+                    source_path,
+                    mask_path,
+                    grow_mask_by,
+                    uploaded_inputs,
+                )
+            except ComfyUIExecutionError as exc:
+                print(f"[inpaint] redraw failed for job {job_id}; falling back to cropped inpaint: {exc}")
+        return await run_cropped_inpaint_generation(
+            job,
+            settings,
+            store,
+            client,
             source_path,
             mask_path,
             crop_source_path,
             crop_mask_path,
+            denoise,
+            grow_mask_by,
+            uploaded_inputs,
         )
-        source_upload = await client.upload_image(crop_source_path, f"{job_id}_source_crop.png")
-        mask_upload = await client.upload_image(crop_mask_path, f"{job_id}_repair_mask_crop.png")
-        uploaded_inputs.extend([source_upload, mask_upload])
-        denoise, grow_mask_by = inpaint_profile(job.get("nsfw_visibility_level"))
-        brushnet_model = select_brushnet_model(settings)
-        legacy_workflow = build_inpaint_workflow(
+    finally:
+        for filename in uploaded_inputs:
+            client.cleanup_comfyui_input_file(filename)
+        cleanup_temp_paths(temp_paths)
+
+
+async def run_full_image_redraw_inpaint(
+    job: dict,
+    settings: Settings,
+    store: JobStore,
+    client: ComfyUIClient,
+    source_path: Path,
+    mask_path: Path,
+    grow_mask_by: int,
+    uploaded_inputs: list[str],
+) -> Path:
+    job_id = job["id"]
+    source_upload = await client.upload_image(source_path, f"{job_id}_source.png")
+    mask_upload = await client.upload_image(mask_path, f"{job_id}_repair_mask.png")
+    uploaded_inputs.extend([source_upload, mask_upload])
+    fooocus_head, fooocus_patch = select_fooocus_inpaint_models(settings)
+    workflow = build_redraw_inpaint_workflow(
+        positive=inpaint_positive_prompt(job["prompt_positive"]),
+        negative=inpaint_negative_prompt(job["prompt_negative"]),
+        seed=job["seed"],
+        steps=job["steps"],
+        cfg=job["cfg"],
+        checkpoint=job["checkpoint"],
+        sampler=settings.default_sampler,
+        scheduler=settings.default_scheduler,
+        base_image=source_upload,
+        mask_image=mask_upload,
+        grow_mask_by=grow_mask_by,
+        blend_denoise=settings.inpaint_blend_denoise,
+        blend_steps=settings.inpaint_blend_steps,
+        blend_mask_expand=settings.inpaint_blend_mask_expand,
+        mask_blur=settings.inpaint_mask_blur,
+        color_match=settings.inpaint_color_match,
+        fooocus_head=fooocus_head,
+        fooocus_patch=fooocus_patch,
+        lora_name=job["lora_name"],
+        lora_strength=job["lora_strength"],
+        second_lora_name=job["second_lora_name"],
+        second_lora_strength=job["second_lora_strength"],
+        filename_prefix=f"local_ai_drawing/{job_id}",
+    )
+    return await queue_and_download(
+        client, store, job_id, workflow, settings.output_dir, local_image_stem(job)
+    )
+
+
+async def run_cropped_inpaint_generation(
+    job: dict,
+    settings: Settings,
+    store: JobStore,
+    client: ComfyUIClient,
+    source_path: Path,
+    mask_path: Path,
+    crop_source_path: Path,
+    crop_mask_path: Path,
+    denoise: float,
+    grow_mask_by: int,
+    uploaded_inputs: list[str],
+) -> Path:
+    job_id = job["id"]
+    crop_box = create_manual_inpaint_crop(
+        source_path,
+        mask_path,
+        crop_source_path,
+        crop_mask_path,
+    )
+    source_upload = await client.upload_image(crop_source_path, f"{job_id}_source_crop.png")
+    mask_upload = await client.upload_image(crop_mask_path, f"{job_id}_repair_mask_crop.png")
+    uploaded_inputs.extend([source_upload, mask_upload])
+    brushnet_model = select_brushnet_model(settings)
+    legacy_workflow = build_inpaint_workflow(
+        positive=inpaint_positive_prompt(job["prompt_positive"]),
+        negative=inpaint_negative_prompt(job["prompt_negative"]),
+        seed=job["seed"],
+        steps=job["steps"],
+        cfg=job["cfg"],
+        checkpoint=job["checkpoint"],
+        sampler=settings.default_sampler,
+        scheduler=settings.default_scheduler,
+        base_image=source_upload,
+        mask_image=mask_upload,
+        denoise=denoise,
+        lora_name=job["lora_name"],
+        lora_strength=job["lora_strength"],
+        second_lora_name=job["second_lora_name"],
+        second_lora_strength=job["second_lora_strength"],
+        grow_mask_by=grow_mask_by,
+        filename_prefix=f"local_ai_drawing/{job_id}",
+    )
+    used_brushnet = False
+    if should_use_brushnet_inpaint(settings, brushnet_model):
+        workflow = build_brushnet_inpaint_workflow(
             positive=inpaint_positive_prompt(job["prompt_positive"]),
             negative=inpaint_negative_prompt(job["prompt_negative"]),
             seed=job["seed"],
@@ -777,62 +891,37 @@ async def run_manual_inpaint_generation(
             base_image=source_upload,
             mask_image=mask_upload,
             denoise=denoise,
+            brushnet_model=brushnet_model,
+            brushnet_dtype=settings.brushnet_dtype,
+            brushnet_scale=settings.brushnet_scale,
             lora_name=job["lora_name"],
             lora_strength=job["lora_strength"],
             second_lora_name=job["second_lora_name"],
             second_lora_strength=job["second_lora_strength"],
-            grow_mask_by=grow_mask_by,
             filename_prefix=f"local_ai_drawing/{job_id}",
         )
-        used_brushnet = False
-        if should_use_brushnet_inpaint(settings, brushnet_model):
-            workflow = build_brushnet_inpaint_workflow(
-                positive=inpaint_positive_prompt(job["prompt_positive"]),
-                negative=inpaint_negative_prompt(job["prompt_negative"]),
-                seed=job["seed"],
-                steps=job["steps"],
-                cfg=job["cfg"],
-                checkpoint=job["checkpoint"],
-                sampler=settings.default_sampler,
-                scheduler=settings.default_scheduler,
-                base_image=source_upload,
-                mask_image=mask_upload,
-                denoise=denoise,
-                brushnet_model=brushnet_model,
-                brushnet_dtype=settings.brushnet_dtype,
-                brushnet_scale=settings.brushnet_scale,
-                lora_name=job["lora_name"],
-                lora_strength=job["lora_strength"],
-                second_lora_name=job["second_lora_name"],
-                second_lora_strength=job["second_lora_strength"],
-                filename_prefix=f"local_ai_drawing/{job_id}",
-            )
-            used_brushnet = True
-        else:
-            workflow = legacy_workflow
-        try:
-            repaired_crop_path = await queue_and_download(
-                client, store, job_id, workflow, settings.output_dir, local_image_stem(job)
-            )
-        except ComfyUIExecutionError as exc:
-            if not used_brushnet:
-                raise
-            print(f"[inpaint] BrushNet failed for job {job_id}; retrying legacy inpaint: {exc}")
-            repaired_crop_path = await queue_and_download(
-                client, store, job_id, legacy_workflow, settings.output_dir, local_image_stem(job)
-            )
-        composite_inpaint_crop(
-            source_path=source_path,
-            mask_path=mask_path,
-            repaired_crop_path=repaired_crop_path,
-            crop_box=crop_box,
-            output_path=repaired_crop_path,
+        used_brushnet = True
+    else:
+        workflow = legacy_workflow
+    try:
+        repaired_crop_path = await queue_and_download(
+            client, store, job_id, workflow, settings.output_dir, local_image_stem(job)
         )
-        return repaired_crop_path
-    finally:
-        for filename in uploaded_inputs:
-            client.cleanup_comfyui_input_file(filename)
-        cleanup_temp_paths(temp_paths)
+    except ComfyUIExecutionError as exc:
+        if not used_brushnet:
+            raise
+        print(f"[inpaint] BrushNet failed for job {job_id}; retrying legacy inpaint: {exc}")
+        repaired_crop_path = await queue_and_download(
+            client, store, job_id, legacy_workflow, settings.output_dir, local_image_stem(job)
+        )
+    composite_inpaint_crop(
+        source_path=source_path,
+        mask_path=mask_path,
+        repaired_crop_path=repaired_crop_path,
+        crop_box=crop_box,
+        output_path=repaired_crop_path,
+    )
+    return repaired_crop_path
 
 
 def inpaint_profile(level: str | None) -> tuple[float, int]:
@@ -844,13 +933,19 @@ def inpaint_profile(level: str | None) -> tuple[float, int]:
     return 0.52, 16
 
 
+def inpaint_engine_name(settings: Settings) -> str:
+    return str(settings.inpaint_engine or "auto").strip().lower() or "auto"
+
+
+def should_use_redraw_inpaint(settings: Settings) -> bool:
+    return inpaint_engine_name(settings) in {"auto", "redraw", "differential", "seamless"}
+
+
 def should_use_brushnet_inpaint(settings: Settings, brushnet_model: str) -> bool:
-    engine = str(settings.inpaint_engine or "auto").strip().lower()
+    engine = inpaint_engine_name(settings)
     if engine in {"legacy", "default", "vae", "comfyui"}:
         return False
-    if engine in {"brushnet", "auto"}:
-        return bool(brushnet_model)
-    return False
+    return bool(brushnet_model)
 
 
 def select_brushnet_model(settings: Settings) -> str:
@@ -863,9 +958,19 @@ def select_brushnet_model(settings: Settings) -> str:
     candidates = sorted(
         str(path.relative_to(inpaint_dir))
         for path in inpaint_dir.rglob("*")
-        if path.is_file() and path.suffix.lower() in {".safetensors", ".ckpt", ".pt", ".pth"}
+        if path.is_file()
+        and path.suffix.lower() in {".safetensors", ".ckpt", ".pt", ".pth"}
+        and "fooocus" not in path.name.lower()
     )
     return candidates[0] if candidates else ""
+
+
+def select_fooocus_inpaint_models(settings: Settings) -> tuple[str, str]:
+    configured_head = str(settings.fooocus_inpaint_head or "").strip()
+    configured_patch = str(settings.fooocus_inpaint_patch or "").strip()
+    if configured_head and configured_patch:
+        return configured_head.replace("\\", "/"), configured_patch.replace("\\", "/")
+    return "", ""
 
 
 def inpaint_positive_prompt(prompt: str) -> str:
