@@ -195,6 +195,8 @@ class PromptingTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Danbooru", system_prompt)
         self.assertIn("one expression", system_prompt)
         self.assertIn("looking back", system_prompt)
+        self.assertIn("single frozen still", system_prompt)
+        self.assertIn("in-frame scene objects", system_prompt)
         self.assertNotIn("Add 'not looking at viewer'", system_prompt)
 
     def test_finalize_injects_lookback_and_glossy_skin_knowledge(self) -> None:

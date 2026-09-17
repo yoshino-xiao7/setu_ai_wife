@@ -50,12 +50,11 @@ def matched_knowledge_entries(prompt: str, path: Path, limit: int = 24) -> tuple
     matched: list[KnowledgeEntry] = []
     seen_targets: set[str] = set()
     source = prompt or ""
-    active_franchises = _active_franchises(source, path)
 
     for entry in load_prompt_knowledge(path):
         if not entry.target or entry.target in seen_targets:
             continue
-        if _entry_matches(entry, source, active_franchises):
+        if _entry_matches(entry, source):
             matched.append(entry)
             seen_targets.add(entry.target)
         if len(matched) >= limit:
@@ -103,27 +102,16 @@ def matched_knowledge_context(prompt: str, path: Path, limit: int = 24) -> str:
     return "\n".join(lines)
 
 
-def _active_franchises(source: str, path: Path) -> set[str]:
-    franchises: set[str] = set()
-    for entry in load_prompt_knowledge(path):
-        if entry.franchise and any(alias and alias in source for alias in entry.aliases):
-            franchises.add(entry.franchise)
-    return franchises
+def _entry_matches(entry: KnowledgeEntry, source: str) -> bool:
+    return any(_alias_matches(alias, source) for alias in entry.aliases if alias)
 
 
-def _entry_matches(entry: KnowledgeEntry, source: str, active_franchises: set[str]) -> bool:
-    for alias in entry.aliases:
-        if not alias:
-            continue
-        if len(alias) <= 1:
-            if entry.franchise in active_franchises and alias in source:
-                return True
-            if _short_alias_matches(alias, source):
-                return True
-            continue
-        if alias in source:
-            return True
-    return False
+def _alias_matches(alias: str, source: str) -> bool:
+    if not alias or not source:
+        return False
+    if len(alias) <= 1:
+        return _short_alias_matches(alias, source)
+    return alias in source
 
 
 def _short_alias_matches(alias: str, source: str) -> bool:
