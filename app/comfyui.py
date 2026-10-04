@@ -166,27 +166,34 @@ def build_qwen_image_workflow(
     scheduler: str = "simple",
     device: str = "auto",
     dtype: str = "default",
+    source_image: str = "",
+    denoise: float = 1.0,
     filename_prefix: str = "local_ai_drawing_qwen",
 ) -> dict[str, Any]:
     """Build the API-format graph for the Qwen Image 2.1 text-to-image path."""
-    return {
+    has_source = bool(source_image)
+    workflow = {
         "1": {"class_type": "UNETLoader", "inputs": {"unet_name": unet_name, "weight_dtype": "default"}},
         "2": {"class_type": "QwenImage21Cache", "inputs": {"model": ["1", 0], "device": device, "dtype": dtype}},
         "3": {"class_type": "CLIPLoader", "inputs": {"clip_name": clip_name, "type": "qwen_image", "device": "default"}},
         "4": {"class_type": "VAELoader", "inputs": {"vae_name": vae_name}},
         "5": {"class_type": "TextEncodeQwenImage21", "inputs": {
             "clip": ["3", 0], "prompt": positive, "negative_prompt": negative or "",
-            "resolution": max(width, height), "images": {},
+            "resolution": max(width, height),
+            "images": {"image_1": ["10", 0]} if has_source else {},
         }},
         "6": {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": 1}},
         "7": {"class_type": "KSampler", "inputs": {
             "seed": seed, "steps": steps, "cfg": cfg, "sampler_name": sampler, "scheduler": scheduler,
-            "denoise": 1, "model": ["2", 0], "positive": ["5", 0], "negative": ["5", 1],
-            "latent_image": ["6", 0],
+            "denoise": max(0.25, min(1.0, denoise)), "model": ["2", 0], "positive": ["5", 0], "negative": ["5", 1],
+            "latent_image": ["5", 2] if has_source else ["6", 0],
         }},
         "8": {"class_type": "VAEDecode", "inputs": {"samples": ["7", 0], "vae": ["4", 0]}},
         "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]}},
     }
+    if has_source:
+        workflow["10"] = {"class_type": "LoadImage", "inputs": {"image": source_image}}
+    return workflow
 
 
 def build_workflow(

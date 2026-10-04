@@ -440,6 +440,26 @@ async def run_generation(job_id: str, settings: Settings) -> None:
             image_path = await run_dual_inpaint_generation(job, settings, store, client)
         elif should_use_dual_mask_conditioning(settings, job):
             image_path = await run_dual_mask_conditioning_generation(job, settings, store, client)
+        elif is_qwen_image_checkpoint(job.get("checkpoint")):
+            workflow = build_qwen_image_workflow(
+                positive=job["prompt_positive"],
+                negative=job["prompt_negative"],
+                seed=job["seed"],
+                width=job["width"],
+                height=job["height"],
+                steps=job["steps"],
+                cfg=1.0,
+                unet_name=str(job["checkpoint"]),
+                clip_name=settings.qwen_clip_name,
+                vae_name=settings.qwen_vae_name,
+                source_image=source_upload,
+                denoise=denoise,
+                sampler=settings.qwen_sampler,
+                scheduler=settings.qwen_scheduler,
+                device=settings.qwen_device,
+                dtype=settings.qwen_dtype,
+                filename_prefix=f"local_ai_drawing/{job['id']}",
+            )
         else:
             use_regions = should_use_dual_regions(settings, job)
             sampling = resolve_classic_sampling(
@@ -1318,6 +1338,26 @@ async def run_img2img_generation(
                 denoise=denoise,
                 sampler=settings.anima_sampler,
                 scheduler=settings.anima_scheduler,
+                filename_prefix=f"local_ai_drawing/{job['id']}",
+            )
+        elif is_qwen_image_checkpoint(job.get("checkpoint")):
+            workflow = build_qwen_image_workflow(
+                positive=job["prompt_positive"],
+                negative=job["prompt_negative"],
+                seed=job["seed"],
+                width=job["width"],
+                height=job["height"],
+                steps=job["steps"],
+                cfg=1.0,
+                unet_name=str(job["checkpoint"]),
+                clip_name=settings.qwen_clip_name,
+                vae_name=settings.qwen_vae_name,
+                source_image=source_upload,
+                denoise=denoise,
+                sampler=settings.qwen_sampler,
+                scheduler=settings.qwen_scheduler,
+                device=settings.qwen_device,
+                dtype=settings.qwen_dtype,
                 filename_prefix=f"local_ai_drawing/{job['id']}",
             )
         else:
