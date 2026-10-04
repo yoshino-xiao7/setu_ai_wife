@@ -40,6 +40,11 @@ def is_anima_checkpoint(checkpoint: str | None) -> bool:
     return name.startswith("anima-")
 
 
+def is_qwen_image_checkpoint(checkpoint: str | None) -> bool:
+    name = (checkpoint or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
+    return name.startswith("qwen_image_2.1")
+
+
 def clamp_img2img_denoise(value: float | None) -> float:
     if value is None:
         return IMG2IMG_DEFAULT_DENOISE
@@ -142,6 +147,45 @@ def build_anima_workflow(
             "class_type": "SaveImage",
             "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]},
         },
+    }
+
+
+def build_qwen_image_workflow(
+    *,
+    positive: str,
+    negative: str,
+    seed: int,
+    width: int,
+    height: int,
+    steps: int,
+    cfg: float,
+    unet_name: str,
+    clip_name: str,
+    vae_name: str,
+    sampler: str = "euler",
+    scheduler: str = "simple",
+    device: str = "auto",
+    dtype: str = "default",
+    filename_prefix: str = "local_ai_drawing_qwen",
+) -> dict[str, Any]:
+    """Build the API-format graph for the Qwen Image 2.1 text-to-image path."""
+    return {
+        "1": {"class_type": "UNETLoader", "inputs": {"unet_name": unet_name, "weight_dtype": "default"}},
+        "2": {"class_type": "QwenImage21Cache", "inputs": {"model": ["1", 0], "device": device, "dtype": dtype}},
+        "3": {"class_type": "CLIPLoader", "inputs": {"clip_name": clip_name, "type": "qwen_image", "device": "default"}},
+        "4": {"class_type": "VAELoader", "inputs": {"vae_name": vae_name}},
+        "5": {"class_type": "TextEncodeQwenImage21", "inputs": {
+            "clip": ["3", 0], "prompt": positive, "negative_prompt": negative or "",
+            "resolution": max(width, height), "images": {},
+        }},
+        "6": {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": 1}},
+        "7": {"class_type": "KSampler", "inputs": {
+            "seed": seed, "steps": steps, "cfg": cfg, "sampler_name": sampler, "scheduler": scheduler,
+            "denoise": 1, "model": ["2", 0], "positive": ["5", 0], "negative": ["5", 1],
+            "latent_image": ["6", 0],
+        }},
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["7", 0], "vae": ["4", 0]}},
+        "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]}},
     }
 
 

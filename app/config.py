@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     control_port: int = Field(7878, alias="AI_CONTROL_PORT")
     control_token: str = Field("", alias="AI_CONTROL_TOKEN")
     control_poll_seconds: float = Field(5, alias="AI_CONTROL_POLL_SECONDS")
+    auto_recover_enabled: bool = Field(True, alias="AI_AUTO_RECOVER_ENABLED")
+    auto_recover_interval_seconds: float = Field(30, alias="AI_AUTO_RECOVER_INTERVAL_SECONDS", ge=10, le=600)
+    auto_recover_cooldown_seconds: float = Field(120, alias="AI_AUTO_RECOVER_COOLDOWN_SECONDS", ge=30, le=3600)
     cloud_api_url: str = Field("", alias="CLOUD_API_URL")
     ai_worker_token: str = Field("", alias="AI_WORKER_TOKEN")
     ai_worker_id: str = Field("local-comfyui-worker", alias="AI_WORKER_ID")
@@ -74,6 +77,12 @@ class Settings(BaseSettings):
     anima_vae_name: str = Field("qwen_image_vae.safetensors", alias="ANIMA_VAE_NAME")
     anima_sampler: str = Field("er_sde", alias="ANIMA_SAMPLER")
     anima_scheduler: str = Field("simple", alias="ANIMA_SCHEDULER")
+    qwen_clip_name: str = Field("qwen3vl_8b_w4a8.safetensors", alias="QWEN_CLIP_NAME")
+    qwen_vae_name: str = Field("qwen_image_2.1_vae_bf16.safetensors", alias="QWEN_VAE_NAME")
+    qwen_sampler: str = Field("euler", alias="QWEN_SAMPLER")
+    qwen_scheduler: str = Field("simple", alias="QWEN_SCHEDULER")
+    qwen_device: str = Field("auto", alias="QWEN_DEVICE")
+    qwen_dtype: str = Field("default", alias="QWEN_DTYPE")
 
 
 @lru_cache

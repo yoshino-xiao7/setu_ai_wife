@@ -196,6 +196,24 @@ def list_anima_models(settings: Settings) -> list[dict[str, Any]]:
     return items
 
 
+def list_qwen_models(settings: Settings) -> list[dict[str, Any]]:
+    unet_dir = settings.comfyui_models_dir / "diffusion_models"
+    if not unet_dir.exists():
+        return []
+    items: list[dict[str, Any]] = []
+    for file in sorted(unet_dir.iterdir(), key=lambda item: item.name.lower()):
+        if not file.is_file() or not file.name.lower().startswith("qwen_image_2.1"):
+            continue
+        items.append({
+            "name": file.name,
+            "displayName": "Qwen Image 2.1（500积分）",
+            "size": file.stat().st_size,
+            "sizeBytes": file.stat().st_size,
+            "metadataJson": json.dumps({"modelType": "QWEN_IMAGE_2_1", "pointsCost": 500}, ensure_ascii=False),
+        })
+    return items
+
+
 def list_loras(settings: Settings) -> list[dict[str, Any]]:
     lora_dir = settings.comfyui_models_dir / "loras"
     if not lora_dir.exists():

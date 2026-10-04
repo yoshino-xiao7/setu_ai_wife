@@ -23,11 +23,13 @@ from app.comfyui import (
     build_brushnet_inpaint_workflow,
     build_img2img_workflow,
     build_inpaint_workflow,
+    build_qwen_image_workflow,
     build_mask_conditioning_workflow,
     build_redraw_inpaint_workflow,
     build_workflow,
     clamp_img2img_denoise,
     is_anima_checkpoint,
+    is_qwen_image_checkpoint,
     resolve_classic_sampling,
     random_seed,
 )
@@ -410,6 +412,26 @@ async def run_generation(job_id: str, settings: Settings) -> None:
                 vae_name=settings.anima_vae_name,
                 sampler=settings.anima_sampler,
                 scheduler=settings.anima_scheduler,
+                filename_prefix=f"local_ai_drawing/{job_id}",
+            )
+            image_path = await queue_and_download(
+                client, store, job_id, workflow, settings.output_dir, local_image_stem(job))
+        elif is_qwen_image_checkpoint(job.get("checkpoint")):
+            workflow = build_qwen_image_workflow(
+                positive=job["prompt_positive"],
+                negative=job["prompt_negative"],
+                seed=job["seed"],
+                width=job["width"],
+                height=job["height"],
+                steps=job["steps"],
+                cfg=1.0,
+                unet_name=str(job["checkpoint"]),
+                clip_name=settings.qwen_clip_name,
+                vae_name=settings.qwen_vae_name,
+                sampler=settings.qwen_sampler,
+                scheduler=settings.qwen_scheduler,
+                device=settings.qwen_device,
+                dtype=settings.qwen_dtype,
                 filename_prefix=f"local_ai_drawing/{job_id}",
             )
             image_path = await queue_and_download(

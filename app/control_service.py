@@ -14,6 +14,8 @@ from app.config import Settings, get_settings
 
 app = FastAPI(title="Xueliang AI Control Service")
 USER_AGENT = "Xueliang-AI-Control/0.1"
+_auto_recovery_paused = False
+_stack_action_lock = asyncio.Lock()
 
 
 def _root_dir() -> Path:
@@ -220,9 +222,11 @@ async def _send_qq_lifecycle_notice(settings: Settings, event_type: str) -> None
         print(f"[ai-control] failed to send QQ lifecycle notice: {exc}")
 
 
-async def _execute_action(action: str, settings: Settings) -> dict[str, Any]:
+async def _execute_action_unlocked(action: str, settings: Settings) -> dict[str, Any]:
+    global _auto_recovery_paused
     normalized = action.upper()
     if normalized == "START":
+        _auto_recovery_paused = False
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck"))
         status = await _wait_stack_status(settings)
         if not status["running"]:
@@ -232,6 +236,7 @@ async def _execute_action(action: str, settings: Settings) -> dict[str, Any]:
         status.update({"accepted": True, "action": "START", "pid": pid, "message": "AI \u7ed8\u56fe\u542f\u52a8\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
         return status
     if normalized == "RESTART":
+        _auto_recovery_paused = False
         pid = _start_hidden(_powershell_command(_script_path("start_cloud_all.ps1"), "-SkipCloudConfigCheck", "-Restart"))
         status = await _wait_stack_status(settings)
         if not status["running"]:
@@ -241,6 +246,7 @@ async def _execute_action(action: str, settings: Settings) -> dict[str, Any]:
         status.update({"accepted": True, "action": "RESTART", "pid": pid, "message": "AI \u7ed8\u56fe\u91cd\u542f\u547d\u4ee4\u5df2\u6267\u884c\u3002"})
         return status
     if normalized == "STOP":
+        _auto_recovery_paused = True
         stopped = await _stop_local_ai_stack()
         status = await _wait_stack_stopped(settings)
         if status["running"]:
@@ -255,6 +261,41 @@ async def _execute_action(action: str, settings: Settings) -> dict[str, Any]:
         })
         return status
     raise RuntimeError(f"Unsupported AI control action: {action}")
+
+
+async def _execute_action(action: str, settings: Settings) -> dict[str, Any]:
+    """Serialize start, stop, and restart operations from API and auto-recovery."""
+    async with _stack_action_lock:
+        return await _execute_action_unlocked(action, settings)
+
+
+async def _monitor_local_stack() -> None:
+    """Recover the local drawing stack after an unexpected process exit."""
+    global _auto_recovery_paused
+    settings = get_settings()
+    if not settings.auto_recover_enabled:
+        print("[ai-control] automatic local stack recovery is disabled.")
+        return
+
+    last_recovery = 0.0
+    while True:
+        await asyncio.sleep(settings.auto_recover_interval_seconds)
+        if _auto_recovery_paused:
+            continue
+        try:
+            status = await _stack_status(settings)
+            if status["running"]:
+                continue
+
+            now = asyncio.get_running_loop().time()
+            if now - last_recovery < settings.auto_recover_cooldown_seconds:
+                continue
+            last_recovery = now
+            print(f"[ai-control] local stack is unhealthy ({status}); starting recovery.")
+            recovered = await _execute_action("START", settings)
+            print(f"[ai-control] local stack recovery completed: {recovered}")
+        except Exception as exc:
+            print(f"[ai-control] automatic local stack recovery failed: {exc}")
 
 
 def _cloud_headers(settings: Settings) -> dict[str, str]:
@@ -330,6 +371,7 @@ async def _poll_cloud_commands() -> None:
 @app.on_event("startup")
 async def start_cloud_control_polling() -> None:
     asyncio.create_task(_poll_cloud_commands())
+    asyncio.create_task(_monitor_local_stack())
 
 
 @app.get("/health")
