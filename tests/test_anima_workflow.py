@@ -5,7 +5,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.comfyui import build_anima_workflow, is_anima_checkpoint
+from app.comfyui import (
+    build_anima_workflow,
+    build_krea2_workflow,
+    build_z_image_workflow,
+    is_anima_checkpoint,
+    is_krea2_checkpoint,
+    is_z_image_checkpoint,
+)
 from app.config import Settings
 from app.presets import list_anima_models
 
@@ -48,3 +55,20 @@ class AnimaWorkflowTest(unittest.TestCase):
             self.assertEqual([item["name"] for item in listed], ["anima-base-v1.0.safetensors"])
             metadata = json.loads(listed[0]["metadataJson"])
             self.assertEqual(metadata["pipeline"], "anima")
+
+    def test_native_turbo_workflows_use_their_text_encoders(self) -> None:
+        z_image = build_z_image_workflow(
+            positive="portrait", negative="blur", seed=1, width=512, height=768,
+            steps=9, unet_name="z_image_turbo_nvfp4.safetensors",
+            clip_name="qwen_3_4b_fp4_mixed.safetensors", vae_name="ae.safetensors",
+        )
+        krea = build_krea2_workflow(
+            positive="portrait", seed=1, width=512, height=768, steps=8,
+            unet_name="krea2_turbo_nvfp4.safetensors",
+            clip_name="qwen3vl_4b_fp8_scaled.safetensors", vae_name="qwen_image_vae.safetensors",
+        )
+        self.assertEqual(z_image["2"]["inputs"]["type"], "lumina2")
+        self.assertEqual(krea["2"]["inputs"]["type"], "krea2")
+        self.assertEqual(krea["5"]["class_type"], "ConditioningZeroOut")
+        self.assertTrue(is_z_image_checkpoint(z_image["1"]["inputs"]["unet_name"]))
+        self.assertTrue(is_krea2_checkpoint(krea["1"]["inputs"]["unet_name"]))

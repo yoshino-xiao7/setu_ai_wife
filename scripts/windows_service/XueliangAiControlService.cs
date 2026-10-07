@@ -14,6 +14,7 @@ namespace XueliangAiControl
         private readonly ManualResetEvent stopEvent = new ManualResetEvent(false);
         private Thread workerThread;
         private Process childProcess;
+        private DateTime loadedRuntimeWriteUtc;
 
         public XueliangAiControlService()
         {
@@ -90,6 +91,12 @@ namespace XueliangAiControl
                         StartChild();
                         failedHealthChecks = 0;
                     }
+                    else if (RuntimeWriteUtc() != loadedRuntimeWriteUtc)
+                    {
+                        Log("control code or configuration changed; restarting child to load updates");
+                        StopChild();
+                        failedHealthChecks = 0;
+                    }
                     else if (!HealthReady())
                     {
                         failedHealthChecks++;
@@ -116,6 +123,7 @@ namespace XueliangAiControl
 
         private void StartChild()
         {
+            loadedRuntimeWriteUtc = RuntimeWriteUtc();
             string python = Path.Combine(root, ".venv", "Scripts", "python.exe");
             if (!File.Exists(python))
             {
@@ -189,6 +197,21 @@ namespace XueliangAiControl
             {
                 return false;
             }
+        }
+
+        private DateTime RuntimeWriteUtc()
+        {
+            DateTime latest = DateTime.MinValue;
+            foreach (string relative in new[] { "app/control_service.py", "app/config.py", ".env" })
+            {
+                string path = Path.Combine(root, relative);
+                if (File.Exists(path))
+                {
+                    DateTime written = File.GetLastWriteTimeUtc(path);
+                    if (written > latest) latest = written;
+                }
+            }
+            return latest;
         }
 
         private static void Log(string message)

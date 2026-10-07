@@ -214,6 +214,41 @@ def list_qwen_models(settings: Settings) -> list[dict[str, Any]]:
     return items
 
 
+def list_native_fast_models(settings: Settings) -> list[dict[str, Any]]:
+    """Report native fast diffusion models as selectable cloud checkpoints."""
+    unet_dir = settings.comfyui_models_dir / "diffusion_models"
+    if not unet_dir.exists():
+        return []
+    items: list[dict[str, Any]] = []
+    model_info = {
+        "z_image_turbo_": ("Z-Image Turbo（本地快速）", "Z_IMAGE_TURBO"),
+        "krea2_turbo_": ("Krea 2 Turbo（本地快速）", "KREA2_TURBO"),
+    }
+    for file in sorted(unet_dir.iterdir(), key=lambda item: item.name.lower()):
+        if not file.is_file() or file.suffix.lower() != ".safetensors":
+            continue
+        match = next((value for prefix, value in model_info.items() if file.name.lower().startswith(prefix)), None)
+        if match is None:
+            continue
+        display_name, model_type = match
+        metadata = {
+            "name": file.name,
+            "display_name": display_name,
+            "category": "Native Turbo",
+            "category_type": "工作流",
+            "pipeline": model_type,
+            "notes": "本地 ComfyUI 原生快速工作流；支持文生图。",
+        }
+        items.append({
+            "name": file.name,
+            "displayName": display_name,
+            "size": file.stat().st_size,
+            "sizeBytes": file.stat().st_size,
+            "metadataJson": json.dumps(metadata, ensure_ascii=False),
+        })
+    return items
+
+
 def list_loras(settings: Settings) -> list[dict[str, Any]]:
     lora_dir = settings.comfyui_models_dir / "loras"
     if not lora_dir.exists():

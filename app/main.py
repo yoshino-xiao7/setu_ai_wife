@@ -22,14 +22,19 @@ from app.comfyui import (
     build_anima_workflow,
     build_brushnet_inpaint_workflow,
     build_img2img_workflow,
+    build_krea2_workflow,
     build_inpaint_workflow,
     build_qwen_image_workflow,
+    build_z_image_workflow,
     build_mask_conditioning_workflow,
     build_redraw_inpaint_workflow,
     build_workflow,
     clamp_img2img_denoise,
     is_anima_checkpoint,
+    is_fast_native_checkpoint,
+    is_krea2_checkpoint,
     is_qwen_image_checkpoint,
+    is_z_image_checkpoint,
     resolve_classic_sampling,
     random_seed,
 )
@@ -432,6 +437,24 @@ async def run_generation(job_id: str, settings: Settings) -> None:
                 scheduler=settings.qwen_scheduler,
                 device=settings.qwen_device,
                 dtype=settings.qwen_dtype,
+                filename_prefix=f"local_ai_drawing/{job_id}",
+            )
+            image_path = await queue_and_download(
+                client, store, job_id, workflow, settings.output_dir, local_image_stem(job))
+        elif is_z_image_checkpoint(job.get("checkpoint")):
+            workflow = build_z_image_workflow(
+                positive=job["prompt_positive"], negative=job["prompt_negative"], seed=job["seed"],
+                width=job["width"], height=job["height"], steps=settings.z_image_steps,
+                unet_name=str(job["checkpoint"]).replace("\\", "/").rsplit("/", 1)[-1], clip_name=settings.z_image_clip_name,
+                vae_name=settings.z_image_vae_name, filename_prefix=f"local_ai_drawing/{job_id}",
+            )
+            image_path = await queue_and_download(
+                client, store, job_id, workflow, settings.output_dir, local_image_stem(job))
+        elif is_krea2_checkpoint(job.get("checkpoint")):
+            workflow = build_krea2_workflow(
+                positive=job["prompt_positive"], seed=job["seed"], width=job["width"], height=job["height"],
+                steps=settings.krea2_steps, unet_name=str(job["checkpoint"]).replace("\\", "/").rsplit("/", 1)[-1],
+                clip_name=settings.krea2_clip_name, vae_name=settings.krea2_vae_name,
                 filename_prefix=f"local_ai_drawing/{job_id}",
             )
             image_path = await queue_and_download(
@@ -1322,6 +1345,8 @@ async def run_img2img_generation(
     source_upload = await client.upload_image(source_path, f"{job['id']}_img2img_source.png")
     denoise = clamp_img2img_denoise(job.get("denoise"))
     try:
+        if is_fast_native_checkpoint(job.get("checkpoint")):
+            raise RuntimeError("Z-Image Turbo and Krea 2 Turbo currently support text-to-image only; img2img is not enabled.")
         if is_anima_checkpoint(job.get("checkpoint")):
             workflow = build_anima_img2img_workflow(
                 positive=job["prompt_positive"],

@@ -1,0 +1,128 @@
+{
+  "13": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "batch_size": 1
+    },
+    "_meta": {
+      "title": "EmptySD3LatentImage"
+    }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "18",
+        0
+      ],
+      "text": "模糊，低质量，变形，多余肢体，文字，水印"
+    },
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": [
+        "18",
+        0
+      ],
+      "text": "一只可爱的橘白猫坐在窗边，阳光从左侧照进来，毛发细节清晰，温暖的电影感摄影，背景是虚化的城市夜景，画面干净，主体突出"
+    },
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "17": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "16": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "z_image_turbo_nvfp4.safetensors",
+      "weight_dtype": "default"
+    },
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "9": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "z_image_turbo_nvfp4_test",
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "3": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 47447417949230,
+      "negative": [
+        "7",
+        0
+      ],
+      "model": [
+        "16",
+        0
+      ],
+      "steps": 9,
+      "sampler_name": "euler",
+      "latent_image": [
+        "13",
+        0
+      ],
+      "cfg": 1.0,
+      "denoise": 1.0,
+      "positive": [
+        "6",
+        0
+      ],
+      "scheduler": "simple"
+    },
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "18": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "type": "lumina2",
+      "clip_name": "qwen_3_4b_fp4_mixed.safetensors",
+      "device": "default"
+    },
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "8": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "vae": [
+        "17",
+        0
+      ],
+      "samples": [
+        "3",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  }
+}

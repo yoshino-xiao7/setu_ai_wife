@@ -1,0 +1,127 @@
+{
+  "4": {
+    "inputs": {
+      "clip": [
+        "2",
+        0
+      ],
+      "text": "A cinematic photorealistic Japanese anime convention portrait of an adult female cosplayer dressed as Yae Miko, pink hair, elegant white and red shrine maiden costume, golden ornaments, soft exhibition hall lighting, detailed fabric and hair, natural confident smile, full body, shallow depth of field, high quality photography"
+    },
+    "_meta": {
+      "title": "Positive Prompt"
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "3": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "_meta": {
+      "title": "Load VAE"
+    },
+    "class_type": "VAELoader"
+  },
+  "1": {
+    "inputs": {
+      "unet_name": "krea2_turbo_nvfp4.safetensors",
+      "weight_dtype": "default"
+    },
+    "_meta": {
+      "title": "Load Krea 2 Turbo NVFP4"
+    },
+    "class_type": "UNETLoader"
+  },
+  "8": {
+    "inputs": {
+      "vae": [
+        "3",
+        0
+      ],
+      "samples": [
+        "7",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Decode"
+    },
+    "class_type": "VAEDecode"
+  },
+  "7": {
+    "inputs": {
+      "steps": 8,
+      "positive": [
+        "4",
+        0
+      ],
+      "cfg": 1.0,
+      "seed": 1333595745,
+      "denoise": 1.0,
+      "model": [
+        "1",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ],
+      "scheduler": "simple",
+      "sampler_name": "euler"
+    },
+    "_meta": {
+      "title": "Krea 2 Turbo 8 Steps"
+    },
+    "class_type": "KSampler"
+  },
+  "2": {
+    "inputs": {
+      "type": "krea2",
+      "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
+      "device": "default"
+    },
+    "_meta": {
+      "title": "Load Krea2 Text Encoder"
+    },
+    "class_type": "CLIPLoader"
+  },
+  "9": {
+    "inputs": {
+      "filename_prefix": "krea2_turbo_nvfp4_test_cfg1",
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Save Image"
+    },
+    "class_type": "SaveImage"
+  },
+  "5": {
+    "inputs": {
+      "conditioning": [
+        "4",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Empty Negative"
+    },
+    "class_type": "ConditioningZeroOut"
+  },
+  "6": {
+    "inputs": {
+      "batch_size": 1,
+      "width": 512,
+      "height": 768
+    },
+    "_meta": {
+      "title": "Empty Latent"
+    },
+    "class_type": "EmptyLatentImage"
+  }
+}

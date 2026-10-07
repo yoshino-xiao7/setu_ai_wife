@@ -45,6 +45,20 @@ def is_qwen_image_checkpoint(checkpoint: str | None) -> bool:
     return name.startswith("qwen_image_2.1")
 
 
+def is_z_image_checkpoint(checkpoint: str | None) -> bool:
+    name = (checkpoint or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
+    return name.startswith("z_image_turbo_")
+
+
+def is_krea2_checkpoint(checkpoint: str | None) -> bool:
+    name = (checkpoint or "").replace("\\", "/").rsplit("/", 1)[-1].lower()
+    return name.startswith("krea2_turbo_")
+
+
+def is_fast_native_checkpoint(checkpoint: str | None) -> bool:
+    return is_z_image_checkpoint(checkpoint) or is_krea2_checkpoint(checkpoint)
+
+
 def clamp_img2img_denoise(value: float | None) -> float:
     if value is None:
         return IMG2IMG_DEFAULT_DENOISE
@@ -194,6 +208,52 @@ def build_qwen_image_workflow(
     if has_source:
         workflow["10"] = {"class_type": "LoadImage", "inputs": {"image": source_image}}
     return workflow
+
+
+def build_z_image_workflow(
+    *, positive: str, negative: str, seed: int, width: int, height: int,
+    steps: int, unet_name: str, clip_name: str, vae_name: str,
+    filename_prefix: str = "local_ai_drawing_z_image",
+) -> dict[str, Any]:
+    """Build the native Z-Image Turbo text-to-image graph."""
+    return {
+        "1": {"class_type": "UNETLoader", "inputs": {"unet_name": unet_name, "weight_dtype": "default"}},
+        "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": clip_name, "type": "lumina2", "device": "default"}},
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": vae_name}},
+        "4": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["2", 0]}},
+        "5": {"class_type": "CLIPTextEncode", "inputs": {"text": negative or "", "clip": ["2", 0]}},
+        "6": {"class_type": "EmptySD3LatentImage", "inputs": {"width": width, "height": height, "batch_size": 1}},
+        "7": {"class_type": "KSampler", "inputs": {
+            "seed": seed, "steps": max(1, steps), "cfg": 1.0, "sampler_name": "euler",
+            "scheduler": "simple", "denoise": 1.0, "model": ["1", 0],
+            "positive": ["4", 0], "negative": ["5", 0], "latent_image": ["6", 0],
+        }},
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["7", 0], "vae": ["3", 0]}},
+        "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]}},
+    }
+
+
+def build_krea2_workflow(
+    *, positive: str, seed: int, width: int, height: int,
+    steps: int, unet_name: str, clip_name: str, vae_name: str,
+    filename_prefix: str = "local_ai_drawing_krea2",
+) -> dict[str, Any]:
+    """Build the native Krea 2 Turbo text-to-image graph."""
+    return {
+        "1": {"class_type": "UNETLoader", "inputs": {"unet_name": unet_name, "weight_dtype": "default"}},
+        "2": {"class_type": "CLIPLoader", "inputs": {"clip_name": clip_name, "type": "krea2", "device": "default"}},
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": vae_name}},
+        "4": {"class_type": "CLIPTextEncode", "inputs": {"text": positive, "clip": ["2", 0]}},
+        "5": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["4", 0]}},
+        "6": {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": 1}},
+        "7": {"class_type": "KSampler", "inputs": {
+            "seed": seed, "steps": max(1, steps), "cfg": 1.0, "sampler_name": "euler",
+            "scheduler": "simple", "denoise": 1.0, "model": ["1", 0],
+            "positive": ["4", 0], "negative": ["5", 0], "latent_image": ["6", 0],
+        }},
+        "8": {"class_type": "VAEDecode", "inputs": {"samples": ["7", 0], "vae": ["3", 0]}},
+        "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": filename_prefix, "images": ["8", 0]}},
+    }
 
 
 def build_workflow(

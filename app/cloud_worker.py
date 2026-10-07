@@ -10,7 +10,7 @@ from urllib.parse import quote
 import httpx
 
 from app.config import Settings, get_settings
-from app.presets import list_anima_models, list_checkpoints, list_loras, list_qwen_models, load_characters, load_prompt_presets
+from app.presets import list_anima_models, list_checkpoints, list_loras, list_native_fast_models, list_qwen_models, load_characters, load_prompt_presets
 from app.prompting import PromptTranslationError, translate_prompt
 
 
@@ -83,7 +83,7 @@ def scan_capabilities(settings: Settings) -> dict[str, Any]:
         "workerId": settings.ai_worker_id,
         "nodeName": settings.ai_worker_name,
         "version": settings.ai_worker_version,
-        "checkpoints": list_checkpoints(settings) + list_anima_models(settings) + list_qwen_models(settings),
+        "checkpoints": list_checkpoints(settings) + list_anima_models(settings) + list_qwen_models(settings) + list_native_fast_models(settings),
         "loras": list_loras(settings),
         "vaes": _list_model_files(settings.comfyui_models_dir, "vae"),
         "characters": characters,

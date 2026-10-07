@@ -16,6 +16,7 @@ app = FastAPI(title="Xueliang AI Control Service")
 USER_AGENT = "Xueliang-AI-Control/0.1"
 _auto_recovery_paused = False
 _stack_action_lock = asyncio.Lock()
+_background_tasks: dict[str, asyncio.Task] = {}
 
 
 def _root_dir() -> Path:
@@ -370,13 +371,19 @@ async def _poll_cloud_commands() -> None:
 
 @app.on_event("startup")
 async def start_cloud_control_polling() -> None:
-    asyncio.create_task(_poll_cloud_commands())
-    asyncio.create_task(_monitor_local_stack())
+    settings = get_settings()
+    if settings.cloud_api_url and settings.ai_worker_token:
+        _background_tasks["cloudControl"] = asyncio.create_task(_poll_cloud_commands())
+    if settings.auto_recover_enabled:
+        _background_tasks["autoRecovery"] = asyncio.create_task(_monitor_local_stack())
 
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
-    return {"ok": True}
+    task_health = {name: not task.done() for name, task in _background_tasks.items()}
+    if not all(task_health.values()):
+        raise HTTPException(status_code=503, detail={"ok": False, "tasks": task_health})
+    return {"ok": True, "tasks": task_health, "autoRecoveryPaused": _auto_recovery_paused}
 
 
 @app.get("/status")

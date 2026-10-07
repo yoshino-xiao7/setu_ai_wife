@@ -83,6 +83,12 @@ class Settings(BaseSettings):
     qwen_scheduler: str = Field("simple", alias="QWEN_SCHEDULER")
     qwen_device: str = Field("auto", alias="QWEN_DEVICE")
     qwen_dtype: str = Field("default", alias="QWEN_DTYPE")
+    z_image_clip_name: str = Field("qwen_3_4b_fp4_mixed.safetensors", alias="Z_IMAGE_CLIP_NAME")
+    z_image_vae_name: str = Field("ae.safetensors", alias="Z_IMAGE_VAE_NAME")
+    z_image_steps: int = Field(9, alias="Z_IMAGE_STEPS", ge=1, le=30)
+    krea2_clip_name: str = Field("qwen3vl_4b_fp8_scaled.safetensors", alias="KREA2_CLIP_NAME")
+    krea2_vae_name: str = Field("qwen_image_vae.safetensors", alias="KREA2_VAE_NAME")
+    krea2_steps: int = Field(8, alias="KREA2_STEPS", ge=1, le=30)
 
 
 @lru_cache
